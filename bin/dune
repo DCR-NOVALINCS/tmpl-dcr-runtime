@@ -1,0 +1,4 @@
+(executable
+ (public_name tmpl_dcr)
+ (name main)
+ (libraries templating))
