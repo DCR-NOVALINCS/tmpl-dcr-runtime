@@ -138,25 +138,32 @@ and add_event event program =
   let events = event :: program.events in
   { program with events }
 
-and is_enabled event program env = 
-  let relations = program.relations in
-  List.fold_left 
-    (fun enabled relation -> enabled && is_enabled_by relation event env)
-    true relations
+and update_event event program = 
+  let events = List.map (fun e -> if (fst e.info) = (fst event.info) then event else e) program.events in
+  { program with events }
 
-and is_enabled_by relation event env =
+and is_enabled event program expr_env = 
+  let relations = program.relations in
+  let enabled = event.marking.included in
+  fold_left_result
+    (fun enabled relation -> 
+      let enabled_by = is_enabled_by relation event expr_env in
+      Ok (enabled && enabled_by))
+    enabled relations
+
+and is_enabled_by relation event expr_env =
   let _id = fst event.info in
   match relation with
-  | SpawnRelation _ -> true
   | ControlRelation (_from, guard, _dest, op) ->
-      let guard_value = eval_expr guard env in
-      match guard_value with
+      let guard_value = eval_expr guard expr_env in
+      ( match guard_value with
       | Ok True -> 
         (match op with 
         | Condition -> false
         | Milestone -> false 
         | _ -> true )
-      | _ -> false 
+      | _ -> false ) 
+  | _ -> true
 
 
 (*
@@ -176,29 +183,36 @@ and id_not_found id = Error Printf.(sprintf "Identifier %s not found" id)
 ===============================================================
 *)
 
-let execute ~event_id ~_expr env  program  = 
+let rec execute ~event_id ?(expr = Unit) env  program  = 
   (* 
     TODO: 
     - Find the event in the program [X]
-    - Check if the event is enabled []
+    - Check if the event is enabled [+/-]
     - Execute the event
-      - Update the event marking []
-      - Execute the effects of the relations []
-    - Update the program []
+      - Update the event marking [X]
+      - Execute the effects of the relations (propagate the relation effects) []
   *)
   match find_event ~id:event_id program with
   | None -> event_not_found event_id
   | Some event -> 
-    if not (is_enabled event program env) then Ok program
-    else 
-      let env = empty_env in
-      eval_expr _expr env 
-      >>= fun value ->
-      print_endline @@ "Value: " ^ (string_of_expr value); 
-      Ok program
+    is_enabled event program env
+    >>= fun _ ->
+    begin match event.io with
+    | Input _ -> execute_event event expr env program
+    | Output data_expr -> execute_event event data_expr env program
+    end
+    
       
+and execute_event event expr env program = 
+  eval_expr expr env
+  >>= fun expr ->
+  let marking = { event.marking with executed = true; value = expr } in
+  let event = { event with marking } in
+  Ok (update_event event program)
 
-and view program = string_of_program program |> print_endline
+and view program = 
+  String.concat "\n" (List.map (fun event -> string_of_event event) program.events)   
+  |> print_endline
 
 
 

@@ -1,5 +1,4 @@
-open Templating
-open Syntax
+open Templating.Syntax
 
 let _add_expr id x = BinaryOp (Identifier id, x, Add)
 
@@ -28,7 +27,7 @@ let g_a' = (
 
 let _test0 = {
   template_decls = [tmpl_g]
-; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
+; events = [mk_event ~id:"a'" ~label:"A" (Input (IntTy))]
 ; template_insts = []
 ; relations = [mk_spawn_relation ~from:"a" g_a']
 }
@@ -38,6 +37,18 @@ let _test1 = {
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
 ; template_insts = [g_0_a']
 ; relations = []
+}
+
+let _test2 = {
+  template_decls = [tmpl_g]
+; events = [
+    mk_event ~id:"a'" ~label:"A" (Input (UnitTy))
+  ; mk_event ~id:"b" ~label:"B" (Output (IntLit 0))
+]
+; template_insts = [g_0_a']
+; relations = [
+    mk_control_relation ~from:"a'" Exclude ~dest:"b"
+]
 }
 
 (*
@@ -50,10 +61,11 @@ let _ =
   (* let open Instantiation in  *)
   let open Misc.Monads in
   let open Misc.Env in
-  let open Runtime in
-  Ok _test0 
+  let open Templating.Runtime in
+  Ok _test2
   (* >>= instantiate  *)
-  >>= execute ~event_id:"a'" ~_expr:(_add 1 2) empty_env
+  >>= execute ~event_id:"a'" ?expr:(Some (_add 1 2)) empty_env
+  >>= execute ~event_id:"b" empty_env
   |> function
     | Ok program -> view program
     | Error e -> print_endline e; view _test1

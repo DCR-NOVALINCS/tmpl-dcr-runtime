@@ -109,7 +109,7 @@ and event_marking =
   { executed : bool 
   ; pending : bool 
   ; included : bool 
-  ; value: expr ref
+  ; value: expr
   }
 
 (*
@@ -136,7 +136,7 @@ and relation_type =
   =============================================================================
 *)
 
-let mk_marking ?(executed=false) ?(pending=false) ?(included=true) ?(value=Unit) () = { executed; pending; included; value = ref value }
+let mk_marking ?(executed=false) ?(pending=false) ?(included=true) ?(value=Unit) () = { executed; pending; included; value = value }
 
 let default_marking = mk_marking ()
 
@@ -224,10 +224,17 @@ and string_of_event_io = function
   | Output e -> Printf.sprintf "[%s]" (string_of_expr e)
 
 and string_of_event_marking m = 
-  Printf.sprintf "{ ex = %b; res = %b; in = %b; va = %s }" m.executed m.pending m.included (string_of_expr !(m.value))
+  Printf.sprintf "{ ex = %b; res = %b; in = %b; va = %s }" m.executed m.pending m.included (string_of_expr m.value)
 
-and string_of_event (e : event) =
-  Printf.sprintf "%s:%s%s %s }" (fst e.info) (snd e.info) (string_of_event_io e.io) (string_of_event_marking e.marking)
+and string_of_event ?(abbreviated = true) (e : event) =
+  if not abbreviated then
+    Printf.sprintf "%s:%s%s %s" (fst e.info) (snd e.info) (string_of_event_io e.io) (string_of_event_marking e.marking)
+  else 
+    let excluded = if not e.marking.included then "%" else "" in
+    let pending = if e.marking.pending then "!" else "" in
+    let executed = if e.marking.executed then "✓" else "" in
+    let value = string_of_expr e.marking.value in
+    Printf.sprintf "%s%s%s%s:%s%s -> %s" excluded pending executed (fst e.info) (snd e.info) (string_of_event_io e.io) value
 
 and string_of_relation_type = function
   | Condition -> Printf.sprintf "-%s->*"
