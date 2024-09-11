@@ -1,4 +1,4 @@
-type 'a t_env = ((string * 'a) list) list
+type 'a env = ((string * 'a) list) list
 
 let empty_env = [[]]
 
@@ -7,7 +7,7 @@ let empty_list = []
 let singleton_scope = [[]]
 
 (**TODO: this bind don't stop if want to put to values with the same key*)
-let bind (x:string) (v:'a) (env:'a t_env) = ((x,v)::List.hd env)::List.tl env
+let bind x v env = ((x,v)::List.hd env)::List.tl env
 
 let or_else v1 v2 = 
   begin match v1 with 
@@ -15,13 +15,13 @@ let or_else v1 v2 =
     | Some v -> Some v
   end
 
-let rec find (n:int) (x:string) (env:'a t_env) : ('a * int) option = 
+let rec find n x env = 
   begin match env with
     | [] -> None
     | sc::env -> or_else (Option.bind (List.assoc_opt x sc) (fun v -> Option.some (v,n))) (fun () -> find (n+1) x env)
   end
 
-let find_flat (x:string) (env:'a t_env) : 'a option = 
+let find_flat x env = 
   Option.bind (find 1 x env) (fun v -> Option.some (fst v))
 
 let get x env = Option.get (find 1 x env)
