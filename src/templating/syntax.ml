@@ -142,6 +142,10 @@ let mk_control_relation ~from ?(guard = True) ~dest t = ControlRelation (from, g
 
 let mk_spawn_relation ~from ?(guard= True) subprogram = SpawnRelation (from, guard, subprogram)
 
+let mk_template_def id params graph ~export = { id; params; graph; export }
+
+let mk_template_inst id args ~x = { tmpl_id = id; args; x }
+
 let mk_program 
   ?(template_decls=[])
   ?(events=[])
@@ -150,7 +154,16 @@ let mk_program
   _ = 
   { template_decls; events; template_insts; relations }
 
+let mk_subprogram
+  ?(events=[])
+  ?(template_insts=[])
+  ?(relations=[])
+  _ = 
+  (events, template_insts, relations)
+
 let empty_program = mk_program ()
+
+let empty_subprogram = mk_subprogram ()
 
 (*
   =============================================================================
@@ -227,7 +240,7 @@ and string_of_relation = function
 | SpawnRelation (from, guard, subprogram) -> 
   let guard = Printf.sprintf "[%s]" (string_of_expr guard) in
   let rel = Printf.sprintf "-%s->>" guard in
-  Printf.sprintf "%s %s %s" from rel (string_of_subprogram subprogram)
+  Printf.sprintf "%s %s {\n%s\n}" from rel (string_of_subprogram subprogram)
 
 and string_of_subprogram (events, _templates, relations) = 
   Printf.sprintf "%s\n;\n%s" 
