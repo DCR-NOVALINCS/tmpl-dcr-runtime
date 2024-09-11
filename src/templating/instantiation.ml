@@ -44,12 +44,12 @@ and bind_tmpls tmpls env =
 and bind_tmpl tmpl env = 
   let id = tmpl.id in
   let expr_env = empty_env in
-  fold_left_result 
+  (* fold_left_result 
     (fun env (name, _ty) -> 
       Ok (bind name (ref Unit) env)) 
     expr_env tmpl.params
-  >>= fun _expr_env -> (* NOT USED *)
-  Ok (bind id tmpl env)
+  >>= fun _expr_env -> *)
+  Ok (bind id (tmpl, expr_env) env)
 
 and bind_param (name, _ty) env = 
   bind (fresh name) (ref Unit) env
@@ -66,16 +66,15 @@ and instantiate_tmpls tmpl_insts env =
     empty_subprogram tmpl_insts
 
 and instantiate_tmpl result_program inst env  = 
-  let (result_events, _, result_relations) = result_program in (* Instantiations should be empty! *)
   let id = inst.tmpl_id in
   match find_flat id env with
   | None -> tmpl_not_found id
-  | Some tmpl ->
+  | Some (tmpl, expr_env) ->
     (* TODO: Verify if the length of the args are the same as the params *)
     let (e_ti, q_ti, r_ti) = tmpl.graph in
     (* Events *)
     fold_left_result 
-      (instantiate_event inst.args)
+      (instantiate_event inst.args expr_env)
       [] e_ti
     >>= fun events ->
 
@@ -87,61 +86,32 @@ and instantiate_tmpl result_program inst env  =
     fold_left_result 
       (instantiate_relation inst.args)
       [] r_ti
-    >>= fun relations ->
-  Ok ( List.flatten [result_events; events], [], List.flatten [result_relations; relations] ) 
-  (* FIXME: Maybe this approach could generate many events then necessary *)
+    >>| fun relations ->
 
-and instantiate_event _args _tmpl_events _target_event =
+    let (result_events, _, result_relations) = result_program in (* Instantiations should be empty! *)
+    ( List.flatten [result_events; events], [], List.flatten [result_relations; relations] ) 
+    (* FIXME: Maybe this approach could generate many events then necessary *)
+
+and instantiate_event args expr_env tmpl_events target_event =
+  (* Bind all arguments to its identifier *)
+  fold_left_result
+    (fun env (prop, expr) -> Ok (bind prop expr env))
+    expr_env args
+  >>= fun expr_env -> 
+
   fold_left_result 
-    replace_all_event
-    _target_event _args
-  >>= fun _target_event ->
-  let (id, label) = _target_event.info in
-  let _target_event = { _target_event with info = (fresh id, label) } in
-  Ok (_target_event::_tmpl_events)
+    (replace_event expr_env)
+    target_event args
+  >>| fun target_event ->
+  target_event::tmpl_events
 
 and instantiate_relation _args _tmpl_relations _target_relation =
   Ok (_target_relation::_tmpl_relations)
 
-
-
-
-and replace_all_event target_event (prop, expr) =
-  replace_id target_event prop expr
-  >>= fun target_event ->
-  replace_expr target_event prop expr
-  >>= fun target_event ->
-  Ok target_event
-
-(* FIXME: This is correct??? *)
-and replace_id target_event prop expr = 
-  let (id, label) = target_event.info in
-  if id = prop then 
-    (* FIXME: Evaluation method! *)
-    match expr with 
-    | Identifier id -> Ok { target_event with info = (id, label) }
-    (* ... *)
-    | _ -> Ok target_event
-    (* --- *)
-  else 
-    Ok target_event
-
-and replace_expr target_event prop expr = 
-  match target_event.io with
-  | Output e -> 
-    (* FIXME: Evaluation method! *)
-    begin match e with
-      | Identifier id -> 
-        if id = prop then 
-          let value = target_event.marking.value in
-          value := expr;
-          Ok target_event
-        else Ok target_event
-      (* ... *)
-      | _ -> Ok target_event
-    end
-    (* --- *)
-  | _ -> Ok target_event
+and replace_event _expr_env event _args  = 
+  (* let (id, label) = event.info in
+  let event = { event with info = (fresh id, label) } in *)
+  Ok event
 
 (*
 ================================================================
@@ -153,13 +123,9 @@ and instantiate program =
   let env = empty_env in
   bind_tmpls program.template_decls env 
   >>= fun env ->
-    
+
   instantiate_tmpls program.template_insts env
   >>= fun tmpled_program ->
-
-  print_endline "= Instantiation done =";
-  print_endline @@ string_of_subprogram tmpled_program;
-  print_endline "======================";
 
   let (events, _, relations) = tmpled_program in
   let program = { program with

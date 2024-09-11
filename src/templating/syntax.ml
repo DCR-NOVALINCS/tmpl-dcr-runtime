@@ -12,6 +12,7 @@ type type_expr =
   | RecordTy of (type_expr) record_field list
   | ListTy of type_expr
   (* | ListTyEmpty *)
+  (* ADD Template Type *)
 
 and expr =
   | Unit
@@ -27,6 +28,7 @@ and expr =
   | PropDeref of expr * string
   | List of expr list
   | Record of (expr) record_field list
+  (* ADD Template Expr *)
 
 and binary_op_type =
   | Add

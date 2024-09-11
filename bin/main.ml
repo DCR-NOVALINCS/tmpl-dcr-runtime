@@ -22,6 +22,8 @@ let g_a' = (
   []
 )
 
+(* TODO: Identity template *)
+
 let _test0 = {
   template_decls = [tmpl_g]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
