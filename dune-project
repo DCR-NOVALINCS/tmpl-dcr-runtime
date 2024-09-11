@@ -5,13 +5,19 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github DCR-NOVALINCS/tmpl-dcr-runtime))
 
 (authors "bfibraga")
 
 ; (maintainers "Maintainer Name")
 
-(license LICENSE)
+(license
+ Creative
+ Commons
+ Attribution-NonCommercial-ShareAlike
+ 4.0
+ International
+ License)
 
 (documentation https://url/to/documentation)
 

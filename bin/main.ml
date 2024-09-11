@@ -3,6 +3,8 @@ open Syntax
 
 let _add_expr id x = BinaryOp (Identifier id, x, Add)
 
+let _add x y = BinaryOp (IntLit x, IntLit y, Add)
+
 let tmpl_g = {
   id = "g";
   params = [("n", IntTy); ("a", (EventTy "A"))];
@@ -45,11 +47,14 @@ let _test1 = {
 *)
 
 let _ = 
-  let open Instantiation in 
-  let program = _test1 in
-  instantiate program 
-  (* Ok program *)
+  (* let open Instantiation in  *)
+  let open Misc.Monads in
+  let open Misc.Env in
+  let open Runtime in
+  Ok _test0 
+  (* >>= instantiate  *)
+  >>= execute ~event_id:"a'" ~_expr:(_add 1 2) empty_env
   |> function
-    | Ok program -> print_endline @@ string_of_program program
-    | Error e -> print_endline e
+    | Ok program -> view program
+    | Error e -> print_endline e; view _test1
 

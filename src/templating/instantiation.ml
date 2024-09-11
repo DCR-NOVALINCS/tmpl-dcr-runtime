@@ -9,11 +9,11 @@ open Syntax
 *)
 
 (* the alpha-renaming function *)
-let rec counter = ref 0
+let rec _counter = ref 0
 
-and fresh name =
-  let res = name ^ "_" ^ (string_of_int !counter) in
-  counter := !counter + 1;
+and _fresh name =
+  let res = name ^ "_" ^ (string_of_int !_counter) in
+  _counter := !_counter + 1;
   res
 
 (*
@@ -50,9 +50,6 @@ and bind_tmpl tmpl env =
     expr_env tmpl.params
   >>= fun _expr_env -> *)
   Ok (bind id (tmpl, expr_env) env)
-
-and bind_param (name, _ty) env = 
-  bind (fresh name) (ref Unit) env
 
 (*
 ================================================================

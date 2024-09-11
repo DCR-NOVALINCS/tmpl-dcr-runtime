@@ -136,7 +136,9 @@ and relation_type =
   =============================================================================
 *)
 
-let default_marking = { executed = false; pending = false; included = true; value = ref Unit }
+let mk_marking ?(executed=false) ?(pending=false) ?(included=true) ?(value=Unit) () = { executed; pending; included; value = ref value }
+
+let default_marking = mk_marking ()
 
 let mk_event ?(marking=default_marking) ~id ~label io = { info = (id, label); io = io; marking }
 
