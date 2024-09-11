@@ -1,1 +1,54 @@
-_build
+# Ignore compiled files
+*.cmx
+*.cmi
+*.cmo
+*.cmxa
+*.cmxs
+*.o
+*.a
+
+# Ignore executable files
+*.exe
+
+# Ignore build directories
+_build/
+_build*/
+_build-*
+_build-*/
+
+# Ignore editor and IDE files
+*.swp
+*.swo
+*~
+*.orig
+*.rej
+*.bak
+*.tmp
+*.log
+*.aux
+*.dvi
+*.toc
+*.out
+*.blg
+*.bbl
+*.run.xml
+*.bcf
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Ignore OPAM files
+.opam/
+.opam-switch/
+.opam-switch/*
+
+# Ignore Dune files
+*.install
+*.merlin
+*.cmt
+*.cmti
+*.annot
+.dune/
+.dune-project
+.dune-workspace
+.dune-workspace.dev
