@@ -12,12 +12,7 @@
 ; (maintainers "Maintainer Name")
 
 (license
- Creative
- Commons
- Attribution-NonCommercial-ShareAlike
- 4.0
- International
- License)
+ "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License")
 
 (documentation https://url/to/documentation)
 

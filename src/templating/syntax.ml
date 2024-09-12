@@ -212,7 +212,7 @@ and string_of_expr = function
     in
     (string_of_op op) ^ (string_of_expr e)
   | Identifier s -> s
-  | Trigger -> "trigger"
+  | Trigger -> "@trigger"
   | PropDeref (e, p) -> (string_of_expr e) ^ "." ^ p
   | List es -> "[" ^ (String.concat ", " (List.map string_of_expr es)) ^ "]"
   | Record fields -> 

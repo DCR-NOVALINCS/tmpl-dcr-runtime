@@ -1,8 +1,8 @@
 open Templating.Syntax
 open Templating.Runtime
 open Misc.Monads
-open Misc.Env
-(* open Templating.Instantiation *)
+(* open Misc.Env *)
+open Templating.Instantiation
 
 
 (*
@@ -19,6 +19,18 @@ let _add x y = BinaryOp (IntLit x, IntLit y, Add)
 =============================================================================
 *)
 
+(*
+=============================================================================
+  Templates
+=============================================================================
+*)
+
+(*
+  tmpl g (n: Number, a: A) {
+    b: B[n];
+    a -->% b
+  }
+*)
 let tmpl_g = {
   id = "g";
   params = [("n", IntTy); ("a", (EventTy "A"))];
@@ -30,15 +42,9 @@ let tmpl_g = {
   export = [];
 }
 
-let g_0_a' = mk_template_inst "g" [("n", IntLit 0); ("a", (Identifier "a'"))] ~x:[]
-
-let g_a' = (
-  [mk_event ~id:"b" ~label:"B" (Output (IntLit (-1)))],
-  [g_0_a'],
-  []
-)
-
-(* Identity template *)
+(*
+tmpl i(e: [label]) {} => e
+*)
 let tmpl_i label = {
   id = "i";
   params = [("e", (EventTy label))];
@@ -46,13 +52,64 @@ let tmpl_i label = {
   export = ["e"];
 }
 
+(*
+tmpl h(a: A) {
+  b: B[0];
+  a -->% b
+} => b
+*)
+let tmpl_h = {
+  id = "h";
+  params = [("a", (EventTy "A"))];
+  graph = (
+    [mk_event ~id:"b" ~label:"B" (Output (IntLit 0))],
+    [],
+    [mk_control_relation ~from:"a" Exclude ~dest:"b"]
+  );
+  export = ["b"];
+}
+
+(*
+=============================================================================
+  Instances & Subprograms
+=============================================================================
+*)
+
+let g_0_a' = mk_template_inst "g" [("n", IntLit 0); ("a", (Identifier "a'"))] ~x:[]
+
+let i param ex = mk_template_inst "i" [("e", (Identifier param))] ~x:[ex]
+
+let h a b = mk_template_inst "h" [("a", (Identifier a))] ~x:[b]
+
+let _g_a' = (
+  [mk_event ~id:"b" ~label:"B" (Output (IntLit (-1)))],
+  [g_0_a'],
+  []
+)
+
+
+(*
+a: A[?];
+a -->> {
+  b: B[-1];
+  g(0, a)
+}
+*)
 let _test0 = {
   template_decls = [tmpl_g; tmpl_i "A"]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (IntTy))]
 ; template_insts = []
-; relations = [mk_spawn_relation ~from:"a" g_a']
+; relations = [mk_spawn_relation ~from:"a" (
+    [mk_event ~id:"b" ~label:"B" (Output (PropDeref (Trigger, "value")))],
+    [g_0_a'],
+    []
+  )]
 }
 
+(*
+a: A[?];
+g(0, a)
+*)
 let _test1 = {
   template_decls = [tmpl_g; tmpl_i "A"]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
@@ -60,59 +117,36 @@ let _test1 = {
 ; relations = []
 }
 
+(*
+a: A[?];
+i(a') => a2
+*)
 let _test2 = {
-  template_decls = [tmpl_g]
-; events = [
-    mk_event ~id:"a" ~label:"A" (Input (UnitTy))
-  ; mk_event ~id:"b" ~label:"B" (Output (IntLit 0))
-  ; mk_event ~id:"c" ~label:"C" (Output (StringLit "Hello world!"))
-]
-; template_insts = [g_0_a']
-; relations = [
-    mk_control_relation ~from:"a" Condition ~dest:"b"
-    ; mk_control_relation ~from:"b" Exclude ~dest:"a"
-    ; mk_control_relation ~from:"a" Response ~dest:"c"
-]
-}
+  template_decls = [tmpl_i "A"]
+; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
+; template_insts = [i "a'" "a2"]
+; relations = []
+} 
 
+(*
+a: A[?];
+h(a)
+*)
 let _test3 = {
-  template_decls = [tmpl_g]
-; events = [
-    mk_event ~id:"a" ~label:"A" (Input (UnitTy))
-  ; mk_event ~id:"b" ~label:"B" (Output (IntLit 0))
-  ; mk_event ~id:"c" ~label:"C" (Output (StringLit "Hello world!"))
-]
-; template_insts = [g_0_a']
-; relations = [
-    mk_control_relation ~from:"a" Condition ~dest:"b"
-    ; mk_control_relation ~from:"b" Exclude ~dest:"a"
-    ; mk_control_relation ~from:"a" Response ~dest:"c"
-    ; mk_spawn_relation ~from:"a" (
-      [mk_event ~id:"b2" ~label:"B" (Output (IntLit 0))],
-      [],
-      [mk_control_relation ~from:"a" Exclude ~dest:"b2"]
-    )
-]
-}
-
-let _test4 = {
-  template_decls = [tmpl_g]
-; events = [
-    mk_event ~id:"a'" ~label:"A" (Input (UnitTy))
-]
+  template_decls = [tmpl_h]
+; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
 ; template_insts = [
-  (* g_0_a' *)
+  h "a'" "b2"
+  ; h "a'" "b3"
 ]
-; relations = [
-    mk_spawn_relation ~from:"a'" g_a'
-]
+; relations = []
 }
 
 let _trace0 event_env expr_env target = 
   execute ~event_env ~expr_env ~event_id:"b" target
 
 let _trace1 event_env expr_env target = 
-  execute ~event_env ~expr_env ~event_id:"a'" ?expr:(Some (BinaryOp (IntLit 1, IntLit 2, Add))) target
+  execute ~event_env ~expr_env ~event_id:"a'" target
   (* >>= execute ~event_env ~expr_env ~event_id:"b" *)
 
 (*
@@ -121,37 +155,23 @@ let _trace1 event_env expr_env target =
 =============================================================================
 *)  
 
-let execute_traces traces program = 
-  fold_left_result 
-    (fun (program, _, _) trace -> 
-      preprocess_program program
-      >>= fun (event_env, expr_env) ->
-      trace event_env expr_env program
-      >>= fun program ->
-      Ok (program, event_env, expr_env)
-      )
-    (program, empty_env, empty_env) traces
-
 let _ = 
-  let target = _test4 in
+  let target = _test3 in
   ( 
     Ok target
-  >>= fun program ->
-    (* preprocess_program target
-  >>= fun (event_env, expr_env) ->
-  instantiate ~expr_env target
-  >>= fun (program, expr_env) ->  *)
-  execute_traces [
-    _trace1;
-    (* _trace0; *)
-  ] program
-  >>= fun (program, event_env, expr_env ) -> 
-  view ~event_env ~expr_env program 
+    >>= fun program ->
+    preprocess_program program
+    >>= fun (event_env, expr_env) ->
+    instantiate ~expr_env program
+    >>= fun (program, expr_env) ->
+    (* execute ~event_env ~expr_env ~event_id:"a'" program
+    >>= fun program ->  *)
+    view ~event_env ~expr_env ~should_print_relations:true program 
   )
   |> function
   | Error e -> 
     print_endline e;
-    print_endline "-----------------";
+    print_endline "-----------------\n";
     (string_of_program target) |> print_endline 
   | _ -> ()
 

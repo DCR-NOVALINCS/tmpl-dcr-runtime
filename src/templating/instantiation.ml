@@ -36,21 +36,15 @@ and bind_tmpls tmpls env =
 
 and bind_tmpl tmpl env = 
   let id = tmpl.id in
-  (* let expr_env = empty_env in
-  fold_left_result 
-    (fun env (name, _ty) -> 
-      Ok (bind name Unit env)) 
-    expr_env tmpl.params
-  >>= fun expr_env -> *)
   Ok (bind id tmpl env)
 
-and _bind_arg (name, expr) env = 
+and bind_arg (name, expr) env = 
   eval_expr expr env
   |> function
   | Ok value -> Ok (bind name value env)
-  | Error e -> 
+  | Error e as err -> 
     print_endline e;
-    Error e
+    err
 
 (*
 ================================================================
@@ -71,57 +65,95 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
   | Some tmpl ->
     (* TODO: Verify if the length of the args are the same as the params *)
     let (e_ti, q_ti, r_ti) = tmpl.graph in
+    let exports_mapping = List.combine tmpl.export inst.x in
+
+    (* Bind all arguments to its identifier *)
+    Ok (begin_scope expr_env)
+    >>= fun expr_env ->
+    fold_left_result
+      (fun env (prop, expr) -> bind_arg (prop, expr) env)
+      expr_env inst.args
+    >>= fun expr_env -> 
+
     (* Events *)
     fold_left_result 
-      (instantiate_event inst.args expr_env)
+      (instantiate_event expr_env)
       [] e_ti
     >>= fun events ->
 
     (* Instantations inside of the Template *)
     instantiate_tmpls q_ti tmpl_env expr_env
-    >>= fun _other_tmpled_programs ->
+    >>= fun (_other_tmpled_events, _, _other_tmpled_relations) ->
 
     (* Relations *)
     fold_left_result 
-      (instantiate_relation inst.args)
+      (instantiate_relation expr_env)
       [] r_ti
     >>= fun relations ->
 
+    (* Maps the exported events *)
+    export_map_events events exports_mapping
+    >>= fun events ->
+    
     (* Fresh ids for the events *)
     fresh_event_ids events relations
     >>| fun (events, relations) ->
 
     let (result_events, _, result_relations) = result_program in (* Instantiations should be empty! *)
-    ( List.flatten [result_events; events], [], List.flatten [result_relations; relations] ) 
+    ( List.flatten [result_events; events; _other_tmpled_events], [], List.flatten [result_relations; relations; _other_tmpled_relations] ) 
     (* FIXME: Maybe this approach could generate many events then necessary *)
 
-and instantiate_event _args _expr_env tmpl_events target_event =
-  (* print_endline @@ string_of_env string_of_expr _expr_env; *)
-  (* Bind all arguments to its identifier *)
-  Ok (begin_scope _expr_env)
-  >>= fun _expr_env ->
-  fold_left_result
-    (fun env (prop, expr) -> _bind_arg (prop, expr) env)
-    _expr_env _args
-  >>= fun _expr_env -> 
-    (* print_endline "Arguments evaluated!";
-    print_endline @@ string_of_env string_of_expr _expr_env;
-    print_endline @@ Printf.sprintf "Event Result %s" (string_of_event target_event); *)
+and instantiate_event _expr_env tmpl_events target_event  =
   replace_event target_event _expr_env
   >>| fun target_event ->
   target_event :: tmpl_events
 
-
-and instantiate_relation _args _tmpl_relations _target_relation =
-  Ok (_target_relation::_tmpl_relations)
+and instantiate_relation _expr_env _tmpl_relations _target_relation =
+  replace_relation _target_relation _expr_env
+  >>| fun _target_relation ->
+  _target_relation::_tmpl_relations
 
 and replace_event event _expr_env   = 
   let { marking; _ } = event in
   eval_expr marking.value _expr_env
   >>= fun value ->
-  { marking with value }
-  |> fun marking -> 
-     Ok { event with marking }
+  Ok { event with marking = { marking with value } }
+
+and replace_relation relation _expr_env = 
+  match relation with
+  | SpawnRelation (from, guard, subprogram) -> 
+    eval_expr guard _expr_env
+    >>| fun guard ->
+    begin match find_flat from _expr_env with
+    | Some (Identifier id) -> id
+    | _ -> from end
+    |> fun from ->
+    SpawnRelation (from, guard, subprogram)
+  | ControlRelation (from, guard, dest, t) -> 
+    eval_expr guard _expr_env
+    >>| fun guard ->
+    begin match find_flat from _expr_env with
+    | Some (Identifier id) -> id
+    | _ -> from end
+    |> fun from ->
+    begin match find_flat dest _expr_env with
+    | Some (Identifier id) -> id
+    | _ -> dest end
+    |> fun dest ->
+    ControlRelation (from, guard, dest, t)
+
+and export_map_events events export_mapping =
+  fold_left_result
+    (map_event_id export_mapping)
+    [] events
+
+and map_event_id exports_mapping events event  = 
+  let (id, label) = event.info in
+  begin match List.assoc_opt id exports_mapping with
+  | None -> event
+  | Some new_id -> { event with info = (new_id, label) }
+  end |> Result.ok
+  >>| fun event -> event::events
 
 (*
 ================================================================

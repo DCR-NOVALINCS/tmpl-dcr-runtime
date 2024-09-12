@@ -229,12 +229,26 @@ and execute_event event expr env =
   let event = { event with marking } in
   Ok event
 
-and view ?(filter = (fun _ _ -> true)) ?(event_env = empty_env) ?(expr_env = empty_env) program = 
+and view 
+  ?(filter = (fun _ _ -> true)) 
+  ?(event_env = empty_env) 
+  ?(expr_env = empty_env) 
+  ?(should_print_events = true)
+  ?(should_print_relations = false)
+  program = 
   (* preprocess_program program 
   >>= fun (event_env, expr_env) -> *)
-  List.filter (filter (event_env, expr_env)) program.events
-  |> List.map (fun event -> string_of_event event)
-  |> String.concat "\n"
+  ( if should_print_events then
+    List.filter (filter (event_env, expr_env)) program.events
+    |> List.map (fun event -> string_of_event event)
+    |> String.concat "\n"
+  else "")
+  |> fun events_str -> 
+  ( if should_print_relations then 
+      List.map (fun relation -> string_of_relation relation) program.relations
+      |> String.concat "\n"
+      |> Printf.sprintf "%s\n;\n%s" events_str
+    else events_str )
   |> print_endline 
   |> Result.ok
 
