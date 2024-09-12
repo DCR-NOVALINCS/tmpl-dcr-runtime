@@ -263,3 +263,30 @@ and string_of_program p =
   let { template_decls = _; events; template_insts; relations } = p in
   string_of_subprogram (events, template_insts, relations)
 
+(*
+=============================================================================
+  Aux functions
+=============================================================================
+*)
+
+(* the alpha-renaming function *)
+let rec _counter = ref 0
+
+and _fresh name =
+  let res = name ^ "_" ^ (string_of_int !_counter) in
+  _counter := !_counter + 1;
+  res
+
+and fresh_event event = 
+  let (id, label) = event.info in
+  let new_id = _fresh id in
+  { event with info = (new_id, label) }
+
+and fresh_event_ids events relations = 
+  Ok (events |> List.map fresh_event, relations)
+  
+and record_event event = 
+  let { marking; _ } = event in
+  Record [
+    ("value", marking.value)
+  ]

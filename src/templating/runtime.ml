@@ -1,125 +1,7 @@
 open Syntax
 open Misc.Monads
-
-(*
-===============================================================
-  Expression Evaluation functions
-===============================================================
-*)
-
-open Misc.Env 
-
-
-let rec eval_expr expr env =
-  match expr with
-  | True -> Ok True
-  | False -> Ok False
-  | IntLit i -> Ok (IntLit i)
-  | StringLit s -> Ok (StringLit s)
-  | Parenthesized e -> eval_expr e env
-  | BinaryOp (e1, e2, op) -> 
-    eval_expr e1 env
-    >>= fun v1 -> 
-    eval_expr e2 env
-    >>= fun v2 ->
-    eval_binop v1 v2 op
-  | UnaryOp (e, op) -> 
-    eval_expr e env
-    >>= fun v -> 
-    eval_unop v op
-  | Identifier id -> find_id id env
-  | Trigger -> find_id "trigger" env
-  | PropDeref (e, p) -> 
-    eval_expr e env
-    >>= fun v -> 
-    ( match v with
-    | Record fields -> 
-      ( match List.assoc_opt p fields with
-      | None -> id_not_found p
-      | Some v -> Ok v )
-    | _ -> failwith "Invalid property dereference" )
-  | List _es -> Ok (List []) (* TODO: *)
-  | Record fields -> 
-    fold_left_result 
-      (fun fields (name, e) -> 
-        eval_expr e env
-        >>| fun v -> (name, v) :: fields)
-      [] fields
-    >>| fun fields -> Record fields
-  | _ -> Ok (IntLit 0)
-
-and eval_binop v1 v2 op = 
-  match op with
-  | Add -> 
-    (match v1, v2 with
-    | IntLit i1, IntLit i2 -> Ok (IntLit (i1 + i2))
-    | _ -> failwith "Invalid arguments for Add")
-
-  | Mult -> 
-    (match v1, v2 with
-    | IntLit i1, IntLit i2 -> Ok (IntLit (i1 * i2))
-    | _ -> failwith "Invalid arguments for Mult")
-
-  | Eq ->
-    (match v1, v2 with
-    | IntLit i1, IntLit i2 -> 
-      if i1 = i2 then Ok True else Ok False
-    | StringLit s1, StringLit s2 -> 
-      if s1 = s2 then Ok True else Ok False
-    | True, True -> Ok True
-    | False, False -> Ok True
-    | _ -> failwith "Invalid arguments for Eq")
-
-  | NotEq ->
-    (match v1, v2 with
-    | IntLit i1, IntLit i2 -> 
-      if i1 <> i2 then Ok True else Ok False
-    | StringLit s1, StringLit s2 -> 
-      if s1 <> s2 then Ok True else Ok False
-    | True, False -> Ok True
-    | False, True -> Ok True
-    | _ -> failwith "Invalid arguments for NotEq")
-
-  | GreaterThan ->
-    (match v1, v2 with
-    | IntLit i1, IntLit i2 -> 
-      if i1 > i2 then Ok True else Ok False
-    | _ -> failwith "Invalid arguments for GreaterThan")
-
-  | LessThan ->
-    (match v1, v2 with
-    | IntLit i1, IntLit i2 -> 
-      if i1 < i2 then Ok True else Ok False
-    | _ -> failwith "Invalid arguments for LessThan")
-
-  | And ->
-    (match v1, v2 with
-    | True, True -> Ok True
-    | _ -> Ok False)
-
-  | Or ->
-    (match v1, v2 with
-    | False, False -> Ok False
-    | _ -> Ok True)
-  (* | _ -> failwith "Invalid binary operator" *)
-
-and eval_unop v op = 
-  match op with
-  | Minus -> 
-    (match v with
-    | IntLit i -> Ok (IntLit (-i))
-    | _ -> failwith "Invalid argument for Minus")
-  | Negation -> 
-    (match v with
-    | True -> Ok False
-    | False -> Ok True
-    | _ -> failwith "Invalid argument for Negation")
-  (* | _ -> failwith "Invalid unary operator" *)
-
-and find_id id env = 
-  match find_flat id env with
-  | None -> id_not_found id
-  | Some expr -> Ok expr
+open Misc.Env
+open Evaluation
 
 (*
 ===============================================================
@@ -138,7 +20,7 @@ and add_event event program =
   let events = event :: program.events in
   { program with events } *)
 
-and update_event event program = 
+let rec update_event event program = 
   let events = List.map (fun e -> 
     let (id, _) = e.info in
     let (id', _) = event.info in
@@ -152,21 +34,19 @@ and is_enabled event program (event_env, expr_env) =
     (fun enabled relation -> enabled && is_enabled_by relation event (event_env, expr_env))
     enabled relations
 
-and is_enabled_by relation event (_event_env, _expr_env) =
+and is_enabled_by relation event (_event_env, expr_env) =
   let (_id, _) = event.info in
   match relation with
-  | ControlRelation (_from, _guard, _dest, _op) ->
+  | ControlRelation (_from, guard, _dest, _op) ->
     (* TODO: *)
       (* Evaluate the guard expression *)
-      (* check_guard guard expr_env
+      (( check_guard guard expr_env
       >>= fun _guard_value ->
-      (find_flat _from event_env) |> Option.to_result
-      >>= fun from_event ->
-      (find_flat _dest event_env) |> Option.to_result
-      |> Result.is_ok *)
-      true
-      
-      
+      (* TODO: Check if the guard evaluates to True *)
+      Ok true
+      ) |> function
+        | Ok _ as ok -> Result.get_ok ok
+        | Error _ -> false)
   | _ -> true
 
 and check_guard guard env = 
@@ -189,13 +69,66 @@ and propagate_effects event (event_env, expr_env) program =
 
 and propagate_effect relation _event (event_env, expr_env) program = 
   match relation with 
-  | SpawnRelation (_from, guard, _dest) -> 
-    check_guard guard expr_env
-    >>= fun _ ->
-    Ok program 
+  | SpawnRelation (_from, _guard, _spawn_prog) -> 
+    print_endline @@ "Spawn relation of " ^ _from;
+    (* check_guard guard expr_env
+    >>= fun _ -> *)
+    (* TODO: Check if the guard evaluates to True *)
+    (*
+      TODO: 
+      Get events / isnts / relations [X]
+      Alpha - renaming local events []
+      Bind "@trigger" in the env [X]
+      Instantiate all insts []
+      Put in the program [] 
+    *)
+    let (_spawn_events, _spawn_insts, _spawn_relations) = _spawn_prog in
+    (* Rename the event ids to new ones, to prevent id clashing *)
+    fresh_event_ids _spawn_events _spawn_relations
+    >>= fun (_spawn_events, _spawn_relations) ->
+      
+    (* Bind "@trigger" in the env *)
+    Ok (begin_scope expr_env)
+    >>= fun expr_env ->
+    Ok (bind "@trigger" (record_event _event) expr_env)
+    >>= fun _expr_env ->
+    print_endline "Expr env:";
+    print_endline (string_of_env string_of_expr _expr_env);
+
+
+    (* Instantiate template instances present in the spawn *)
+    (* let open Instantiation in *)
+    { template_decls = program.template_decls
+    ; events = []
+    ; template_insts = _spawn_insts
+    ; relations = [] 
+    } |> (* instantiate spawn_prog  *) Result.ok
+    >>= fun { events = inst_spawn_events; template_insts = _; relations = inst_spawn_relations; _ } -> 
+      
+    (* DEBUG! *)
+    print_endline "Spawned events:";
+    List.iter (fun e -> print_endline (string_of_event e)) _spawn_events;
+    print_endline "Spawned relations:";
+    List.iter (fun r -> print_endline (string_of_relation r)) _spawn_relations;
+    print_endline "Spawned inst events:";
+    List.iter (fun e -> print_endline (string_of_event e)) inst_spawn_events;
+    print_endline "Spawned inst relations:";
+    List.iter (fun r -> print_endline (string_of_relation r)) inst_spawn_relations;
+    (* END DEBUG*)
+    
+
+    (* Put it all together *)
+    Ok {
+      program with 
+      events = List.flatten [program.events; _spawn_events; inst_spawn_events];
+      template_insts = [];
+      relations = List.flatten [program.relations; _spawn_relations; inst_spawn_relations];
+    }
+
   | ControlRelation (_from, guard, _dest, _op) -> 
     check_guard guard expr_env
-    >>= fun _ ->
+    >>= fun _guard_value ->
+    (* TODO: Check if the guard evaluates to True *)
     (* Get the event [dest] *)
     (find_flat _dest event_env |> Option.to_result ~none:(event_not_found _dest |> Result.get_error) )
     >>= fun dest_event ->
@@ -220,11 +153,7 @@ and propagate_effect relation _event (event_env, expr_env) program =
     | _ -> Ok program
     
 
-and record_event event = 
-  let { marking; _ } = event in
-  Record [
-    ("value", marking.value)
-  ]
+
 
 (*
 ===============================================================
@@ -234,9 +163,7 @@ and record_event event =
 
 and event_not_found event = Error Printf.(sprintf "Event %s not found" event)
 
-and id_not_found id = Error Printf.(sprintf "Identifier %s not found" id)
-
-and event_not_enabled event = 
+and _event_not_enabled event = 
   let (id, _) = event.info in
   Error Printf.(sprintf "Event %s is not enabled" id)
 
@@ -246,31 +173,34 @@ and event_not_enabled event =
 ===============================================================
 *)
 
-let rec execute ~event_id ?(expr = Unit) program  = 
+let rec execute ~event_id ?(expr = Unit) ?(event_env = empty_env) ?(expr_env = empty_env) program  = 
   (* 
     TODO: 
     - Find the event in the program [X]
     - Check if the event is enabled [+/-]
     - Execute the event
       - Update the event marking [X]
-      - Execute the effects of the relations (propagate the relation effects) []
+      - Execute the effects of the relations (propagate the relation effects) [+/-] (TESTING)
   *)
-  preprocess_program program
-  >>= fun (event_env, expr_env) ->
+  (* preprocess_program program
+  >>= fun (event_env, expr_env) -> *)
 
   match find_flat event_id event_env with
   | None -> event_not_found event_id
   | Some event -> 
-    ( is_enabled event program (event_env, expr_env) |> function
+    (* ( is_enabled event program (event_env, expr_env) |> function
     | false -> event_not_enabled event
     | true -> Ok program 
-    >>= begin match event.io with
+    >>=  *)
+    begin match event.io with
       | Input _ -> execute_event event expr expr_env
       | Output data_expr -> execute_event event data_expr expr_env
-      end
-    >>= propagate_effects event (event_env, expr_env)
-    )
+    end
+    >>= fun event ->
+    propagate_effects event (event_env, expr_env) (update_event event program)
+    (* ) *)
     
+
 and preprocess_program program = 
   fold_left_result
     (fun env event -> 
@@ -278,6 +208,8 @@ and preprocess_program program =
       Ok (bind id event env))
     empty_env program.events
   >>= fun event_env ->
+  (* print_endline "Event env:";
+  print_endline (string_of_env string_of_event event_env); *)
 
   fold_left_result
     (fun env event -> 
@@ -285,26 +217,39 @@ and preprocess_program program =
       Ok (bind id (record_event event) env))
     empty_env program.events
   >>= fun expr_env ->
+  (* print_endline "Expr env:";
+  print_endline (string_of_env string_of_expr expr_env); *)
 
   Ok (event_env, expr_env)
-      
-and execute_event event expr env program = 
+
+and execute_event event expr env = 
   eval_expr expr env
   >>= fun expr ->
   let marking = { event.marking with executed = true; value = expr } in
   let event = { event with marking } in
-  Ok (update_event event program)
+  Ok event
 
-and view ?(filter = (fun _ _ -> true)) program = 
-  preprocess_program program 
-  >>= fun (event_env, expr_env) ->
+and view ?(filter = (fun _ _ -> true)) ?(event_env = empty_env) ?(expr_env = empty_env) program = 
+  (* preprocess_program program 
+  >>= fun (event_env, expr_env) -> *)
   List.filter (filter (event_env, expr_env)) program.events
   |> List.map (fun event -> string_of_event event)
-  |> String.concat "\n" 
+  |> String.concat "\n"
+  |> print_endline 
+  |> Result.ok
+
+and view_debug program =
+  view program
+  >>= fun _ -> 
+  List.map (fun relation -> string_of_relation relation) program.relations
+  |> String.concat "\n"
+  |> print_endline
   |> Result.ok
 
 and view_enabled program =
   view ~filter:(fun (event_env, expr_env) event -> 
     is_enabled event program (event_env, expr_env)) program
 
-
+and _view_disabled program =
+  view ~filter:(fun (event_env, expr_env) event -> 
+    not (is_enabled event program (event_env, expr_env))) program
