@@ -85,7 +85,11 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     fold_left_result 
       (instantiate_relation inst.args)
       [] r_ti
-    >>| fun relations ->
+    >>= fun relations ->
+
+    (* Fresh ids for the events *)
+    fresh_event_ids events relations
+    >>| fun (events, relations) ->
 
     let (result_events, _, result_relations) = result_program in (* Instantiations should be empty! *)
     ( List.flatten [result_events; events], [], List.flatten [result_relations; relations] ) 

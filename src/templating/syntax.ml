@@ -283,6 +283,7 @@ and fresh_event event =
   { event with info = (new_id, label) }
 
 and fresh_event_ids events relations = 
+  (* TODO: alpha-renaming all event'id*)
   Ok (events |> List.map fresh_event, relations)
   
 and record_event event = 

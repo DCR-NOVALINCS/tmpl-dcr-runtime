@@ -1,7 +1,8 @@
 open Templating.Syntax
 open Templating.Runtime
 open Misc.Monads
-open Templating.Instantiation
+open Misc.Env
+(* open Templating.Instantiation *)
 
 
 (*
@@ -32,7 +33,7 @@ let tmpl_g = {
 let g_0_a' = mk_template_inst "g" [("n", IntLit 0); ("a", (Identifier "a'"))] ~x:[]
 
 let g_a' = (
-  [],
+  [mk_event ~id:"b" ~label:"B" (Output (IntLit (-1)))],
   [g_0_a'],
   []
 )
@@ -108,15 +109,11 @@ let _test4 = {
 }
 
 let _trace0 event_env expr_env target = 
-  Ok target
-  >>= execute ~event_env ~expr_env ~event_id:"a" ?expr:(Some (IntLit 1)) 
-  >>= execute ~event_env ~expr_env ~event_id:"a" ?expr:(Some (IntLit 1)) 
-  (* >>= execute ~event_id:"b" *)
+  execute ~event_env ~expr_env ~event_id:"b" target
 
 let _trace1 event_env expr_env target = 
-  Ok target
-  >>= execute ~event_env ~expr_env ~event_id:"a'" ?expr:(Some (BinaryOp (IntLit 1, IntLit 2, Add))) 
-  (* >>= execute ~event_id:"b" *)
+  execute ~event_env ~expr_env ~event_id:"a'" ?expr:(Some (BinaryOp (IntLit 1, IntLit 2, Add))) target
+  (* >>= execute ~event_env ~expr_env ~event_id:"b" *)
 
 (*
 =============================================================================
@@ -124,21 +121,33 @@ let _trace1 event_env expr_env target =
 =============================================================================
 *)  
 
-let execute_traces event_env expr_env traces program = 
+let execute_traces traces program = 
   fold_left_result 
-    (fun program trace -> 
-      trace event_env expr_env program)
-    program traces
+    (fun (program, _, _) trace -> 
+      preprocess_program program
+      >>= fun (event_env, expr_env) ->
+      trace event_env expr_env program
+      >>= fun program ->
+      Ok (program, event_env, expr_env)
+      )
+    (program, empty_env, empty_env) traces
 
 let _ = 
   let target = _test4 in
-  ( preprocess_program target
+  ( 
+    Ok target
+  >>= fun program ->
+    (* preprocess_program target
   >>= fun (event_env, expr_env) ->
   instantiate ~expr_env target
-  >>= fun (program, expr_env) -> 
-  execute_traces event_env expr_env [_trace1] program
-  >>= fun program -> 
-  view ~event_env ~expr_env program )
+  >>= fun (program, expr_env) ->  *)
+  execute_traces [
+    _trace1;
+    (* _trace0; *)
+  ] program
+  >>= fun (program, event_env, expr_env ) -> 
+  view ~event_env ~expr_env program 
+  )
   |> function
   | Error e -> 
     print_endline e;
