@@ -127,44 +127,104 @@ and find_id id env =
 ===============================================================
 *)
 
-and find_event ~id program = 
-  List.find_opt (fun e -> let (id', _) = e.info in id = id') program.events
+(* and find_event ~id env = 
+  find_flat id env *)
 
-and remove_event ~id program = 
+(* and remove_event ~id program = 
   let events = List.filter (fun e -> let (id', _) = e.info in id <> id') program.events in
   { program with events }
 
 and add_event event program = 
   let events = event :: program.events in
-  { program with events }
+  { program with events } *)
 
 and update_event event program = 
-  let events = List.map (fun e -> if (fst e.info) = (fst event.info) then event else e) program.events in
+  let events = List.map (fun e -> 
+    let (id, _) = e.info in
+    let (id', _) = event.info in
+    if id = id' then event else e) program.events in
   { program with events }
 
-and is_enabled event program expr_env = 
+and is_enabled event program (event_env, expr_env) = 
   let relations = program.relations in
   let enabled = event.marking.included in
-  fold_left_result
-    (fun enabled relation -> 
-      let enabled_by = is_enabled_by relation event expr_env in
-      Ok (enabled && enabled_by))
+  List.fold_left 
+    (fun enabled relation -> enabled && is_enabled_by relation event (event_env, expr_env))
     enabled relations
 
-and is_enabled_by relation event expr_env =
-  let _id = fst event.info in
+and is_enabled_by relation event (_event_env, _expr_env) =
+  let (_id, _) = event.info in
   match relation with
-  | ControlRelation (_from, guard, _dest, op) ->
-      let guard_value = eval_expr guard expr_env in
-      ( match guard_value with
-      | Ok True -> 
-        (match op with 
-        | Condition -> false
-        | Milestone -> false 
-        | _ -> true )
-      | _ -> false ) 
+  | ControlRelation (_from, _guard, _dest, _op) ->
+    (* TODO: *)
+      (* Evaluate the guard expression *)
+      (* check_guard guard expr_env
+      >>= fun _guard_value ->
+      (find_flat _from event_env) |> Option.to_result
+      >>= fun from_event ->
+      (find_flat _dest event_env) |> Option.to_result
+      |> Result.is_ok *)
+      true
+      
+      
   | _ -> true
 
+and check_guard guard env = 
+  eval_expr guard env
+  >>= fun guard_value ->
+  match guard_value with
+  | True -> Ok true
+  | False -> Ok false
+  | _ as expr -> Error ("Invalid guard value " ^ string_of_expr expr)
+
+and propagate_effects event (event_env, expr_env) program = 
+  let relations = program.relations in
+  fold_left_result
+    (fun program relation -> 
+      propagate_effect relation event (event_env, expr_env) program
+      |> function
+      | Ok program' -> Ok program'
+      | Error _ -> Ok program)  
+    program relations
+
+and propagate_effect relation _event (event_env, expr_env) program = 
+  match relation with 
+  | SpawnRelation (_from, guard, _dest) -> 
+    check_guard guard expr_env
+    >>= fun _ ->
+    Ok program 
+  | ControlRelation (_from, guard, _dest, _op) -> 
+    check_guard guard expr_env
+    >>= fun _ ->
+    (* Get the event [dest] *)
+    (find_flat _dest event_env |> Option.to_result ~none:(event_not_found _dest |> Result.get_error) )
+    >>= fun dest_event ->
+    (* According to [op], apply the effect on the marking for both events *)
+    (* Order of applying the relations: response -> exclude -> include -> other (do nothing)  *)
+    match _op with
+    | Response -> 
+      let { marking = dest_marking; _ } = dest_event in
+      let dest_marking = { dest_marking with pending = true } in
+      let dest_event = { dest_event with marking = dest_marking } in
+      Ok (update_event dest_event program)
+    | Exclude -> 
+      let { marking = dest_marking; _ } = dest_event in
+      let dest_marking = { dest_marking with included = false } in
+      let dest_event = { dest_event with marking = dest_marking } in
+      Ok (update_event dest_event program)
+    | Include -> 
+      let { marking = dest_marking; _ } = dest_event in
+      let dest_marking = { dest_marking with included = true } in
+      let dest_event = { dest_event with marking = dest_marking } in
+      Ok (update_event dest_event program)
+    | _ -> Ok program
+    
+
+and record_event event = 
+  let { marking; _ } = event in
+  Record [
+    ("value", marking.value)
+  ]
 
 (*
 ===============================================================
@@ -176,6 +236,9 @@ and event_not_found event = Error Printf.(sprintf "Event %s not found" event)
 
 and id_not_found id = Error Printf.(sprintf "Identifier %s not found" id)
 
+and event_not_enabled event = 
+  let (id, _) = event.info in
+  Error Printf.(sprintf "Event %s is not enabled" id)
 
 (*
 ===============================================================
@@ -183,7 +246,7 @@ and id_not_found id = Error Printf.(sprintf "Identifier %s not found" id)
 ===============================================================
 *)
 
-let rec execute ~event_id ?(expr = Unit) env  program  = 
+let rec execute ~event_id ?(expr = Unit) program  = 
   (* 
     TODO: 
     - Find the event in the program [X]
@@ -192,16 +255,38 @@ let rec execute ~event_id ?(expr = Unit) env  program  =
       - Update the event marking [X]
       - Execute the effects of the relations (propagate the relation effects) []
   *)
-  match find_event ~id:event_id program with
+  preprocess_program program
+  >>= fun (event_env, expr_env) ->
+
+  match find_flat event_id event_env with
   | None -> event_not_found event_id
   | Some event -> 
-    is_enabled event program env
-    >>= fun _ ->
-    begin match event.io with
-    | Input _ -> execute_event event expr env program
-    | Output data_expr -> execute_event event data_expr env program
-    end
+    ( is_enabled event program (event_env, expr_env) |> function
+    | false -> event_not_enabled event
+    | true -> Ok program 
+    >>= begin match event.io with
+      | Input _ -> execute_event event expr expr_env
+      | Output data_expr -> execute_event event data_expr expr_env
+      end
+    >>= propagate_effects event (event_env, expr_env)
+    )
     
+and preprocess_program program = 
+  fold_left_result
+    (fun env event -> 
+      let (id , _) = event.info in
+      Ok (bind id event env))
+    empty_env program.events
+  >>= fun event_env ->
+
+  fold_left_result
+    (fun env event -> 
+      let (id, _) = event.info in
+      Ok (bind id (record_event event) env))
+    empty_env program.events
+  >>= fun expr_env ->
+
+  Ok (event_env, expr_env)
       
 and execute_event event expr env program = 
   eval_expr expr env
@@ -210,10 +295,16 @@ and execute_event event expr env program =
   let event = { event with marking } in
   Ok (update_event event program)
 
-and view program = 
-  String.concat "\n" (List.map (fun event -> string_of_event event) program.events)   
-  |> print_endline
+and view ?(filter = (fun _ _ -> true)) program = 
+  preprocess_program program 
+  >>= fun (event_env, expr_env) ->
+  List.filter (filter (event_env, expr_env)) program.events
+  |> List.map (fun event -> string_of_event event)
+  |> String.concat "\n" 
+  |> Result.ok
 
-
+and view_enabled program =
+  view ~filter:(fun (event_env, expr_env) event -> 
+    is_enabled event program (event_env, expr_env)) program
 
 
