@@ -65,7 +65,7 @@ and instantiate_tmpls tmpl_insts tmpl_env expr_env =
 
 and instantiate_tmpl result_program inst tmpl_env expr_env  = 
   let id = inst.tmpl_id in
-  print_endline @@ Printf.sprintf "Instantiating %s(%s)" id (String.concat ", " (List.map (fun (name, expr) -> name ^ " = " ^ (string_of_expr expr)) inst.args));
+  (* print_endline @@ Printf.sprintf "Instantiating %s(%s)" id (String.concat ", " (List.map (fun (name, expr) -> name ^ " = " ^ (string_of_expr expr)) inst.args)); *)
   match find_flat id tmpl_env with
   | None -> tmpl_not_found id
   | Some tmpl ->
@@ -92,29 +92,32 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     (* FIXME: Maybe this approach could generate many events then necessary *)
 
 and instantiate_event _args _expr_env tmpl_events target_event =
-  print_endline @@ string_of_env string_of_expr _expr_env;
+  (* print_endline @@ string_of_env string_of_expr _expr_env; *)
   (* Bind all arguments to its identifier *)
+  Ok (begin_scope _expr_env)
+  >>= fun _expr_env ->
   fold_left_result
     (fun env (prop, expr) -> _bind_arg (prop, expr) env)
     _expr_env _args
   >>= fun _expr_env -> 
-    print_endline "Arguments evaluated!";
+    (* print_endline "Arguments evaluated!";
     print_endline @@ string_of_env string_of_expr _expr_env;
-    print_endline @@ Printf.sprintf "Event Result %s" (string_of_event target_event);
-  (* fold_left_result 
-    (replace_event expr_env)
-    target_event args
-  >>| fun target_event -> *)
-  Ok (target_event :: tmpl_events)
+    print_endline @@ Printf.sprintf "Event Result %s" (string_of_event target_event); *)
+  replace_event target_event _expr_env
+  >>| fun target_event ->
+  target_event :: tmpl_events
 
 
 and instantiate_relation _args _tmpl_relations _target_relation =
   Ok (_target_relation::_tmpl_relations)
 
-(* and replace_event _expr_env event _args  = 
-  (* let (id, label) = event.info in
-  let event = { event with info = (fresh id, label) } in *)
-  Ok event *)
+and replace_event event _expr_env   = 
+  let { marking; _ } = event in
+  eval_expr marking.value _expr_env
+  >>= fun value ->
+  { marking with value }
+  |> fun marking -> 
+     Ok { event with marking }
 
 (*
 ================================================================
@@ -133,8 +136,8 @@ and instantiate ?(expr_env = empty_env) program  =
 
   (* Append the result in the program *)
   let (events, _, relations) = tmpled_program in
-  Ok { program with
+  Ok ({ program with
     events = List.append program.events events;
     template_insts = [];
     relations = List.append program.relations relations;
-  } (* \vec{Q} -> \emptyset *)
+  }, expr_env)

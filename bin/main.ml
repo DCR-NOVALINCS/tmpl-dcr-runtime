@@ -100,10 +100,10 @@ let _test4 = {
     mk_event ~id:"a'" ~label:"A" (Input (UnitTy))
 ]
 ; template_insts = [
-  g_0_a'
+  (* g_0_a' *)
 ]
 ; relations = [
-    (* mk_spawn_relation ~from:"a'" g_a' *)
+    mk_spawn_relation ~from:"a'" g_a'
 ]
 }
 
@@ -124,7 +124,7 @@ let _trace1 event_env expr_env target =
 =============================================================================
 *)  
 
-let traces event_env expr_env traces program = 
+let execute_traces event_env expr_env traces program = 
   fold_left_result 
     (fun program trace -> 
       trace event_env expr_env program)
@@ -132,17 +132,17 @@ let traces event_env expr_env traces program =
 
 let _ = 
   let target = _test4 in
-  (* view_debug target
-  >>| fun _ ->  *)
-  preprocess_program target
-  >>| fun (event_env, expr_env) ->
+  ( preprocess_program target
+  >>= fun (event_env, expr_env) ->
   instantiate ~expr_env target
-  >>= traces event_env expr_env [_trace1]
-  >>= view ~event_env ~expr_env
+  >>= fun (program, expr_env) -> 
+  execute_traces event_env expr_env [_trace1] program
+  >>= fun program -> 
+  view ~event_env ~expr_env program )
   |> function
-    | Ok result -> result
-    | Error e -> 
-      print_endline e;
-      print_endline "-----------------";
-      (string_of_program target) |> print_endline 
+  | Error e -> 
+    print_endline e;
+    print_endline "-----------------";
+    (string_of_program target) |> print_endline 
+  | _ -> ()
 

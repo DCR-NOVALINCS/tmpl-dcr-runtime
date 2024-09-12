@@ -70,7 +70,7 @@ and propagate_effects event (event_env, expr_env) program =
 and propagate_effect relation _event (event_env, expr_env) program = 
   match relation with 
   | SpawnRelation (_from, _guard, _spawn_prog) -> 
-    print_endline @@ "Spawn relation of " ^ _from;
+    (* print_endline @@ "Spawn relation of " ^ _from; *)
     (* check_guard guard expr_env
     >>= fun _ -> *)
     (* TODO: Check if the guard evaluates to True *)
@@ -92,28 +92,28 @@ and propagate_effect relation _event (event_env, expr_env) program =
     >>= fun expr_env ->
     Ok (bind "@trigger" (record_event _event) expr_env)
     >>= fun _expr_env ->
-    print_endline "Expr env:";
-    print_endline (string_of_env string_of_expr _expr_env);
+    (* print_endline "Expr env:";
+    print_endline (string_of_env string_of_expr _expr_env); *)
 
 
     (* Instantiate template instances present in the spawn *)
-    (* let open Instantiation in *)
+    let open Instantiation in
     { template_decls = program.template_decls
     ; events = []
     ; template_insts = _spawn_insts
     ; relations = [] 
-    } |> (* instantiate spawn_prog  *) Result.ok
-    >>= fun { events = inst_spawn_events; template_insts = _; relations = inst_spawn_relations; _ } -> 
+    } |> instantiate ~expr_env
+    >>= fun ({ events = inst_spawn_events; template_insts = _; relations = inst_spawn_relations; _ }, _) -> 
       
     (* DEBUG! *)
-    print_endline "Spawned events:";
+    (* print_endline "Spawned events:";
     List.iter (fun e -> print_endline (string_of_event e)) _spawn_events;
     print_endline "Spawned relations:";
     List.iter (fun r -> print_endline (string_of_relation r)) _spawn_relations;
     print_endline "Spawned inst events:";
     List.iter (fun e -> print_endline (string_of_event e)) inst_spawn_events;
     print_endline "Spawned inst relations:";
-    List.iter (fun r -> print_endline (string_of_relation r)) inst_spawn_relations;
+    List.iter (fun r -> print_endline (string_of_relation r)) inst_spawn_relations; *)
     (* END DEBUG*)
     
 
@@ -185,7 +185,7 @@ let rec execute ~event_id ?(expr = Unit) ?(event_env = empty_env) ?(expr_env = e
   (* preprocess_program program
   >>= fun (event_env, expr_env) -> *)
 
-  match find_flat event_id event_env with
+  (match find_flat event_id event_env with
   | None -> event_not_found event_id
   | Some event -> 
     (* ( is_enabled event program (event_env, expr_env) |> function
@@ -197,7 +197,7 @@ let rec execute ~event_id ?(expr = Unit) ?(event_env = empty_env) ?(expr_env = e
       | Output data_expr -> execute_event event data_expr expr_env
     end
     >>= fun event ->
-    propagate_effects event (event_env, expr_env) (update_event event program)
+    propagate_effects event (event_env, expr_env) (update_event event program))
     (* ) *)
     
 
