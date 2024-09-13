@@ -70,52 +70,56 @@ and propagate_effects event (event_env, expr_env) program =
 and propagate_effect relation _event (event_env, expr_env) program = 
   match relation with 
   | SpawnRelation (_from, _guard, _spawn_prog) -> 
-    (* print_endline @@ "Spawn relation of " ^ _from; *)
     (* check_guard guard expr_env
     >>= fun _ -> *)
     (* TODO: Check if the guard evaluates to True *)
     (*
       TODO: 
       Get events / isnts / relations [X]
-      Alpha - renaming local events []
+      Alpha - renaming local events [+/-]
       Bind "@trigger" in the env [X]
-      Instantiate all insts []
-      Put in the program [] 
+      Instantiate all insts [X]
+      Put in the program [X] 
     *)
     let (_spawn_events, _spawn_insts, _spawn_relations) = _spawn_prog in
+
     (* Rename the event ids to new ones, to prevent id clashing *)
-    fresh_event_ids _spawn_events _spawn_relations
+    fresh_event_ids _spawn_events _spawn_relations []
     >>= fun (_spawn_events, _spawn_relations) ->
       
-    (* Bind "@trigger" in the env *)
+    (* Begin new env scope and bind "@trigger" *)
     Ok (begin_scope expr_env)
     >>= fun expr_env ->
     Ok (bind "@trigger" (record_event _event) expr_env)
     >>= fun _expr_env ->
-    (* print_endline "Expr env:";
-    print_endline (string_of_env string_of_expr _expr_env); *)
+    print_endline "Expr env:";
+    print_endline (string_of_env string_of_expr _expr_env);
 
+    (* Update values of the event inside of the spawn *)
+    fold_left_result
+      (fun events event -> 
+        let { marking; io; _ } = event in 
+        begin match io with 
+        | Input _ as io -> Ok (io, Unit)
+        | Output expr -> 
+          eval_expr expr _expr_env
+          >>| fun value ->
+          (Output value, value)
+        end
+        >>= fun (io, value) ->
+        Ok ({ event with marking = { marking with value }; io } :: events))
+      [] _spawn_events
+    >>= fun _spawn_events ->
 
     (* Instantiate template instances present in the spawn *)
+    (* FIXME: Maybe use instantiate_tmpls instead of this function *)
     let open Instantiation in
     { template_decls = program.template_decls
     ; events = []
     ; template_insts = _spawn_insts
     ; relations = [] 
-    } |> instantiate ~expr_env
+    } |> instantiate ~expr_env 
     >>= fun ({ events = inst_spawn_events; template_insts = _; relations = inst_spawn_relations; _ }, _) -> 
-      
-    (* DEBUG! *)
-    (* print_endline "Spawned events:";
-    List.iter (fun e -> print_endline (string_of_event e)) _spawn_events;
-    print_endline "Spawned relations:";
-    List.iter (fun r -> print_endline (string_of_relation r)) _spawn_relations;
-    print_endline "Spawned inst events:";
-    List.iter (fun e -> print_endline (string_of_event e)) inst_spawn_events;
-    print_endline "Spawned inst relations:";
-    List.iter (fun r -> print_endline (string_of_relation r)) inst_spawn_relations; *)
-    (* END DEBUG*)
-    
 
     (* Put it all together *)
     Ok {
@@ -253,12 +257,7 @@ and view
   |> Result.ok
 
 and view_debug program =
-  view program
-  >>= fun _ -> 
-  List.map (fun relation -> string_of_relation relation) program.relations
-  |> String.concat "\n"
-  |> print_endline
-  |> Result.ok
+  view ~should_print_relations:true program
 
 and view_enabled program =
   view ~filter:(fun (event_env, expr_env) event -> 

@@ -34,9 +34,9 @@ let rec eval_expr expr env =
     ( match v with
     | Record fields -> 
       ( match List.assoc_opt p fields with
-      | None -> Error ("Property " ^ p ^ " not found")
+      | None -> Error ("Property " ^ p ^ " not found in " ^ string_of_expr e)
       | Some v -> Ok v )
-    | _ -> failwith "Invalid property dereference" )
+    | _ -> Error ((string_of_expr e) ^ "is not a record") )
   | List _es -> Ok (List []) (* TODO: *)
   | Record fields -> 
     fold_left_result 
@@ -46,6 +46,7 @@ let rec eval_expr expr env =
       [] fields
     >>| fun fields -> Record fields
   (* | _ -> Ok (IntLit 0) *)
+  | _ -> Error "Invalid expression"
 
 and eval_binop v1 v2 op = 
   match op with

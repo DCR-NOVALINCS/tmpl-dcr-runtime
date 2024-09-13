@@ -39,11 +39,11 @@ and bind_tmpl tmpl env =
   Ok (bind id tmpl env)
 
 and bind_arg (name, expr) env = 
-  print_string @@ Printf.sprintf "Binding %s: %s" name (string_of_expr expr);
+  (* print_string @@ Printf.sprintf "Binding %s: %s" name (string_of_expr expr); *)
   eval_expr expr env
   |> function
   | Ok value -> 
-    print_endline @@ Printf.sprintf " -> %s\n" (string_of_expr value);
+    (* print_endline @@ Printf.sprintf " -> %s\n" (string_of_expr value); *)
     Ok (bind name value env)
   | Error _e as err -> 
     err
@@ -61,14 +61,19 @@ and instantiate_tmpls tmpl_insts tmpl_env expr_env =
 
 and instantiate_tmpl result_program inst tmpl_env expr_env  = 
   let id = inst.tmpl_id in
-  print_endline @@ Printf.sprintf "Instantiating %s(%s)--------\n" id (String.concat ", " (List.map (fun (name, expr) -> name ^ " = " ^ (string_of_expr expr)) inst.args));
   match find_flat id tmpl_env with
   | None -> tmpl_not_found id
   | Some tmpl ->
+    print_endline @@ Printf.sprintf "Instantiating %s(%s) => %s--------\n" 
+    id 
+    (String.concat ", " (List.map (fun (name, expr) -> name ^ " = " ^ (string_of_expr expr)) inst.args))
+    (String.concat ", " inst.x)
+    ;
     (* TODO: Verify if the length of the args are the same as the params *)
     let (e_ti, q_ti, r_ti) = tmpl.graph in
     let exports_mapping = List.combine tmpl.export inst.x in
-    let (result_events, _, result_relations) = result_program in (* Instantiations should be empty! *)
+    let (result_events, _, result_relations) = result_program in 
+    (* Instantiations should be empty! *)
 
     (* DEBUG: Expr_env*)
     print_endline "Expr env:";
@@ -88,6 +93,9 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
       expr_env inst.args
     >>= fun expr_env -> 
     
+    
+
+
 
     (* DEBUG: Expr_env*)
     print_endline "After binding:";
@@ -99,6 +107,11 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
       [] e_ti
     >>= fun events ->
 
+    (* Maps the exported events *)
+    (* TODO: This should also affect the events from the args! *)
+    export_map_events events exports_mapping
+    >>= fun events ->
+    
     (* Instantations inside of the Template *)
     instantiate_tmpls q_ti tmpl_env expr_env
     >>= fun (_other_tmpled_events, _, _other_tmpled_relations) ->
@@ -109,13 +122,8 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
       [] r_ti
     >>= fun relations ->
 
-    (* Maps the exported events *)
-    (* TODO: This should also affect the events from the args! *)
-    export_map_events events exports_mapping
-    >>= fun events ->
-    
     (* Fresh ids for the events *)
-    fresh_event_ids events relations
+    fresh_event_ids events relations exports_mapping
     >>= fun (events, relations) ->
 
     (* Unbind the declared params from the template instance *)
@@ -136,10 +144,15 @@ and instantiate_relation _expr_env _tmpl_relations _target_relation =
   _target_relation::_tmpl_relations
 
 and replace_event event _expr_env   = 
-  let { marking; _ } = event in
+  let { marking; io; _ } = event in
   eval_expr marking.value _expr_env
   >>= fun value ->
-  Ok { event with marking = { marking with value } }
+  begin match io with 
+  | Input _ as input -> input
+  | Output _ -> Output value
+  end |> Result.ok
+  >>| fun io ->
+  { event with marking = { marking with value }; io }
 
 and replace_relation relation _expr_env = 
   match relation with

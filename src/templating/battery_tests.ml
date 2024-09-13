@@ -9,6 +9,25 @@ let add x y = BinaryOp (x, y, Add)
 *)
 
 (*
+tmpl f(num: Number) {
+  a: A[?];
+  g(num, a)
+} => a
+
+*)
+let tmpl_f = {
+  id = "f";
+  params = [("num", IntTy)];
+  graph = (
+    [mk_event ~id:"a" ~label:"A" (Input (UnitTy))],
+    [mk_template_inst "g" [("n", add (Identifier "num") (IntLit 1)); ("a", (Identifier "a"))] ~x:[]],
+    (* [], *)
+    []
+  );
+  export = ["a"]
+}
+
+(*
   tmpl g (n: Number, a: A) {
     b: B[n];
     a -->% b
@@ -23,16 +42,6 @@ let tmpl_g = {
     [mk_control_relation ~from:"a" Exclude ~dest:"b"]
   );
   export = [];
-}
-
-(*
-tmpl i(e: [label]) {} => e
-*)
-let tmpl_i label = {
-  id = "i";
-  params = [("e", (EventTy label))];
-  graph = empty_subprogram;
-  export = ["e"];
 }
 
 (*
@@ -53,22 +62,13 @@ let tmpl_h = {
 }
 
 (*
-tmpl f(num: Number) {
-  a: A[?];
-  g(num, a)
-} => a
-
+tmpl i(e: [label]) {} => e
 *)
-let tmpl_f = {
-  id = "f";
-  params = [("num", IntTy)];
-  graph = (
-    [mk_event ~id:"a" ~label:"A" (Input (UnitTy))],
-    [mk_template_inst "g" [("n", add (Identifier "num") (IntLit 1)); ("a", (Identifier "a"))] ~x:[]],
-    (* [], *)
-    []
-  );
-  export = ["a"]
+let tmpl_i label = {
+  id = "i";
+  params = [("e", (EventTy label))];
+  graph = empty_subprogram;
+  export = ["e"];
 }
 
 (*
@@ -91,9 +91,9 @@ let h ~a ~x = mk_template_inst "h" [("a", (Identifier a))] ~x:[x]
 *)
 
 (*
-a': A[?];
+a': A[?: Number];
 a' -->> {
-  b: B[-1];
+  b: B[@trigger.value];
   g(0, a')
 }
 *)
@@ -101,7 +101,7 @@ let _test0 = {
   template_decls = [tmpl_g; tmpl_i "A"]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (IntTy))]
 ; template_insts = []
-; relations = [mk_spawn_relation ~from:"a" (
+; relations = [mk_spawn_relation ~from:"a'" (
     [mk_event ~id:"b" ~label:"B" (Output (PropDeref (Trigger, "value")))],
     [g ~n:0 ~a:"a'"],
     []
@@ -162,22 +162,24 @@ a' -->> {
   g(0, a')
 }
 a' -->> {
-  b: B[0];
-  g(0, a')
+  b: B[1];
+  g(1, a')
 }
 *)
 let _test4 = {
-  template_decls = [tmpl_h]
-; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
-; template_insts = [
-  h ~a:"a'" ~x:"b2"
-  ; h ~a:"a'" ~x:"b3"
-]
+  template_decls = [ tmpl_g ]
+; events = [ mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
+; template_insts = []
 ; relations = [
   mk_spawn_relation ~from:"a'" (
-    [ mk_event ~id:"b4" ~label:"B" (Output (IntLit 0))],
-    [],
-    [ mk_control_relation ~from:"a'" Exclude ~dest:"b2"]
+    [ mk_event ~id:"b" ~label:"B" (Output (IntLit 0))],
+    [ mk_template_inst "g" [("n", IntLit 0); ("a", (Identifier "a'"))] ~x:[]],
+    []
+  );
+  mk_spawn_relation ~from:"a'" (
+    [ mk_event ~id:"b" ~label:"B" (Output (IntLit 1))],
+    [ mk_template_inst "g" [("n", IntLit 1); ("a", (Identifier "a'"))] ~x:[]],
+    []
   )
 ]
 }
@@ -221,3 +223,21 @@ let _test6 = {
 (*
 TODO: Test feeding a param with a exported event
 *)
+(*
+tmpl i(e: A) {} => e
+
+a: A[?];
+iA(a) => a'
+iA(a') => a''
+*)
+let _test7 = {
+  template_decls = [tmpl_i "A"]
+; events = [
+  mk_event ~id:"a" ~label:"A" (Input (UnitTy))
+]
+; template_insts = [
+  mk_template_inst "i" [("e", (Identifier "a"))] ~x:["a'"]
+  ; mk_template_inst "i" [("e", (Identifier "a'"))] ~x:["a''"]
+]
+; relations = []
+}

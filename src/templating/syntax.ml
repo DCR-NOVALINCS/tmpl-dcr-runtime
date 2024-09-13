@@ -12,6 +12,7 @@ type type_expr =
   | RecordTy of (type_expr) record_field list
   | ListTy of type_expr
   (* ADD Template Type *)
+  (* | TemplateTy of template_def *)
 
 and expr =
   | Unit
@@ -28,6 +29,7 @@ and expr =
   | List of expr list
   | Record of (expr) record_field list
   (* ADD Template Expr *)
+  | Template of template_instance
 
 and binary_op_type =
   | Add
@@ -227,6 +229,7 @@ and string_of_expr = function
   | Record fields -> 
     let string_of_field (name, e) = name ^ " = " ^ (string_of_expr e) in
     "{ " ^ (String.concat "; " (List.map string_of_field fields)) ^ " }"
+  | _ -> "unknown"
 
 and string_of_event_io = function
   | Input ty -> Printf.sprintf "[?:%s]" (string_of_type_expr ty)
@@ -269,16 +272,17 @@ and string_of_template_inst =
     let args = String.concat ", " args in
     Printf.sprintf "%s(%s) => %s" tmpl_id args (String.concat ", " x)
 
-and string_of_subprogram ?(indent = "") ?(abbreviated = true) (events, _templates, relations) = 
-  let string_of_event = string_of_event ~abbreviated in
-  let string_of_relation = string_of_relation in
-  let string_of_template_inst_list = List.map string_of_template_inst _templates in
+and string_of_subprogram ?(indent = "") (events, _templates, relations) = 
   let string_of_event_list = List.map string_of_event events in
+  let string_of_template_inst_list = List.map string_of_template_inst _templates in
   let string_of_relation_list = List.map string_of_relation relations in
-  let events = String.concat "\n" string_of_event_list in
-  let relations = String.concat "\n" string_of_relation_list in
-  let template_insts = String.concat "\n" string_of_template_inst_list in
-  Printf.sprintf "%sEvents:\n%s\n%sTemplate Instances:\n%s\n%sRelations:\n%s" indent events indent template_insts indent relations
+  List.flatten [
+    string_of_event_list;
+    string_of_template_inst_list;
+    string_of_relation_list;
+  ]
+  |> List.map (Printf.sprintf "%s%s" indent)
+  |> String.concat "\n" 
 
 and string_of_program p =
   let { template_decls = _; events; template_insts; relations } = p in
@@ -303,9 +307,18 @@ and fresh_event event =
   let new_id = _fresh id in
   { event with info = (new_id, label) }
 
-and fresh_event_ids events relations = 
-  (* TODO: alpha-renaming all event'id*)
-  Ok (events |> List.map fresh_event, relations)
+and fresh_event_ids events relations _exports_mapping  = 
+  let fresh_events = List.map fresh_event events in
+  let fresh_relations = List.map (function
+    | ControlRelation (from, guard, dest, t) -> 
+      let new_from = List.assoc_opt from _exports_mapping |> Option.value ~default:from in
+      let new_dest = List.assoc_opt dest _exports_mapping |> Option.value ~default:dest in
+      ControlRelation (new_from, guard, new_dest, t)
+    | SpawnRelation (from, guard, subprogram) -> 
+      let new_from = List.assoc_opt from _exports_mapping |> Option.value ~default:from in
+      SpawnRelation (new_from, guard, subprogram)
+  ) relations in
+  Ok (fresh_events, fresh_relations)
   
 and record_event event = 
   let { marking; _ } = event in
