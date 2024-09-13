@@ -11,7 +11,7 @@ open Misc.Monads
 =============================================================================
 *)  
 
-let execute_event ~event_id ?(expr = Unit)  program = 
+let execute_event ~event_id ?(expr = Unit) program = 
   preprocess_program program
   >>= fun (event_env, expr_env) ->
   instantiate ~expr_env program
@@ -34,20 +34,31 @@ let read_command cmd program =
     parse_expression expr
     >>= fun parsed_expr ->
     execute_event ~event_id ~expr:parsed_expr program
+    >>= fun _ -> Ok (program, "Event executed")
   | ["view"] | ["v"] -> 
     view_program program 
-    >>= fun _ -> Ok program
-  | _ -> print_endline "Invalid command"; Ok program
+    >>= fun _ -> Ok (program, "")
+  | _ -> Error "Invalid command"
 
 let rec prompt lexbuf program =
   print_string "> ";
-  let cmd = read_line () |> String.split_on_char ' ' in
+  let cmd = read_line () 
+  |> String.split_on_char ' ' 
+  |> List.filter (fun s -> s <> "") in
   read_command cmd program
   |> function
-    | Ok program -> prompt lexbuf program
-    | Error e -> print_endline e; prompt lexbuf program
+  | Ok (program, msg) -> 
+    print_endline msg;
+    prompt lexbuf program
+  | Error e ->
+    print_endline e;
+    prompt lexbuf program
 
 let _ = 
   let lexbuf = Lexing.from_channel stdin in
-  let program = _test0 in
+  let program = _test3 in
+  preprocess_program program
+  >>= fun (_, expr_env) ->
+  instantiate ~expr_env program
+  >>= fun (program, _) ->
   prompt lexbuf program

@@ -309,7 +309,7 @@ and fresh_event event =
 
 and fresh_event_ids events relations _exports_mapping  = 
   let fresh_events = List.map fresh_event events in
-  let fresh_relations = List.map (function
+  let _fresh_relations = List.map (function
     | ControlRelation (from, guard, dest, t) -> 
       let new_from = fresh from in
       let new_dest = fresh dest in
@@ -318,7 +318,7 @@ and fresh_event_ids events relations _exports_mapping  =
       let new_from = fresh from in
       SpawnRelation (new_from, guard, subprogram)
   ) relations in
-  Ok (fresh_events, fresh_relations)
+  Ok (fresh_events, relations)
   
 and record_event event = 
   let { marking; _ } = event in
