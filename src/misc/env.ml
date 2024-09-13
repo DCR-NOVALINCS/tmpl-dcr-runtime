@@ -37,6 +37,7 @@ let end_scope env =
 let decrease_nesting (x,(x',n)) = (x,(x',n-1))
 
 let string_of_env v_fmt env = 
+  let env_len = List.length env in
   let rec string_of_scope sc = 
     begin match sc with
       | [] -> ""
@@ -46,7 +47,7 @@ let string_of_env v_fmt env =
   let rec string_of_env' n env = 
     begin match env with
       | [] -> ""
-      | sc::env -> "Scope " ^ (string_of_int n) ^ ": { " ^ (string_of_scope sc) ^ " }" ^ "\n" ^ (string_of_env' (n+1) env)
+      | sc::env -> "Scope " ^ (string_of_int (env_len - n)) ^ ": { " ^ (string_of_scope sc) ^ " }" ^ "\n" ^ (string_of_env' (n+1) env)
     end
   in
   string_of_env' 1 env

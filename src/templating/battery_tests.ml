@@ -1,5 +1,7 @@
 open Syntax
 
+let add x y = BinaryOp (x, y, Add)
+
 (*
 =============================================================================
   Templates
@@ -51,12 +53,31 @@ let tmpl_h = {
 }
 
 (*
+tmpl f(num: Number) {
+  a: A[?];
+  g(num, a)
+} => a
+
+*)
+let tmpl_f = {
+  id = "f";
+  params = [("num", IntTy)];
+  graph = (
+    [mk_event ~id:"a" ~label:"A" (Input (UnitTy))],
+    [mk_template_inst "g" [("n", add (Identifier "num") (IntLit 1)); ("a", (Identifier "a"))] ~x:[]],
+    (* [], *)
+    []
+  );
+  export = ["a"]
+}
+
+(*
 =============================================================================
   Instances & Subprograms
 =============================================================================
 *)
 
-let g_0_a' = mk_template_inst "g" [("n", IntLit 0); ("a", (Identifier "a'"))] ~x:[]
+let g ~n ~a = mk_template_inst "g" [("n", (IntLit n)); ("a", (Identifier a))] ~x:[]
 
 let i ~e ~x = mk_template_inst "i" [("e", (Identifier e))] ~x:[x]
 
@@ -82,7 +103,7 @@ let _test0 = {
 ; template_insts = []
 ; relations = [mk_spawn_relation ~from:"a" (
     [mk_event ~id:"b" ~label:"B" (Output (PropDeref (Trigger, "value")))],
-    [g_0_a'],
+    [g ~n:0 ~a:"a'"],
     []
   )]
 }
@@ -94,7 +115,7 @@ g(0, a')
 let _test1 = {
   template_decls = [tmpl_g; tmpl_i "A"]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
-; template_insts = [g_0_a']
+; template_insts = [g ~n:0 ~a:"a'"]
 ; relations = []
 }
 
@@ -160,3 +181,43 @@ let _test4 = {
   )
 ]
 }
+
+(*
+f(5)
+*)
+let _test5 = {
+  template_decls = [tmpl_f; tmpl_g]
+; events = []
+; template_insts = [
+  mk_template_inst "f" [("num", IntLit 5)] ~x:["a'"]
+]
+; relations = []
+}
+
+(*
+a: A[?];
+f(5);
+a -->> {
+  f(2)
+}
+*)
+let _test6 = {
+  template_decls = [tmpl_f; tmpl_g]
+; events = [
+  mk_event ~id:"a" ~label:"A" (Input (UnitTy))
+]
+; template_insts = [
+  mk_template_inst "f" [("num", IntLit 5)] ~x:["a'"]
+]
+; relations = [
+  mk_spawn_relation ~from:"a" (
+    [], 
+    [mk_template_inst "f" [("num", IntLit 2)] ~x:["a''"]],
+    []
+  )
+]
+}
+
+(*
+TODO: Test feeding a param with a exported event
+*)

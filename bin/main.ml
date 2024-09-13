@@ -5,15 +5,6 @@ open Templating.Instantiation
 open Misc.Monads
 (* open Misc.Env *)
 
-
-(*
-=============================================================================
-  Aux functions
-=============================================================================
-*)
-
-let _add x y = BinaryOp (IntLit x, IntLit y, Add)
-
 (*
 =============================================================================
   Main Section
@@ -21,7 +12,7 @@ let _add x y = BinaryOp (IntLit x, IntLit y, Add)
 *)  
 
 let _ = 
-  let target = _test4 in
+  let target = _test6 in
   ( 
     Ok target
     >>= fun program ->
@@ -29,13 +20,13 @@ let _ =
     >>= fun (event_env, expr_env) ->
     instantiate ~expr_env program
     >>= fun (program, expr_env) ->
-    (* execute ~event_env ~expr_env ~event_id:"a'" program
-    >>= fun program ->  *)
+    execute ~event_env ~expr_env ~event_id:"a" program
+    >>= fun program -> 
     view ~event_env ~expr_env ~should_print_relations:true program 
   )
   |> function
-  | Error e -> 
-    print_endline e;
+  | Error _e -> 
+    print_endline _e;
     print_endline "-----------------\n";
     print_endline @@ string_of_program target
   | _ -> ()

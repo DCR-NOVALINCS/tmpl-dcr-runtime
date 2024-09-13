@@ -201,12 +201,12 @@ let rec execute ~event_id ?(expr = Unit) ?(event_env = empty_env) ?(expr_env = e
     (* ) *)
     
 
-and preprocess_program program = 
+and preprocess_program ?(expr_env = empty_env) program = 
   fold_left_result
     (fun env event -> 
       let (id , _) = event.info in
       Ok (bind id event env))
-    empty_env program.events
+    expr_env program.events
   >>= fun event_env ->
   (* print_endline "Event env:";
   print_endline (string_of_env string_of_event event_env); *)

@@ -262,14 +262,23 @@ and string_of_relation = function
   let rel = Printf.sprintf "-%s->>" guard in
   Printf.sprintf "%s %s {\n%s\n}" from rel (string_of_subprogram ~indent:"  " subprogram)
 
+and string_of_template_inst = 
+  let string_of_arg (name, e) = Printf.sprintf "%s = %s" name (string_of_expr e) in
+  fun { tmpl_id; args; x } -> 
+    let args = List.map string_of_arg args in
+    let args = String.concat ", " args in
+    Printf.sprintf "%s(%s) => %s" tmpl_id args (String.concat ", " x)
+
 and string_of_subprogram ?(indent = "") ?(abbreviated = true) (events, _templates, relations) = 
   let string_of_event = string_of_event ~abbreviated in
   let string_of_relation = string_of_relation in
+  let string_of_template_inst_list = List.map string_of_template_inst _templates in
   let string_of_event_list = List.map string_of_event events in
   let string_of_relation_list = List.map string_of_relation relations in
   let events = String.concat "\n" string_of_event_list in
   let relations = String.concat "\n" string_of_relation_list in
-  Printf.sprintf "%s%s\n%s%s" indent events indent relations
+  let template_insts = String.concat "\n" string_of_template_inst_list in
+  Printf.sprintf "%sEvents:\n%s\n%sTemplate Instances:\n%s\n%sRelations:\n%s" indent events indent template_insts indent relations
 
 and string_of_program p =
   let { template_decls = _; events; template_insts; relations } = p in

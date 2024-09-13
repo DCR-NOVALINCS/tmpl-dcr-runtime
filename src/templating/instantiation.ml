@@ -39,11 +39,13 @@ and bind_tmpl tmpl env =
   Ok (bind id tmpl env)
 
 and bind_arg (name, expr) env = 
+  print_string @@ Printf.sprintf "Binding %s: %s" name (string_of_expr expr);
   eval_expr expr env
   |> function
-  | Ok value -> Ok (bind name value env)
-  | Error e as err -> 
-    print_endline e;
+  | Ok value -> 
+    print_endline @@ Printf.sprintf " -> %s\n" (string_of_expr value);
+    Ok (bind name value env)
+  | Error _e as err -> 
     err
 
 (*
@@ -59,21 +61,37 @@ and instantiate_tmpls tmpl_insts tmpl_env expr_env =
 
 and instantiate_tmpl result_program inst tmpl_env expr_env  = 
   let id = inst.tmpl_id in
-  (* print_endline @@ Printf.sprintf "Instantiating %s(%s)" id (String.concat ", " (List.map (fun (name, expr) -> name ^ " = " ^ (string_of_expr expr)) inst.args)); *)
+  print_endline @@ Printf.sprintf "Instantiating %s(%s)--------\n" id (String.concat ", " (List.map (fun (name, expr) -> name ^ " = " ^ (string_of_expr expr)) inst.args));
   match find_flat id tmpl_env with
   | None -> tmpl_not_found id
   | Some tmpl ->
     (* TODO: Verify if the length of the args are the same as the params *)
     let (e_ti, q_ti, r_ti) = tmpl.graph in
     let exports_mapping = List.combine tmpl.export inst.x in
+    let (result_events, _, result_relations) = result_program in (* Instantiations should be empty! *)
+
+    (* DEBUG: Expr_env*)
+    print_endline "Expr env:";
+    print_endline (string_of_env string_of_expr expr_env);
 
     (* Bind all arguments to its identifier *)
     Ok (begin_scope expr_env)
     >>= fun expr_env ->
     fold_left_result
+      (fun env event -> 
+        let (id, _) = event.info in
+        bind_arg (id, record_event event) env)
+      expr_env e_ti
+    >>= fun expr_env -> 
+    fold_left_result
       (fun env (prop, expr) -> bind_arg (prop, expr) env)
       expr_env inst.args
     >>= fun expr_env -> 
+    
+
+    (* DEBUG: Expr_env*)
+    print_endline "After binding:";
+    print_endline (string_of_env string_of_expr expr_env);
 
     (* Events *)
     fold_left_result 
@@ -104,7 +122,6 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     Ok (end_scope expr_env)
     >>| fun _ ->
 
-    let (result_events, _, result_relations) = result_program in (* Instantiations should be empty! *)
     ( List.flatten [result_events; events; _other_tmpled_events], [], List.flatten [result_relations; relations; _other_tmpled_relations] ) 
     (* FIXME: Maybe this approach could generate many events then necessary *)
 

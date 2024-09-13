@@ -10,6 +10,7 @@ open Syntax
 
 let rec eval_expr expr env =
   match expr with
+  | Unit -> Ok Unit
   | True -> Ok True
   | False -> Ok False
   | IntLit i -> Ok (IntLit i)
@@ -44,7 +45,7 @@ let rec eval_expr expr env =
         >>| fun v -> (name, v) :: fields)
       [] fields
     >>| fun fields -> Record fields
-  | _ -> Ok (IntLit 0)
+  (* | _ -> Ok (IntLit 0) *)
 
 and eval_binop v1 v2 op = 
   match op with
