@@ -297,25 +297,25 @@ and string_of_program p =
 (* the alpha-renaming function *)
 let rec _counter = ref 0
 
-and _fresh name =
+and fresh name =
   let res = name ^ "_" ^ (string_of_int !_counter) in
   _counter := !_counter + 1;
   res
 
 and fresh_event event = 
   let (id, label) = event.info in
-  let new_id = _fresh id in
+  let new_id = fresh id in
   { event with info = (new_id, label) }
 
 and fresh_event_ids events relations _exports_mapping  = 
   let fresh_events = List.map fresh_event events in
   let fresh_relations = List.map (function
     | ControlRelation (from, guard, dest, t) -> 
-      let new_from = List.assoc_opt from _exports_mapping |> Option.value ~default:from in
-      let new_dest = List.assoc_opt dest _exports_mapping |> Option.value ~default:dest in
+      let new_from = fresh from in
+      let new_dest = fresh dest in
       ControlRelation (new_from, guard, new_dest, t)
     | SpawnRelation (from, guard, subprogram) -> 
-      let new_from = List.assoc_opt from _exports_mapping |> Option.value ~default:from in
+      let new_from = fresh from in
       SpawnRelation (new_from, guard, subprogram)
   ) relations in
   Ok (fresh_events, fresh_relations)
