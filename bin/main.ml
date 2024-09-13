@@ -15,12 +15,6 @@ let _add x y = BinaryOp (IntLit x, IntLit y, Add)
 
 (*
 =============================================================================
-  Test Section
-=============================================================================
-*)
-
-(*
-=============================================================================
   Templates
 =============================================================================
 *)
@@ -77,22 +71,21 @@ let tmpl_h = {
 
 let g_0_a' = mk_template_inst "g" [("n", IntLit 0); ("a", (Identifier "a'"))] ~x:[]
 
-let i param ex = mk_template_inst "i" [("e", (Identifier param))] ~x:[ex]
+let i ~e ~x = mk_template_inst "i" [("e", (Identifier e))] ~x:[x]
 
-let h a b = mk_template_inst "h" [("a", (Identifier a))] ~x:[b]
-
-let _g_a' = (
-  [mk_event ~id:"b" ~label:"B" (Output (IntLit (-1)))],
-  [g_0_a'],
-  []
-)
-
+let h ~a ~x = mk_template_inst "h" [("a", (Identifier a))] ~x:[x]
 
 (*
-a: A[?];
-a -->> {
+=============================================================================
+  Test Section
+=============================================================================
+*)
+
+(*
+a': A[?];
+a' -->> {
   b: B[-1];
-  g(0, a)
+  g(0, a')
 }
 *)
 let _test0 = {
@@ -107,8 +100,8 @@ let _test0 = {
 }
 
 (*
-a: A[?];
-g(0, a)
+a': A[?];
+g(0, a')
 *)
 let _test1 = {
   template_decls = [tmpl_g; tmpl_i "A"]
@@ -118,36 +111,40 @@ let _test1 = {
 }
 
 (*
-a: A[?];
+a': A[?];
 i(a') => a2
 *)
 let _test2 = {
   template_decls = [tmpl_i "A"]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
-; template_insts = [i "a'" "a2"]
+; template_insts = [i ~e:"a'" ~x:"a2"]
 ; relations = []
 } 
 
 (*
-a: A[?];
-h(a)
+a': A[?];
+h(a') => b2
+h(a') => b3
+a' -->> {
+  b4: B[0];
+  g(0, a')
+}
 *)
 let _test3 = {
   template_decls = [tmpl_h]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
 ; template_insts = [
-  h "a'" "b2"
-  ; h "a'" "b3"
+  h ~a:"a'" ~x:"b2"
+  ; h ~a:"a'" ~x:"b3"
 ]
-; relations = []
+; relations = [
+  mk_spawn_relation ~from:"a'" (
+    [ mk_event ~id:"b4" ~label:"B" (Output (IntLit 0))],
+    [],
+    [ mk_control_relation ~from:"a'" Exclude ~dest:"b2"]
+  )
+]
 }
-
-let _trace0 event_env expr_env target = 
-  execute ~event_env ~expr_env ~event_id:"b" target
-
-let _trace1 event_env expr_env target = 
-  execute ~event_env ~expr_env ~event_id:"a'" target
-  (* >>= execute ~event_env ~expr_env ~event_id:"b" *)
 
 (*
 =============================================================================
@@ -172,6 +169,6 @@ let _ =
   | Error e -> 
     print_endline e;
     print_endline "-----------------\n";
-    (string_of_program target) |> print_endline 
+    print_endline @@ string_of_program target
   | _ -> ()
 

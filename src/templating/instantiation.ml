@@ -92,12 +92,17 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     >>= fun relations ->
 
     (* Maps the exported events *)
+    (* TODO: This should also affect the events from the args! *)
     export_map_events events exports_mapping
     >>= fun events ->
     
     (* Fresh ids for the events *)
     fresh_event_ids events relations
-    >>| fun (events, relations) ->
+    >>= fun (events, relations) ->
+
+    (* Unbind the declared params from the template instance *)
+    Ok (end_scope expr_env)
+    >>| fun _ ->
 
     let (result_events, _, result_relations) = result_program in (* Instantiations should be empty! *)
     ( List.flatten [result_events; events; _other_tmpled_events], [], List.flatten [result_relations; relations; _other_tmpled_relations] ) 
