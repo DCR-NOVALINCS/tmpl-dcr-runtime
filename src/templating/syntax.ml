@@ -11,7 +11,6 @@ type type_expr =
   | EventTy of string
   | RecordTy of (type_expr) record_field list
   | ListTy of type_expr
-  (* | ListTyEmpty *)
   (* ADD Template Type *)
 
 and expr =
@@ -86,6 +85,16 @@ and template_instance = {
   x: string list;
   tmpl_id: string;
 }
+
+(*
+  =============================================================================
+  Program Section: template annotations
+  =============================================================================
+*)
+
+and ('a) template_annotated = 
+  | When of expr * 'a
+  | Foreach of string * expr * 'a
 
 (*
   =============================================================================
@@ -245,19 +254,22 @@ and string_of_relation_type = function
 
 and string_of_relation = function
 | ControlRelation (from, guard, dest, t) -> 
-  let guard = Printf.sprintf "[%s]" (string_of_expr guard) in
+  let guard = if guard = True then "" else Printf.sprintf "[%s]" (string_of_expr guard) in
   let rel = string_of_relation_type t guard in
   Printf.sprintf "%s %s %s" from rel dest
 | SpawnRelation (from, guard, subprogram) -> 
-  let guard = Printf.sprintf "[%s]" (string_of_expr guard) in
+  let guard = if guard = True then "" else Printf.sprintf "[%s]" (string_of_expr guard) in
   let rel = Printf.sprintf "-%s->>" guard in
-  Printf.sprintf "%s %s {\n%s\n}" from rel (string_of_subprogram subprogram)
+  Printf.sprintf "%s %s {\n%s\n}" from rel (string_of_subprogram ~indent:"  " subprogram)
 
-and string_of_subprogram (events, _templates, relations) = 
-  Printf.sprintf "%s\n;\n%s" 
-    (String.concat "\n" (List.map string_of_event events))
-    (* (String.concat "; " []) *)
-    (String.concat "\n" (List.map string_of_relation relations))
+and string_of_subprogram ?(indent = "") ?(abbreviated = true) (events, _templates, relations) = 
+  let string_of_event = string_of_event ~abbreviated in
+  let string_of_relation = string_of_relation in
+  let string_of_event_list = List.map string_of_event events in
+  let string_of_relation_list = List.map string_of_relation relations in
+  let events = String.concat "\n" string_of_event_list in
+  let relations = String.concat "\n" string_of_relation_list in
+  Printf.sprintf "%s%s\n%s%s" indent events indent relations
 
 and string_of_program p =
   let { template_decls = _; events; template_insts; relations } = p in
