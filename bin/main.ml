@@ -21,6 +21,11 @@ let execute_event ~event_id ?(expr = Unit) program =
 let view_program program = 
   preprocess_program program
   >>= fun (event_env, expr_env) ->
+  view_enabled ~event_env ~expr_env program
+
+let debug_program program = 
+  preprocess_program program
+  >>= fun (event_env, expr_env) ->
   view ~should_print_relations:true ~event_env ~expr_env program
 
 (* TODO: *)
@@ -29,15 +34,26 @@ let parse_expression _expr_string =
 
 let read_command cmd program = 
   match cmd with
-  | ["exit"] | ["quit"] | ["q"] -> exit 0
-  | "exec"::event_id::expr | "execute"::event_id::expr | "e"::event_id::expr -> 
+  | ["exit"] | ["q"] -> exit 0
+  | ["help"] | ["h"] -> 
+    Ok (program, 
+    "Commands: \n\
+    - view (v): View the current program\n\
+    - debug (d): View the current program with relations\n\
+    - exec (e) <event_id> <expr>: Execute an event with an expression\n\
+    - exit (q): Exit the program\n\
+    - help (h): Display this message")
+  | "exec"::event_id::expr | "e"::event_id::expr -> 
     parse_expression expr
     >>= fun parsed_expr ->
     execute_event ~event_id ~expr:parsed_expr program
-    >>= fun _ -> Ok (program, "Event executed")
+    >>= fun program -> Ok (program, "Event executed")
   | ["view"] | ["v"] -> 
     view_program program 
-    >>= fun _ -> Ok (program, "")
+    >>= fun unparsed_program -> Ok (program, unparsed_program)
+  | ["debug"] | ["d"] -> 
+    debug_program program 
+    >>= fun unparsed_program -> Ok (program, unparsed_program)
   | _ -> Error "Invalid command"
 
 let rec prompt lexbuf program =
@@ -56,7 +72,7 @@ let rec prompt lexbuf program =
 
 let _ = 
   let lexbuf = Lexing.from_channel stdin in
-  let program = _test3 in
+  let program = _test9 in
   preprocess_program program
   >>= fun (_, expr_env) ->
   instantiate ~expr_env program

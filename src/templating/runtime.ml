@@ -34,19 +34,29 @@ and is_enabled event program (event_env, expr_env) =
     (fun enabled relation -> enabled && is_enabled_by relation event (event_env, expr_env))
     enabled relations
 
-and is_enabled_by relation event (_event_env, expr_env) =
+and is_enabled_by relation event (_event_env, _expr_env) =
   let (_id, _) = event.info in
   match relation with
-  | ControlRelation (_from, guard, _dest, _op) ->
+  | ControlRelation (_from, _guard, _dest, _op) ->
     (* TODO: *)
-      (* Evaluate the guard expression *)
-      (( check_guard guard expr_env
-      >>= fun _guard_value ->
-      (* TODO: Check if the guard evaluates to True *)
-      Ok true
-      ) |> function
-        | Ok _ as ok -> Result.get_ok ok
-        | Error _ -> false)
+    begin match find_flat _dest _event_env with
+    | Some dest_event when _id = fst dest_event.info -> 
+      begin match find_flat _from _event_env with
+      | Some from_event -> 
+        let { marking = from_marking; _ } = from_event in
+        let { marking = dest_marking; _ } = dest_event in
+        begin match _op with 
+        | Condition -> from_marking.included && from_marking.executed
+                      && dest_marking.included
+        | Milestone -> (not from_marking.pending) && from_marking.included
+                      && dest_marking.included
+        | _ -> true 
+      end
+      | None -> true
+      end
+    | _ -> true
+    
+    end
   | _ -> true
 
 and check_guard guard env = 
@@ -167,7 +177,7 @@ and propagate_effect relation _event (event_env, expr_env) program =
 
 and event_not_found event = Error Printf.(sprintf "Event %s not found" event)
 
-and _event_not_enabled event = 
+and event_not_enabled event = 
   let (id, _) = event.info in
   Error Printf.(sprintf "Event %s is not enabled" id)
 
@@ -189,20 +199,20 @@ let rec execute ~event_id ?(expr = Unit) ?(event_env = empty_env) ?(expr_env = e
   (* preprocess_program program
   >>= fun (event_env, expr_env) -> *)
 
-  (match find_flat event_id event_env with
+  match find_flat event_id event_env with
   | None -> event_not_found event_id
   | Some event -> 
-    (* ( is_enabled event program (event_env, expr_env) |> function
+    is_enabled event program (event_env, expr_env) 
+    |> function
     | false -> event_not_enabled event
     | true -> Ok program 
-    >>=  *)
+    >>= fun program -> 
     begin match event.io with
       | Input _ -> execute_event event expr expr_env
       | Output data_expr -> execute_event event data_expr expr_env
     end
     >>= fun event ->
-    propagate_effects event (event_env, expr_env) (update_event event program))
-    (* ) *)
+    propagate_effects event (event_env, expr_env) (update_event event program)
     
 
 and preprocess_program ?(expr_env = empty_env) program = 
@@ -253,14 +263,17 @@ and view
       |> String.concat "\n"
       |> Printf.sprintf "%s\n;\n%s" events_str
     else events_str )
-  |> print_endline 
   |> Result.ok
 
 and view_debug program =
   view ~should_print_relations:true program
 
-and view_enabled program =
-  view ~filter:(fun (event_env, expr_env) event -> 
+and view_enabled
+  ?(event_env = empty_env)
+  ?(expr_env = empty_env)
+  ?(should_print_relations = false)  
+  program =
+  view ~event_env ~expr_env ~should_print_relations ~filter:(fun (event_env, expr_env) event -> 
     is_enabled event program (event_env, expr_env)) program
 
 and _view_disabled program =

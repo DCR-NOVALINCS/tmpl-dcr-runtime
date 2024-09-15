@@ -30,7 +30,7 @@ let tmpl_f = {
 (*
   tmpl g (n: Number, a: A) {
     b: B[n];
-    a -->% b
+    a -->* b
   }
 *)
 let tmpl_g = {
@@ -39,7 +39,7 @@ let tmpl_g = {
   graph = (
     [mk_event ~id:"b" ~label:"B" (Output (Identifier "n"))],
     [],
-    [mk_control_relation ~from:"a" Exclude ~dest:"b"]
+    [mk_control_relation ~from:"a" Condition ~dest:"b"]
   );
   export = [];
 }
@@ -72,17 +72,55 @@ let tmpl_i label = {
 }
 
 (*
+tmpl j() {
+  e: E[?]
+  k(e) => e2
+} => e2
+*)
+let tmpl_j = {
+  id = "j";
+  params = [];
+  graph = (
+    [mk_event ~id:"e" ~label:"E" (Input (UnitTy))],
+    [mk_template_inst "k" [("e", (Identifier "e"))] ~x:["e2"]],
+    []
+  );
+  export = ["e"];
+}
+
+(*
+tmpl k(e: E[?]) {
+  j() => e
+} => e
+*)
+let tmpl_k = {
+  id = "k";
+  params = [("e", (EventTy "E"))];
+  graph = (
+    [],
+    [mk_template_inst "j" [] ~x:["e"]],
+    []
+  );
+  export = ["e"];
+}
+
+(*
 =============================================================================
   Instances & Subprograms
 =============================================================================
 *)
 
-let g ~n ~a = mk_template_inst "g" [("n", (IntLit n)); ("a", (Identifier a))] ~x:[]
+let f ~num ~x = mk_template_inst "f" [("num", (IntLit num))] ~x:[x]
 
-let i ~e ~x = mk_template_inst "i" [("e", (Identifier e))] ~x:[x]
+let g ~n ~a = mk_template_inst "g" [("n", (IntLit n)); ("a", (Identifier a))] ~x:[]
 
 let h ~a ~x = mk_template_inst "h" [("a", (Identifier a))] ~x:[x]
 
+let i ~e ~x = mk_template_inst "i" [("e", (Identifier e))] ~x:[x]
+
+let j ~x = mk_template_inst "j" [] ~x:[x]
+
+let k ~e ~x = mk_template_inst "k" [("e", (Identifier e))] ~x:[x]
 
 (*
 =============================================================================
@@ -150,7 +188,7 @@ let _test3 = {
   mk_spawn_relation ~from:"a'" (
     [ mk_event ~id:"b4" ~label:"B" (Output (IntLit 0))],
     [],
-    [ mk_control_relation ~from:"a'" Exclude ~dest:"b2"]
+    []
   )
 ]
 }
@@ -240,4 +278,29 @@ let _test7 = {
   ; mk_template_inst "i" [("e", (Identifier "a'"))] ~x:["a''"]
 ]
 ; relations = []
+}
+
+(*
+j() => e
+*)
+let _test8 = {
+  template_decls = [tmpl_j; tmpl_k]
+; events = []
+; template_insts = [
+  mk_template_inst "j" [] ~x:["e"]
+]
+; relations = []
+}
+
+let _test9 = {
+  template_decls = []
+; events = [
+  mk_event ~id:"a" ~label:"A" (Input (UnitTy));
+  mk_event ~id:"b" ~label:"B" (Input (UnitTy))
+]
+; template_insts = []
+; relations = [
+  mk_control_relation ~from:"a" Condition ~dest:"b";
+  mk_control_relation ~from:"b" Exclude ~dest:"a"
+]
 }
