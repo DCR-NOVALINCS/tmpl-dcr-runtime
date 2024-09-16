@@ -99,7 +99,7 @@ and propagate_effect relation _event (event_env, expr_env) program =
       (fun events event -> 
         let { marking; io; _ } = event in 
         begin match io with 
-        | Input _ as io -> Ok (io, Unit)
+        | Input _ as io -> Ok (io, event.marking.value)
         | Output expr -> 
           eval_expr expr expr_env
           >>| fun value ->
@@ -118,7 +118,7 @@ and propagate_effect relation _event (event_env, expr_env) program =
     ; template_insts = _spawn_insts
     ; relations = [] 
     } |> instantiate ~expr_env 
-    >>= fun ({ events = inst_spawn_events; template_insts = _; relations = inst_spawn_relations; _ }, _) -> 
+    >>= fun ({ events = inst_spawn_events; relations = inst_spawn_relations; _ }, _) -> 
 
     (* Put it all together *)
     Ok {

@@ -193,15 +193,15 @@ let empty_template_inst = mk_template_inst "" [] ~x:[]
 *)
 
 let rec string_of_type_expr = function
-  | UnitTy -> "unit"
-  | StringTy -> "string"
-  | IntTy -> "int"
-  | BoolTy -> "bool"
+  | UnitTy -> "Unit"
+  | StringTy -> "String"
+  | IntTy -> "Number"
+  | BoolTy -> "Boolean"
   | EventTy s -> s
   | RecordTy fields -> 
     let string_of_field (name, ty) = name ^ " : " ^ (string_of_type_expr ty) in
     "{ " ^ (String.concat "; " (List.map string_of_field fields)) ^ " }"
-  | ListTy ty -> "[" ^ (string_of_type_expr ty) ^ "]"
+  | ListTy ty -> Printf.sprintf "[%s]" (string_of_type_expr ty)
 
 and string_of_expr = function
   | Unit -> "()"

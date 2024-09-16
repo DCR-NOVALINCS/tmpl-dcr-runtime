@@ -73,7 +73,7 @@ let rec prompt lexbuf program =
 
 let _ = 
   let lexbuf = Lexing.from_channel stdin in
-  let program = _test11 in
+  let program = _test10 in
   preprocess_program program
   >>= fun (_, expr_env) ->
   instantiate ~expr_env program

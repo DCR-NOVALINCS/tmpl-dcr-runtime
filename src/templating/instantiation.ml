@@ -71,17 +71,8 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
   match find_flat id tmpl_env with
   | None -> tmpl_not_found id
   | Some tmpl ->
-    print_endline @@ Printf.sprintf "Instantiating %s(%s) => %s --------\n" 
-    id 
-    (String.concat ", " (List.map (fun (name, expr) -> name ^ " = " ^ (string_of_expr expr)) inst.args))
-    (String.concat ", " inst.x)
-    ;
+    print_endline @@ Printf.sprintf "Instantiating %s --------\n" (string_of_template_inst inst);
     (* TODO: Verify if the length of the args are the same as the params *)
-    (* let annotations = inst.tmpl_annotations in
-    analize_annotations inst ~none:empty_template_inst annotations expr_env
-    >>= fun inst ->  *)
-    
-
     let (e_ti, q_ti, r_ti) = tmpl.graph in
     let exports_mapping = List.combine tmpl.export inst.x in
     let (result_events, _, result_relations) = result_program in 
@@ -148,10 +139,10 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     >>| fun _ -> *)
 
     ( List.flatten [result_events; events; _other_tmpled_events], [], List.flatten [result_relations; relations; _other_tmpled_relations] ) 
-    |> fun result -> 
+    (* |> fun result -> 
     print_endline "-----------------";
     print_endline @@ Printf.sprintf "Result: %s" (string_of_subprogram result);
-    result
+    result *)
     (* FIXME: Maybe this approach could generate many events then necessary *)
 
 and instantiate_event _expr_env tmpl_events target_event  =
@@ -174,6 +165,7 @@ and replace_event event _expr_env   =
   | Output _ -> Output value
   end |> Result.ok
   >>| fun io ->
+    print_endline @@ Printf.sprintf "Replacing %s with %s" (string_of_event_io io) (string_of_expr value);
   { event with marking = { marking with value }; io }
 
 and replace_relation relation _expr_env = 
@@ -418,8 +410,16 @@ and evaluate_annotations ?(expr_env = empty_env) program  =
       | _ -> failwith "Unsuported annotation")
     [] relations
   >>= deannotate_relations
-  >>= fun relations ->
-  Ok { program with events ; template_insts; relations }
+  >>| List.partition 
+        (fun relation ->
+          let (from, dest) = match relation with
+          | SpawnRelation (from, _, _, _) -> (from, "")
+          | ControlRelation (from, _, dest, _, _) -> (from, dest) in
+          List.exists (fun event -> let (id, _) = event.info in id = from || id = dest) _eliminated)
+  >>| fun (_, relations) ->
+  
+  (* Put it together *)
+  { program with events ; template_insts; relations }
 
 (*
 ================================================================
@@ -433,8 +433,8 @@ and instantiate ?(expr_env = empty_env) program  =
   >>= fun tmpl_env ->
 
   (* Evaluate the annotations *)
-  (* evaluate_annotations program ~expr_env
-  >>= fun program ->  *)
+  evaluate_annotations program ~expr_env
+  >>= fun program -> 
 
   (* Instantiate all the instantiations of the program *)
   instantiate_tmpls program.template_insts tmpl_env expr_env
