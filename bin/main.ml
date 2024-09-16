@@ -30,7 +30,8 @@ let debug_program program =
 
 (* TODO: *)
 let parse_expression _expr_string = 
-  Ok (IntLit (1))
+  (* let n = Random.full_int 2 in *)
+  Ok (IntLit 5)
 
 let read_command cmd program = 
   match cmd with
@@ -47,7 +48,7 @@ let read_command cmd program =
     parse_expression expr
     >>= fun parsed_expr ->
     execute_event ~event_id ~expr:parsed_expr program
-    >>= fun program -> Ok (program, "Event executed")
+    >>= fun program -> Ok (program, "Event executed with expression " ^ (string_of_expr parsed_expr))
   | ["view"] | ["v"] -> 
     view_program program 
     >>= fun unparsed_program -> Ok (program, unparsed_program)

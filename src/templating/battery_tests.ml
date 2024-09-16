@@ -28,9 +28,9 @@ let tmpl_f = {
 }
 
 (*
-  tmpl g (n: Number, a: A) {
+  tmpl g (n: Number, e: A) {
     b: B[n];
-    a -->* b
+    e -->* b
   }
 *)
 let tmpl_g = {
@@ -89,7 +89,7 @@ let tmpl_j = {
 }
 
 (*
-tmpl k(e: E[?]) {
+tmpl k(e: E[?]) E {
   j() => e
 } => e
 *)
@@ -106,7 +106,7 @@ let tmpl_k = {
 
 (*
 tmpl fac(n: Number) NumberHolder {
-    fac_aux(1, 0, n) => r
+    fac_aux(1, 1, n) => r
 } => r
 *)
 let tmpl_fac = {
@@ -114,7 +114,7 @@ let tmpl_fac = {
   params = [("n", IntTy)];
   graph = (
     [],
-    [mk_template_inst "fac_aux" [("acc", IntLit 1); ("i", IntLit 0); ("n", (Identifier "n"))] ~x:["r"]],
+    [mk_template_inst "fac_aux" [("acc", IntLit 1); ("i", IntLit 1); ("n", (Identifier "n"))] ~x:["r"]],
     []
   );
   export = ["r"]
@@ -122,9 +122,9 @@ let tmpl_fac = {
 
 (*
 tmpl fac_aux(acc: Number, i: Number, n: Number) NumberHolder {
-    (r: NumberHolder) [acc] -- when i >= n
+    r: NumberHolder[acc] -- when i >= n
     ;
-    fac_aux(acc = i * acc, i = i + 1, n = n) -- when i < n
+    fac_aux(acc = i * acc, i = i + 1, n = n) => r -- when i < n
 } => r
 *)
 let tmpl_fac_aux = {
@@ -138,7 +138,7 @@ let tmpl_fac_aux = {
       ; ("i", BinaryOp (Identifier "i", IntLit 1, Add))
       ; ("n", (Identifier "n"))
       ]
-      ~x:[] ~annotations:[When (BinaryOp (Identifier "i", Identifier "n", LessThan))]
+      ~x:["r"] ~annotations:[When (BinaryOp (Identifier "i", Identifier "n", LessThan))]
     ],
     []
   );
@@ -354,23 +354,45 @@ let _test9 = {
 }
 
 (*
-a: A[?: Number]
+a': A[?: Number]
 ;
-a -->> {
-  g(0, a) -- when @trigger.value > 0
+a' -->> {
+  g(0, a') -- when @trigger.value > 0
 }
 *)
 let _test10 = {
   template_decls = [tmpl_g]
+; events = [mk_event ~id:"a'" ~label:"A" (Input (IntTy))]
+; template_insts = []
+; relations = [
+  mk_spawn_relation ~from:"a'" (
+    [],
+    [mk_template_inst "g" [("n", IntLit 0); ("a", (Identifier "a'"))] ~x:[] 
+    ~annotations:[When (BinaryOp (PropDeref(Trigger, "value"), IntLit 0, GreaterThan))]],
+    []
+  )
+]
+}
+
+(*
+a: A[?: Number]
+;
+a -->> {
+  fac(@trigger.value) => result
+} 
+*)
+let _test11 = {
+  template_decls = [tmpl_fac; tmpl_fac_aux]
 ; events = [mk_event ~id:"a" ~label:"A" (Input (IntTy))]
 ; template_insts = []
 ; relations = [
   mk_spawn_relation ~from:"a" (
     [],
-    [mk_template_inst "g" [("n", IntLit 0); ("a", (Identifier "a"))] ~x:[] 
-    ~annotations:[When (BinaryOp (PropDeref(Trigger, "value"), IntLit 0, GreaterThan))]],
+    [
+      mk_template_inst "fac" [("n", PropDeref (Trigger, "value"))] ~x:["result"]
+    ],
     []
-  )
+  ) 
 ]
 }
 
@@ -381,7 +403,7 @@ a -->> {
   fac(i) => result -- foreach i in [0, 1, 2]
 } 
 *)
-let _test11 = {
+let _test12 = {
   template_decls = [tmpl_fac; tmpl_fac_aux]
 ; events = [mk_event ~id:"a" ~label:"A" (Input (UnitTy))]
 ; template_insts = []

@@ -184,6 +184,8 @@ let empty_program = mk_program ()
 
 let empty_subprogram = mk_subprogram ()
 
+let empty_template_inst = mk_template_inst "" [] ~x:[]
+
 (*
   =============================================================================
   Program Section: Pretty Printers
@@ -245,6 +247,7 @@ and string_of_event_marking m =
   Printf.sprintf "{ ex = %b; res = %b; in = %b; va = %s }" m.executed m.pending m.included (string_of_expr m.value)
 
 and string_of_event ?(abbreviated = true) (e : event) =
+  let annots = List.map string_of_template_annotation e.annotations in
   if not abbreviated then
     Printf.sprintf "%s:%s%s %s" (fst e.info) (snd e.info) (string_of_event_io e.io) (string_of_event_marking e.marking)
   else 
@@ -252,7 +255,7 @@ and string_of_event ?(abbreviated = true) (e : event) =
     let pending = if e.marking.pending then "!" else "" in
     let executed = if e.marking.executed then "✓" else "" in
     let value = string_of_expr e.marking.value in
-    Printf.sprintf "%s%s%s%s:%s%s -> %s" excluded pending executed (fst e.info) (snd e.info) (string_of_event_io e.io) value
+    Printf.sprintf "%s%s%s%s:%s%s -> %s %s" excluded pending executed (fst e.info) (snd e.info) (string_of_event_io e.io) value (String.concat " | " annots)
 
 and string_of_relation_type = function
   | Condition -> Printf.sprintf "-%s->*"

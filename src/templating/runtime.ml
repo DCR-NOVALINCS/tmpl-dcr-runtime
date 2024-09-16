@@ -90,9 +90,9 @@ and propagate_effect relation _event (event_env, expr_env) program =
     Ok (begin_scope expr_env)
     >>= fun expr_env ->
     Ok (bind "@trigger" (record_event _event) expr_env)
-    >>= fun _expr_env ->
+    >>= fun expr_env ->
     print_endline "Expr env:";
-    print_endline (string_of_env string_of_expr _expr_env);
+    print_endline (string_of_env string_of_expr expr_env);
 
     (* Update values of the event inside of the spawn *)
     fold_left_result
@@ -101,7 +101,7 @@ and propagate_effect relation _event (event_env, expr_env) program =
         begin match io with 
         | Input _ as io -> Ok (io, Unit)
         | Output expr -> 
-          eval_expr expr _expr_env
+          eval_expr expr expr_env
           >>| fun value ->
           (Output value, value)
         end
