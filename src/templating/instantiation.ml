@@ -23,6 +23,8 @@ open Evaluation
 
 let rec tmpl_not_found id = Error Printf.(sprintf "Template %s not found" id)
 
+and invalid_annotation_value value ty = Error Printf.(sprintf "Invalid annotation value %s for type %s" (string_of_expr value) (string_of_type_expr ty))
+
 (*
 ================================================================
   Binding templates
@@ -55,8 +57,16 @@ and bind_arg (name, expr) env =
 *)
 
 and instantiate_tmpls tmpl_insts tmpl_env expr_env = 
+  (* FIXME: Move this inside of the [instantiate_tmpl] function *)
+  fold_left_result
+    (fun final_insts inst -> 
+      analize_annotations [inst] inst.tmpl_annotations expr_env
+      >>| List.append final_insts)
+    [] tmpl_insts 
+  >>= fun tmpl_insts ->
   fold_left_result 
-    (fun inst_program inst -> instantiate_tmpl inst_program inst tmpl_env expr_env)
+    (fun inst_program inst -> 
+      instantiate_tmpl inst_program inst tmpl_env expr_env)
     empty_subprogram tmpl_insts
 
 and instantiate_tmpl result_program inst tmpl_env expr_env  = 
@@ -101,7 +111,8 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     print_endline "After binding:";
     print_endline (string_of_env string_of_expr expr_env);
 
-    (* Events *)
+    
+    (* Instantiate events *)
     fold_left_result 
       (instantiate_event expr_env)
       [] e_ti
@@ -116,11 +127,15 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     instantiate_tmpls q_ti tmpl_env expr_env
     >>= fun (_other_tmpled_events, _, _other_tmpled_relations) ->
 
-    (* Relations *)
+    (* Instantiate relations *)
     fold_left_result 
       (instantiate_relation expr_env)
       [] r_ti
     >>= fun relations ->
+
+    (* Filter/Iterate the relations based on its annotations  *)
+    (* eval_relation_template_annotations relations expr_env
+    >>= fun relations ->  *)
 
     (* Fresh ids for the events *)
     fresh_event_ids events relations exports_mapping
@@ -134,6 +149,7 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     (* FIXME: Maybe this approach could generate many events then necessary *)
 
 and instantiate_event _expr_env tmpl_events target_event  =
+(* Filter/Iterate the events based on its annotations  *)
   replace_event target_event _expr_env
   >>| fun target_event ->
   target_event :: tmpl_events
@@ -156,15 +172,15 @@ and replace_event event _expr_env   =
 
 and replace_relation relation _expr_env = 
   match relation with
-  | SpawnRelation (from, guard, subprogram) -> 
+  | SpawnRelation (from, guard, subprogram, _annot) -> 
     eval_expr guard _expr_env
     >>| fun guard ->
     begin match find_flat from _expr_env with
     | Some (Identifier id) -> id
     | _ -> from end
     |> fun from ->
-    SpawnRelation (from, guard, subprogram)
-  | ControlRelation (from, guard, dest, t) -> 
+    SpawnRelation (from, guard, subprogram, _annot)
+  | ControlRelation (from, guard, dest, t, _annot) -> 
     eval_expr guard _expr_env
     >>| fun guard ->
     begin match find_flat from _expr_env with
@@ -175,7 +191,66 @@ and replace_relation relation _expr_env =
     | Some (Identifier id) -> id
     | _ -> dest end
     |> fun dest ->
-    ControlRelation (from, guard, dest, t)
+    ControlRelation (from, guard, dest, t, _annot)
+
+and when_annotation body expr expr_env = 
+  (* Evaluate [expr] *)
+  (eval_expr expr expr_env
+  >>= fun value -> 
+
+  print_endline @@ Printf.sprintf "When annotation: %s" (string_of_expr value);
+  (* Check if the [expr] evaluates to True, if so return [body], return empty otherwise *)
+  begin match value with
+  | True -> Ok body
+  | _ -> Ok []
+  end) |> Result.to_option  
+and foreach_annotation body eval_body x expr expr_env =
+  (* Evaluate [expr] *)
+  eval_expr expr expr_env
+  >>= fun value -> 
+
+  (* Check if [expr] is a list *)
+  match value with
+  | List values ->
+    fold_left_result
+      (fun results value -> 
+        (* Evaluate [value] *)
+        eval_expr value expr_env
+        >>= fun value ->
+        
+        (* Bind [x] with the expr of [value] *)
+        Ok (bind x value expr_env)
+        >>= fun expr_env ->
+        
+        (* Evaluate [body] *)
+        eval_body body expr_env
+        >>= fun body ->
+        
+        (* Append the result in the acc [results] *)
+        Ok (body::results) )
+      [] values
+    >>| List.flatten
+  | _ -> invalid_annotation_value value (ListTy (UnitTy))
+ 
+and analize_annotations body annotations expr_env = 
+  print_endline "Analizing annotations";
+  fold_left_result
+    (fun result annotation -> 
+      analize_annotation body annotation expr_env
+      >>= fun body -> Ok (body::result))
+    [] annotations
+  >>| List.flatten
+
+and analize_annotation body annotation expr_env =
+  match annotation with 
+  | When expr -> 
+    begin match when_annotation body expr expr_env with
+    | Some body -> Ok body
+    | None -> Ok []
+    end
+  | Foreach (x, expr) ->
+    (* TODO: Function to evaluate and change [body] *)
+    foreach_annotation body (fun body _expr_env -> Ok body) x expr expr_env
 
 and export_map_events events export_mapping =
   fold_left_result

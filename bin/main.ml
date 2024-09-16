@@ -30,7 +30,7 @@ let debug_program program =
 
 (* TODO: *)
 let parse_expression _expr_string = 
-  Ok (IntLit (-1))
+  Ok (IntLit (1))
 
 let read_command cmd program = 
   match cmd with
@@ -72,7 +72,7 @@ let rec prompt lexbuf program =
 
 let _ = 
   let lexbuf = Lexing.from_channel stdin in
-  let program = _test9 in
+  let program = _test11 in
   preprocess_program program
   >>= fun (_, expr_env) ->
   instantiate ~expr_env program

@@ -9,17 +9,6 @@ open Evaluation
 ===============================================================
 *)
 
-(* and find_event ~id env = 
-  find_flat id env *)
-
-(* and remove_event ~id program = 
-  let events = List.filter (fun e -> let (id', _) = e.info in id <> id') program.events in
-  { program with events }
-
-and add_event event program = 
-  let events = event :: program.events in
-  { program with events } *)
-
 let rec update_event event program = 
   let events = List.map (fun e -> 
     let (id, _) = e.info in
@@ -37,7 +26,7 @@ and is_enabled event program (event_env, expr_env) =
 and is_enabled_by relation event (_event_env, _expr_env) =
   let (_id, _) = event.info in
   match relation with
-  | ControlRelation (_from, _guard, _dest, _op) ->
+  | ControlRelation (_from, _guard, _dest, _op, _annot) ->
     (* TODO: *)
     begin match find_flat _dest _event_env with
     | Some dest_event when _id = fst dest_event.info -> 
@@ -65,7 +54,7 @@ and check_guard guard env =
   match guard_value with
   | True -> Ok true
   | False -> Ok false
-  | _ as expr -> Error ("Invalid guard value " ^ string_of_expr expr)
+  | _ as expr -> invalid_guard_value expr
 
 and propagate_effects event (event_env, expr_env) program = 
   let relations = program.relations in
@@ -79,7 +68,7 @@ and propagate_effects event (event_env, expr_env) program =
 
 and propagate_effect relation _event (event_env, expr_env) program = 
   match relation with 
-  | SpawnRelation (_from, _guard, _spawn_prog) -> 
+  | SpawnRelation (_from, _guard, _spawn_prog, _annot) -> 
     (* check_guard guard expr_env
     >>= fun _ -> *)
     (* TODO: Check if the guard evaluates to True *)
@@ -139,7 +128,7 @@ and propagate_effect relation _event (event_env, expr_env) program =
       relations = List.flatten [program.relations; _spawn_relations; inst_spawn_relations];
     }
 
-  | ControlRelation (_from, guard, _dest, _op) -> 
+  | ControlRelation (_from, guard, _dest, _op, _annot) -> 
     check_guard guard expr_env
     >>= fun _guard_value ->
     (* TODO: Check if the guard evaluates to True *)
@@ -180,6 +169,9 @@ and event_not_found event = Error Printf.(sprintf "Event %s not found" event)
 and event_not_enabled event = 
   let (id, _) = event.info in
   Error Printf.(sprintf "Event %s is not enabled" id)
+
+and invalid_guard_value value = 
+  Error Printf.(sprintf "Invalid guard value %s" (string_of_expr value))
 
 (*
 ===============================================================

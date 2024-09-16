@@ -10,9 +10,7 @@ open Syntax
 
 let rec eval_expr expr env =
   match expr with
-  | Unit -> Ok Unit
-  | True -> Ok True
-  | False -> Ok False
+  | Unit | True | False -> Ok expr
   | IntLit i -> Ok (IntLit i)
   | StringLit s -> Ok (StringLit s)
   | Parenthesized e -> eval_expr e env
@@ -37,7 +35,14 @@ let rec eval_expr expr env =
       | None -> Error ("Property " ^ p ^ " not found in " ^ string_of_expr e)
       | Some v -> Ok v )
     | _ -> Error ((string_of_expr e) ^ "is not a record") )
-  | List _es -> Ok (List []) (* TODO: *)
+  | List es -> 
+    fold_left_result 
+      (fun result e -> 
+        eval_expr e env
+        >>= fun v -> Ok (v :: result)
+        )
+      [] es
+    >>| fun es -> List es
   | Record fields -> 
     fold_left_result 
       (fun fields (name, e) -> 
@@ -86,11 +91,23 @@ and eval_binop v1 v2 op =
       if i1 > i2 then Ok True else Ok False
     | _ -> failwith "Invalid arguments for GreaterThan")
 
+  | GreaterOrEqual ->
+    (match v1, v2 with
+    | IntLit i1, IntLit i2 -> 
+      if i1 >= i2 then Ok True else Ok False
+    | _ -> failwith "Invalid arguments for GreaterOrEqual")
+
   | LessThan ->
     (match v1, v2 with
     | IntLit i1, IntLit i2 -> 
       if i1 < i2 then Ok True else Ok False
     | _ -> failwith "Invalid arguments for LessThan")
+
+  | LessOrEqual ->
+    (match v1, v2 with
+    | IntLit i1, IntLit i2 -> 
+      if i1 <= i2 then Ok True else Ok False
+    | _ -> failwith "Invalid arguments for LessOrEqual")
 
   | And ->
     (match v1, v2 with
@@ -120,3 +137,32 @@ and find_id id env =
   match find_flat id env with
   | None -> Error ("Identifier " ^ id ^ " not found")
   | Some expr -> Ok expr
+
+and partial_eval_expr expr env = 
+  match expr with
+  | BinaryOp (e1, e2, op) -> 
+    partial_eval_expr e1 env
+    >>= fun v1-> partial_eval_expr e2 env
+    >>= fun v2 -> Ok (BinaryOp (v1, v2, op))
+  | UnaryOp (e, op) ->
+    partial_eval_expr e env
+    >>= fun v -> Ok (UnaryOp (v, op))
+  | PropDeref (e, p) ->
+    partial_eval_expr e env
+    >>= fun v -> Ok (PropDeref (v, p))
+  | Record fields ->
+    fold_left_result 
+      (fun fields (name, e) -> 
+        partial_eval_expr e env
+        >>| fun v -> (name, v) :: fields)
+      [] fields
+    >>| fun fields -> Record fields
+  | List _es -> 
+    fold_left_result 
+      (fun result e -> 
+        partial_eval_expr e env
+        >>= fun v -> Ok (v :: result)
+        )
+      [] _es
+    >>| fun es -> List es
+  | _ -> Ok expr

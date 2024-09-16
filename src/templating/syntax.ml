@@ -37,7 +37,9 @@ and binary_op_type =
   | Eq
   | NotEq
   | GreaterThan
+  | GreaterOrEqual
   | LessThan
+  | LessOrEqual
   | And
   | Or
 
@@ -86,6 +88,7 @@ and template_instance = {
   args : (string * expr) list;
   x: string list;
   tmpl_id: string;
+  tmpl_annotations: template_annotation list;
 }
 
 (*
@@ -94,9 +97,9 @@ and template_instance = {
   =============================================================================
 *)
 
-and ('a) template_annotated = 
-  | When of expr * 'a
-  | Foreach of string * expr * 'a
+and template_annotation = 
+  | When of expr
+  | Foreach of string * expr
 
 (*
   =============================================================================
@@ -108,6 +111,7 @@ and event =
   { info : event_info
   ; io : event_io
   ; marking : event_marking
+  ; annotations : template_annotation list
   }
 
 and event_info = string * string (* id : label *)
@@ -130,8 +134,8 @@ and event_marking =
 *)
 
 and relation =
-  | ControlRelation of string * expr * string * relation_type
-  | SpawnRelation of string * expr * subprogram
+  | ControlRelation of string * expr * string * relation_type * template_annotation list
+  | SpawnRelation of string * expr * subprogram * template_annotation list
 
 and relation_type =
   | Condition
@@ -151,15 +155,15 @@ let mk_marking ?(executed=false) ?(pending=false) ?(included=true) ?(value=Unit)
 
 let default_marking = mk_marking ()
 
-let mk_event ?(marking=default_marking) ~id ~label io = { info = (id, label); io = io; marking }
+let mk_event ?(marking=default_marking) ?(annotations = []) ~id ~label io = { info = (id, label); io = io; marking; annotations }
 
-let mk_control_relation ~from ?(guard = True) ~dest t = ControlRelation (from, guard, dest, t)
+let mk_control_relation ?(annotations = []) ~from ?(guard = True) ~dest t = ControlRelation (from, guard, dest, t, annotations)
 
-let mk_spawn_relation ~from ?(guard= True) subprogram = SpawnRelation (from, guard, subprogram)
+let mk_spawn_relation ?(annotations = []) ~from ?(guard= True) subprogram = SpawnRelation (from, guard, subprogram, annotations)
 
 let mk_template_def id params graph ~export = { id; params; graph; export }
 
-let mk_template_inst id args ~x = { tmpl_id = id; args; x }
+let mk_template_inst ?(annotations = []) id args ~x = { tmpl_id = id; args; x; tmpl_annotations=annotations }
 
 let mk_program 
   ?(template_decls=[])
@@ -211,7 +215,9 @@ and string_of_expr = function
       | Eq -> "=="
       | NotEq -> "!="
       | GreaterThan -> ">"
+      | GreaterOrEqual -> ">="
       | LessThan -> "<"
+      | LessOrEqual -> "<="
       | And -> "&&"
       | Or -> "||"
     in
@@ -256,21 +262,43 @@ and string_of_relation_type = function
   | Response -> Printf.sprintf "*-%s->"
 
 and string_of_relation = function
-| ControlRelation (from, guard, dest, t) -> 
+| ControlRelation (from, guard, dest, t, annot) -> 
   let guard = if guard = True then "" else Printf.sprintf "[%s]" (string_of_expr guard) in
   let rel = string_of_relation_type t guard in
-  Printf.sprintf "%s %s %s" from rel dest
-| SpawnRelation (from, guard, subprogram) -> 
+  let annot = 
+    if List.length annot <= 0 then ""
+    else List.map string_of_template_annotation annot
+    |> String.concat " | " 
+    |> Printf.sprintf "-- %s"
+  in
+  Printf.sprintf "%s %s %s %s" from rel dest annot
+| SpawnRelation (from, guard, subprogram, annot) -> 
   let guard = if guard = True then "" else Printf.sprintf "[%s]" (string_of_expr guard) in
   let rel = Printf.sprintf "-%s->>" guard in
-  Printf.sprintf "%s %s {\n%s\n}" from rel (string_of_subprogram ~indent:"  " subprogram)
+  let annot = 
+    if List.length annot <= 0 then ""
+    else List.map string_of_template_annotation annot
+    |> String.concat " | " 
+    |> Printf.sprintf "-- %s"
+  in
+  Printf.sprintf "%s %s {\n%s\n} %s" from rel (string_of_subprogram ~indent:"  " subprogram) annot
 
 and string_of_template_inst = 
   let string_of_arg (name, e) = Printf.sprintf "%s = %s" name (string_of_expr e) in
-  fun { tmpl_id; args; x } -> 
+  fun { tmpl_id; args; x; tmpl_annotations = annotations } -> 
     let args = List.map string_of_arg args in
     let args = String.concat ", " args in
-    Printf.sprintf "%s(%s) => %s" tmpl_id args (String.concat ", " x)
+    let xs = String.concat ", " x in
+    let annots = if List.length annotations <= 0 then "" 
+    else List.map string_of_template_annotation annotations 
+    |> String.concat " | " 
+    |> Printf.sprintf "-- %s" in
+    Printf.sprintf "%s(%s) => %s %s" tmpl_id args xs annots
+
+and string_of_template_annotation = 
+  function 
+  | When e -> Printf.sprintf "when %s" (string_of_expr e)
+  | Foreach (name, e) -> Printf.sprintf "foreach %s in %s" name (string_of_expr e)
 
 and string_of_subprogram ?(indent = "") (events, _templates, relations) = 
   let string_of_event_list = List.map string_of_event events in
@@ -310,13 +338,13 @@ and fresh_event event =
 and fresh_event_ids events relations _exports_mapping  = 
   let fresh_events = List.map fresh_event events in
   let _fresh_relations = List.map (function
-    | ControlRelation (from, guard, dest, t) -> 
+    | ControlRelation (from, guard, dest, t, _annot) -> 
       let new_from = fresh from in
       let new_dest = fresh dest in
-      ControlRelation (new_from, guard, new_dest, t)
-    | SpawnRelation (from, guard, subprogram) -> 
+      ControlRelation (new_from, guard, new_dest, t, _annot)
+    | SpawnRelation (from, guard, subprogram, _annot) -> 
       let new_from = fresh from in
-      SpawnRelation (new_from, guard, subprogram)
+      SpawnRelation (new_from, guard, subprogram, _annot)
   ) relations in
   Ok (fresh_events, relations)
   

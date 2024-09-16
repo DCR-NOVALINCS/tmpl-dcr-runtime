@@ -105,6 +105,47 @@ let tmpl_k = {
 }
 
 (*
+tmpl fac(n: Number) NumberHolder {
+    fac_aux(1, 0, n) => r
+} => r
+*)
+let tmpl_fac = {
+  id = "fac";
+  params = [("n", IntTy)];
+  graph = (
+    [],
+    [mk_template_inst "fac_aux" [("acc", IntLit 1); ("i", IntLit 0); ("n", (Identifier "n"))] ~x:["r"]],
+    []
+  );
+  export = ["r"]
+}
+
+(*
+tmpl fac_aux(acc: Number, i: Number, n: Number) NumberHolder {
+    (r: NumberHolder) [acc] -- when i >= n
+    ;
+    fac_aux(acc = i * acc, i = i + 1, n = n) -- when i < n
+} => r
+*)
+let tmpl_fac_aux = {
+  id = "fac_aux";
+  params = [("acc", IntTy); ("i", IntTy); ("n", IntTy)];
+  graph = (
+    [mk_event ~id:"r" ~label:"NumberHolder" (Output (Identifier "acc")) 
+    ~annotations:[When (BinaryOp (Identifier "i", Identifier "n", GreaterOrEqual))]],
+    [mk_template_inst "fac_aux" 
+      [ ("acc", BinaryOp (Identifier "i", Identifier "acc", Mult))
+      ; ("i", BinaryOp (Identifier "i", IntLit 1, Add))
+      ; ("n", (Identifier "n"))
+      ]
+      ~x:[] ~annotations:[When (BinaryOp (Identifier "i", Identifier "n", LessThan))]
+    ],
+    []
+  );
+  export = ["r"]
+}
+
+(*
 =============================================================================
   Instances & Subprograms
 =============================================================================
@@ -292,15 +333,66 @@ let _test8 = {
 ; relations = []
 }
 
+(*
+a: A[?] -- when 0 > 1
+b: B[?]
+;
+a -->* b
+b -->% a
+*)
 let _test9 = {
   template_decls = []
 ; events = [
-  mk_event ~id:"a" ~label:"A" (Input (UnitTy));
+  mk_event ~id:"a" ~label:"A" (Input (UnitTy)) ~annotations:[When (BinaryOp (IntLit 0, IntLit 1, GreaterThan))];
   mk_event ~id:"b" ~label:"B" (Input (UnitTy))
 ]
 ; template_insts = []
 ; relations = [
   mk_control_relation ~from:"a" Condition ~dest:"b";
   mk_control_relation ~from:"b" Exclude ~dest:"a"
+]
+}
+
+(*
+a: A[?: Number]
+;
+a -->> {
+  g(0, a) -- when @trigger.value > 0
+}
+*)
+let _test10 = {
+  template_decls = [tmpl_g]
+; events = [mk_event ~id:"a" ~label:"A" (Input (IntTy))]
+; template_insts = []
+; relations = [
+  mk_spawn_relation ~from:"a" (
+    [],
+    [mk_template_inst "g" [("n", IntLit 0); ("a", (Identifier "a"))] ~x:[] 
+    ~annotations:[When (BinaryOp (PropDeref(Trigger, "value"), IntLit 0, GreaterThan))]],
+    []
+  )
+]
+}
+
+(*
+a: A[?]
+;
+a -->> {
+  fac(i) => result -- foreach i in [0, 1, 2]
+} 
+*)
+let _test11 = {
+  template_decls = [tmpl_fac; tmpl_fac_aux]
+; events = [mk_event ~id:"a" ~label:"A" (Input (UnitTy))]
+; template_insts = []
+; relations = [
+  mk_spawn_relation ~from:"a" (
+    [],
+    [
+      mk_template_inst "fac" [("n", Identifier "i")] ~x:["result"]
+      ~annotations:[ Foreach ("i", List [IntLit 0; IntLit 1; IntLit 2]) ]  
+    ],
+    []
+  ) 
 ]
 }

@@ -28,8 +28,8 @@ let get_relation id program =
   let relations = program.relations in
   List.find_opt (fun r -> 
     match r with
-    | ControlRelation (from, _, dest, _) -> from = id || dest = id
-    | SpawnRelation (from, _, _) -> from = id) relations
+    | ControlRelation (from, _, dest, _, _) -> from = id || dest = id
+    | SpawnRelation (from, _, _, _) -> from = id) relations
 
 (**
   [has_relation id program]
