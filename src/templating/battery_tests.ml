@@ -418,3 +418,19 @@ let _test12 = {
   ) 
 ]
 }
+
+(*
+a: A[?]
+b: B[i] -- foreach i in [0, 1, 2]
+;
+*)
+let _test13 = {
+  template_decls = []
+; events = [
+  mk_event ~id:"a" ~label:"A" (Input (UnitTy))
+  ; mk_event ~id:"b" ~label:"B" (Output (Identifier "i")) 
+  ~annotations: [ Foreach ("i", List([IntLit 0; IntLit 1; IntLit 2])) ]
+] 
+; template_insts = []
+; relations = []
+}
