@@ -434,3 +434,110 @@ let _test13 = {
 ; template_insts = []
 ; relations = []
 }
+
+(*
+=============================================================================
+  Robot Watering Plant Example
+=============================================================================
+*)
+
+let robot_tmpl = {
+  id = "robot";
+  params = [("id", StringTy)];
+  graph = (
+    [
+      mk_event ~id:"r" ~label:"Robot" (Output (Record [("id", Identifier "id")]));
+      mk_event ~id:"m" ~label:"move" (Input (RecordTy [("x", IntTy); ("y", IntTy)]));
+      mk_event ~id:"cf" ~label:"collectFruits" (Input (EventTy "Plant"));
+      mk_event ~id:"w" ~label:"watering" (Input (EventTy "Plant"));
+      mk_event ~id:"t" ~label:"trim" (Input (EventTy "Plant"));
+    ],
+    [],
+    [
+      mk_control_relation ~from:"m" Condition ~dest:"cf";
+      mk_control_relation ~from:"m" Condition ~dest:"w";
+      mk_control_relation ~from:"m" Condition ~dest:"t";
+      mk_control_relation ~from:"cf" Milestone ~dest:"wp";
+      mk_control_relation ~from:"cf" Milestone ~dest:"t";
+      mk_control_relation ~from:"w" Milestone ~dest:"cf";
+      mk_control_relation ~from:"w" Milestone ~dest:"t";
+      mk_control_relation ~from:"t" Milestone ~dest:"w";
+      mk_control_relation ~from:"t" Milestone ~dest:"cf";
+      ]
+  );
+  export = ["w"; "cf"; "t"]
+}
+
+let robot ~id ~x ~annotations = mk_template_inst "robot" [("id", id)] ~x ~annotations
+
+let plant_tmpl = {
+  id = "plant";
+  params = [
+    ("id", StringTy);
+    ("position", RecordTy [("x", IntTy); ("y", IntTy)]);
+    ("plantType", RecordTy [("typename", StringTy)]);
+    ("wp", EventTy "watering");
+  ];
+  graph = (
+    [
+      mk_event ~id:"p" ~label:"Plant" (Output (Record [("id", Identifier "id"); ("plantType", Identifier "plantType"); ("position", Identifier "position")]));
+      mk_event ~id:"nw" ~label:"needWatering" (Input (UnitTy));
+    ],
+    [],
+    [
+      mk_control_relation ~from:"nw" Exclude ~dest:"nw";
+      mk_control_relation ~from:"nw" Response ~dest:"wp";
+      mk_control_relation ~from:"nw" Include ~dest:"nw";
+    ]
+  );
+  export = []
+}
+
+let plant ~id ~position ~plantType ~wp ~annotations = mk_template_inst "plant" [
+  ("id", id);
+  ("position", position);
+  ("plantType", plantType);
+  ("wp", wp)
+] ~x:[] ~annotations:annotations
+
+let _robot_plant_watering_test = {
+  template_decls = [robot_tmpl; plant_tmpl]
+; events = [
+  mk_event ~id:"ar" ~label:"addRobot" (Input (RecordTy [("id", StringTy); ("count", IntTy)]));
+  mk_event ~id:"ap" ~label:"addPlant" (Input (RecordTy [("id", StringTy); ("count", IntTy); ("typename", StringTy); ("position", RecordTy [("x", IntTy); ("y", IntTy)])]));
+]
+; template_insts = []
+; relations = [
+  mk_spawn_relation ~from:"ar" (
+    [],
+    [
+      robot ~id:(PropDeref(PropDeref (Trigger, "value"), "id")) ~x:["w"; "cf"; "t"]
+      ~annotations: [
+        Foreach ("i", List (List.init 3 (fun i -> IntLit i)));
+      ]
+    ],
+    [
+      mk_spawn_relation ~from:"ap" (
+        [],
+        [plant 
+          ~id:(PropDeref(PropDeref (Trigger, "value"), "id"))
+          ~position:(PropDeref(PropDeref (Trigger, "value"), "position"))
+          ~plantType:(Identifier ("plantType"))
+          ~wp:(Identifier "w")
+          ~annotations: [
+            When (BinaryOp (Identifier "plantType", PropDeref (PropDeref (Trigger, "value"), "typename"), Eq))
+            ; Foreach ("i", List (List.init 4 (fun i -> IntLit i)));
+          ]
+        ],
+        []
+      ) ~annotations: [Foreach ("plantType", List [
+        Record [("typename", StringLit "tree")]
+        ; Record [("typename", StringLit "bush")]
+        ; Record [("typename", StringLit "flower")]
+        ; Record [("typename", StringLit "cactus")]
+        ])]
+    ]
+  );
+  
+]
+}

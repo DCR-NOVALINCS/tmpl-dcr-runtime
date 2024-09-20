@@ -67,8 +67,11 @@ and propagate_effects event (event_env, expr_env) program =
     program relations
 
 and propagate_effect relation _event (event_env, expr_env) program = 
+  let (id, _) = _event.info in
   match relation with 
   | SpawnRelation (_from, _guard, _spawn_prog, _annot) -> 
+    if not (_from = id) then Ok program
+    else
     (* check_guard guard expr_env
     >>= fun _ -> *)
     (* TODO: Check if the guard evaluates to True *)
@@ -129,6 +132,8 @@ and propagate_effect relation _event (event_env, expr_env) program =
     }
 
   | ControlRelation (_from, guard, _dest, _op, _annot) -> 
+    if not (_from = id) then Ok program
+    else
     check_guard guard expr_env
     >>= fun _guard_value ->
     (* TODO: Check if the guard evaluates to True *)
@@ -246,6 +251,7 @@ and view
   >>= fun (event_env, expr_env) -> *)
   ( if should_print_events then
     List.filter (filter (event_env, expr_env)) program.events
+    |> List.sort compare
     |> List.map (fun event -> string_of_event event)
     |> String.concat "\n"
   else "")

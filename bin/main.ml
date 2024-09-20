@@ -31,7 +31,7 @@ let debug_program program =
 (* TODO: *)
 let parse_expression _expr_string = 
   (* let n = Random.full_int 2 in *)
-  Ok (IntLit 5)
+  Ok (Record [("id", IntLit 1); ("count", IntLit 2); ("typename", StringLit "tree")])
 
 let read_command cmd program = 
   match cmd with
@@ -73,7 +73,7 @@ let rec prompt lexbuf program =
 
 let _ = 
   let lexbuf = Lexing.from_channel stdin in
-  let program = _test10 in
+  let program = _robot_plant_watering_test in
   preprocess_program program
   >>= fun (_, expr_env) ->
   instantiate ~expr_env program
