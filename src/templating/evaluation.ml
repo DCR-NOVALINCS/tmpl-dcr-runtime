@@ -66,11 +66,16 @@ and eval_binop v1 v2 op =
     | _ -> failwith "Invalid arguments for Mult")
 
   | Eq ->
+    print_endline "Eq";
+    print_endline (string_of_expr v1);
+    print_endline (string_of_expr v2);
     (match v1, v2 with
     | IntLit i1, IntLit i2 -> 
       if i1 = i2 then Ok True else Ok False
     | StringLit s1, StringLit s2 -> 
       if s1 = s2 then Ok True else Ok False
+    | Record r1, Record r2 -> 
+      if r1 = r2 then Ok True else Ok False
     | True, True -> Ok True
     | False, False -> Ok True
     | _ -> failwith "Invalid arguments for Eq")

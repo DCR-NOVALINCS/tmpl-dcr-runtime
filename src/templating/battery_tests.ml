@@ -422,6 +422,7 @@ let _test12 = {
 (*
 a: A[?]
 b: B[i] -- foreach i in [0, 1, 2]
+c: C[?: Number] -- when false
 ;
 *)
 let _test13 = {
@@ -430,6 +431,7 @@ let _test13 = {
   mk_event ~id:"a" ~label:"A" (Input (UnitTy))
   ; mk_event ~id:"b" ~label:"B" (Output (Identifier "i")) 
   ~annotations: [ Foreach ("i", List([IntLit 0; IntLit 1; IntLit 2])) ]
+  ; mk_event ~id:"c" ~label:"C" (Input (IntTy)) ~annotations: [When True]
 ] 
 ; template_insts = []
 ; relations = []
@@ -513,7 +515,7 @@ let _robot_plant_watering_test = {
     [
       robot ~id:(PropDeref(PropDeref (Trigger, "value"), "id")) ~x:["w"; "cf"; "t"]
       ~annotations: [
-        Foreach ("i", List (List.init 3 (fun i -> IntLit i)));
+        Foreach ("i", List (List.init 2 (fun i -> IntLit i)));
       ]
     ],
     [
@@ -525,8 +527,8 @@ let _robot_plant_watering_test = {
           ~plantType:(Identifier ("plantType"))
           ~wp:(Identifier "w")
           ~annotations: [
-            When (BinaryOp (Identifier "plantType", PropDeref (PropDeref (Trigger, "value"), "typename"), Eq))
-            ; Foreach ("i", List (List.init 4 (fun i -> IntLit i)));
+            Foreach ("i", List (List.init 4 (fun i -> IntLit i)));
+            When (BinaryOp (PropDeref(Identifier "plantType", "typename"), PropDeref (PropDeref (Trigger, "value"), "typename"), Eq));
           ]
         ],
         []

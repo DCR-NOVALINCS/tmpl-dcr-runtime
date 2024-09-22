@@ -61,9 +61,10 @@ and propagate_effects event (event_env, expr_env) program =
   fold_left_result
     (fun program relation -> 
       propagate_effect relation event (event_env, expr_env) program
-      |> function
+      (* |> function
       | Ok program' -> Ok program'
-      | Error _ -> Ok program)  
+      | Error _ -> Ok program *)
+      )  
     program relations
 
 and propagate_effect relation _event (event_env, expr_env) program = 
