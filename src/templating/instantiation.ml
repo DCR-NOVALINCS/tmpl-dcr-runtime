@@ -1,5 +1,6 @@
 open Misc.Monads
 open Misc.Env
+open Misc.Printing
 open Syntax
 open Evaluation
 
@@ -8,6 +9,26 @@ open Evaluation
   Auxiliary functions
 ================================================================
 *)
+
+(*
+================================================================
+ Error messages
+================================================================
+*)
+
+let tmpl_not_found id = 
+  Error {
+    location = id.loc
+    ; message = "Template " ^ id.data ^ " not found"
+    ; filepath = ""
+  }
+
+and invalid_annotation_value value ty = 
+  Error {
+    location = value.loc
+    ; message = Printf.sprintf "Invalid annotation value %s for type %s" (string_of_expr value) (string_of_type_expr (annotate ty))
+    ; filepath = ""
+  }
 
 (*
 ================================================================
@@ -21,19 +42,15 @@ module MakeAnnotationEvaluator (T: sig type t end) = struct
   let when_annotation ~(body: t) ~(none: t) expr expr_env = 
     eval_expr expr expr_env
     >>= fun value -> 
-    match value with
+    match value.data with
     | True -> Ok body
     | False -> Ok none
-    | _ -> Error "Invalid annotation value"
+    | _ -> invalid_annotation_value value BoolTy
 
   let foreach_annotation ~(body: t) eval_body x expr expr_env =
-    print_endline "Foreach annotation";
-    print_endline "Expr env:";
-    print_endline (string_of_env string_of_expr expr_env);
-
     eval_expr expr expr_env
     >>= fun value -> 
-    match value with
+    match value.data with
     | List values ->
       fold_left_result
         (fun results value -> 
@@ -41,30 +58,24 @@ module MakeAnnotationEvaluator (T: sig type t end) = struct
           >>= fun value ->
           Ok (begin_scope expr_env)
           >>= fun expr_env ->
-          Ok (bind x value expr_env)
+          Ok (bind x.data value expr_env)
           >>= fun expr_env ->
           (* Evaluate the body with  *)
           eval_body body expr_env
           >>= fun body ->
 
-            print_endline "Foreach annotation Expr env: ";
-            print_endline (string_of_env string_of_expr expr_env);
+            (* print_endline "Foreach annotation Expr env: ";
+            print_endline (string_of_env string_of_expr expr_env); *)
 
           Ok (body :: results) )
         [] values
       >>| List.flatten
-    | _ -> Error "Invalid foreach expression"
+    | _ -> 
+      let ty = match !(expr.ty) with
+      | None -> UnitTy
+      | Some ty -> ty in
+      invalid_annotation_value value (ListTy (annotate ty))
 end
-
-(*
-================================================================
- Error messages
-================================================================
-*)
-
-let rec tmpl_not_found id = Error Printf.(sprintf "Template %s not found" id)
-
-and invalid_annotation_value value ty = Error Printf.(sprintf "Invalid annotation value %s for type %s" (string_of_expr value) (string_of_type_expr ty))
 
 (*
 ================================================================
@@ -72,28 +83,22 @@ and invalid_annotation_value value ty = Error Printf.(sprintf "Invalid annotatio
 ================================================================
 *)
 
-and bind_tmpls tmpls env = 
+let rec bind_tmpls tmpls env = 
   fold_left_result 
     (fun env tmpl -> bind_tmpl tmpl env) 
     env tmpls
 
 and bind_tmpl tmpl env = 
   let id = tmpl.id in
-  Ok (bind id tmpl env)
+  Logger.info @@ Printf.sprintf "Binding template %s" id.data;
+  Ok (bind id.data tmpl env)
 
 and bind_arg (name, expr) env = 
-  print_endline @@ Printf.sprintf "Binding %s: %s" name (string_of_expr expr);
-  print_endline @@ Printf.sprintf " in %s\n" (string_of_env string_of_expr env);
+  Logger.info @@ Printf.sprintf "Binding argument %s" name;
+  (* print_endline @@ Printf.sprintf "Binding %s: %s" name (string_of_expr expr); *)
+  (* print_endline @@ Printf.sprintf " in %s\n" (string_of_env string_of_expr env); *)
   eval_expr expr env
-  (* >>= fun value ->
-  Ok (bind name value env) *)
-  |> function
-  | Ok value -> 
-    (* print_endline @@ Printf.sprintf " -> %s\n" (string_of_expr value); *)
-    Ok (bind name value env)
-  | Error _e as err -> 
-    print_endline @@ Printf.sprintf "Error: %s" _e;
-    err
+  >>| fun value -> bind name value env
 
 (*
 ================================================================
@@ -102,6 +107,7 @@ and bind_arg (name, expr) env =
 *)
 
 and instantiate_tmpls tmpl_insts tmpl_env expr_env = 
+  (* Logger.info "Instantiating templates"; *)
   fold_left_result 
     (fun inst_program inst -> 
       instantiate_tmpl inst_program inst tmpl_env expr_env)
@@ -109,10 +115,11 @@ and instantiate_tmpls tmpl_insts tmpl_env expr_env =
 
 and instantiate_tmpl result_program inst tmpl_env expr_env  = 
   let id = inst.tmpl_id in
-  match find_flat id tmpl_env with
+  Logger.info @@ Printf.sprintf "Instantiating %s" id.data;
+  match find_flat id.data tmpl_env with
   | None -> tmpl_not_found id
   | Some tmpl ->
-    print_endline @@ Printf.sprintf "Instantiating %s --------\n" (string_of_template_inst inst);
+    Logger.info @@ Printf.sprintf "Instantiating %s" (string_of_template_inst inst);
     (* TODO: Verify if the length of the args are the same as the params *)
     let (e_ti, q_ti, r_ti) = tmpl.graph in
     let exports_mapping = List.combine tmpl.export inst.x in
@@ -138,19 +145,14 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     >>= fun expr_env ->
     fold_left_result
       (fun env event -> 
-        let (id, _) = event.info in
-        bind_arg (id, record_event event) env)
+        let (id, _) = event.data.info in
+        bind_arg (id.data, record_event event) env)
       expr_env e_ti
     >>= fun expr_env -> 
     fold_left_result
-      (fun env (prop, expr) -> bind_arg (prop, expr) env)
+      (fun env (prop, expr) -> bind_arg (prop.data, expr) env)
       expr_env inst.args
     >>= fun expr_env -> 
-
-    print_endline "After binding, Expr env:";
-    print_endline (string_of_env string_of_expr expr_env);
-
-    
 
     (* Instantiate events *)
     fold_left_result 
@@ -182,11 +184,6 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     >>| fun _ -> *)
 
     ( List.flatten [result_events; events; _other_tmpled_events], [], List.flatten [result_relations; relations; _other_tmpled_relations] ) 
-    (* |> fun result -> 
-    print_endline "-----------------";
-    print_endline @@ Printf.sprintf "Result: %s" (string_of_subprogram result);
-    result *)
-    (* FIXME: Maybe this approach could generate many events then necessary *)
 
 and instantiate_event _expr_env tmpl_events target_event  =
 (* Filter/Iterate the events based on its annotations  *)
@@ -194,56 +191,56 @@ and instantiate_event _expr_env tmpl_events target_event  =
   >>| fun target_event ->
   target_event :: tmpl_events
 
-and instantiate_relation _expr_env _tmpl_relations _target_relation =
-  replace_relation _target_relation _expr_env
-  >>| fun _target_relation ->
-  _target_relation::_tmpl_relations
-
-(* and replace_event event expr_env   = 
-  let { marking; io; _ } = event in
-  eval_expr marking.value expr_env
-  >>= fun value ->
-  print_endline @@ Printf.sprintf "Expr env %s" (string_of_env string_of_expr expr_env);
-  print_endline @@ Printf.sprintf "Replacing %s with %s" (string_of_event event) (string_of_expr value);
-  begin match io with 
-  | Input _ as input -> input
-  | Output _ -> Output value
-  end |> Result.ok
-  >>| fun io ->
-    print_endline @@ Printf.sprintf "Replacing %s with %s" (string_of_event_io io) (string_of_expr value);
-  { event with marking = { marking with value }; io } *)
+and instantiate_relation _expr_env tmpl_relations (target_relation) : (relation list, 'a) result =
+  replace_relation target_relation _expr_env
+  >>| fun target_relation ->
+  target_relation::tmpl_relations
 
 and replace_event event expr_env = 
-  let{ marking; io; _ } = event in
-  let value = match io with
-  | Input _ -> marking.value
+  let{ marking; io; _ } = event.data in
+  let value = match io.data with
+  | Input _ -> marking.data.value
   | Output expr -> expr in
   eval_expr value expr_env
   >>| fun value -> 
-  { event with marking = { marking with value }; io }
+  let marking = { marking with data = { marking.data with value } } in
+  let io = begin match io.data with
+  | Input _ as input -> input
+  | Output _ -> Output value end |> annotate ~loc:io.loc ~ty:!(io.ty) in
+  { event with data = { event.data with marking; io } }
 
-and replace_relation relation _expr_env = 
-  match relation with
-  | SpawnRelation (from, guard, subprogram, _annot) -> 
-    eval_expr guard _expr_env
-    >>| fun guard ->
-    begin match find_flat from _expr_env with
-    | Some (Identifier id) -> id
+
+and replace_relation relation expr_env = 
+  (* FIXME: Can't replace the [from] and [dest] ids *)
+  match relation.data with
+  | SpawnRelation (from, guard, subprogram, annot) -> 
+    eval_expr guard expr_env
+    >>= fun guard ->
+    begin match find_flat from.data expr_env with
+    | Some { data = (Identifier id); _ } -> id
     | _ -> from end
     |> fun from ->
-    SpawnRelation (from, guard, subprogram, _annot)
-  | ControlRelation (from, guard, dest, t, _annot) -> 
-    eval_expr guard _expr_env
-    >>| fun guard ->
-    begin match find_flat from _expr_env with
-    | Some (Identifier id) -> id
-    | _ -> from end
+    Ok { relation with data = (SpawnRelation (from, guard, subprogram, annot)) }
+  | ControlRelation (from, guard, dest, t, annot) -> 
+    eval_expr guard expr_env
+    >>= fun guard ->
+            Logger.debug @@ from.data;
+            Logger.debug @@ string_of_env string_of_expr expr_env;
+    begin match find_flat from.data expr_env with
+    | Some { data = (Identifier id); _ } -> id
+    | _ ->
+      Logger.debug "Has none";
+      Logger.debug @@ from.data;
+      from end
     |> fun from ->
-    begin match find_flat dest _expr_env with
-    | Some (Identifier id) -> id
+            Logger.debug @@ from.data;
+    begin match find_flat dest.data expr_env with
+    | Some { data = (Identifier id); _ } -> id
     | _ -> dest end
     |> fun dest ->
-    ControlRelation (from, guard, dest, t, _annot)
+    Logger.debug @@ string_of_relation relation;
+    Logger.debug @@ string_of_relation { relation with data = (ControlRelation (from, guard, dest, t, annot)) };
+    Ok { relation with data = (ControlRelation (from, guard, dest, t, annot)) }
 
 and replace_template_inst inst expr_env = 
   let { tmpl_id; args; tmpl_annotations; x } = inst in
@@ -256,17 +253,14 @@ and replace_template_inst inst expr_env =
   Ok { tmpl_id; args; tmpl_annotations; x }
 
 and export_map_events events export_mapping =
-  fold_left_result
-    (map_event_id export_mapping)
-    [] events
+  List.map (fun event -> map_event_id event export_mapping
+  ) events |> Result.ok
 
-and map_event_id exports_mapping events event  = 
-  let (id, label) = event.info in
-  begin match List.assoc_opt id exports_mapping with
+and map_event_id event export_mapping = 
+  let (id, label) = event.data.info in
+  match List.assoc_opt id export_mapping with
   | None -> event
-  | Some new_id -> { event with info = (new_id, label) }
-  end |> Result.ok
-  >>| fun event -> event::events
+  | Some id -> { event with data = { event.data with info = (id, label) } }
 
 (*
 ================================================================
@@ -275,7 +269,7 @@ and map_event_id exports_mapping events event  =
 *)
 
 and analize_annotations_of_event event ~none annotations expr_env = 
-  print_endline "Analizing annotations of events";
+  (* print_endline "Analizing annotations of events"; *)
   fold_left_result
     (fun result annotation -> 
       analize_annotation_event event ~none annotation expr_env
@@ -283,6 +277,7 @@ and analize_annotations_of_event event ~none annotations expr_env =
     [] annotations
 
 and analize_annotation_event event ~none annotation expr_env =
+  Logger.info @@ Printf.sprintf "Analizing annotation %s of the event %s" (string_of_template_annotation annotation) (List.map string_of_event event |> String.concat ", ");
   let module AnnotationEvaluator = MakeAnnotationEvaluator(struct type t = event list end) in
   match annotation with 
   | When expr ->
@@ -294,17 +289,17 @@ and analize_annotation_event event ~none annotation expr_env =
         (fun result event -> 
           replace_event event expr_env
           >>| fun event -> 
-            print_endline @@ Printf.sprintf "Event: %s" (string_of_event event);
+            (* print_endline @@ Printf.sprintf "Event: %s" (string_of_event event); *)
             event::result)
       [] body)
      x expr expr_env
     >>= fun events -> 
-      print_endline "Foreach annotation Event Result: ";
-      print_endline @@ String.concat "\n" (List.map string_of_event events);
+      (* print_endline "Foreach annotation Event Result: ";
+      print_endline @@ String.concat "\n" (List.map string_of_event events); *)
       Ok events
 
 and analize_annotations_of_relation relation ~none annotations expr_env = 
-  print_endline "Analizing annotations of relations";
+  (* print_endline "Analizing annotations of relations"; *)
   fold_left_result
     (fun result annotation -> 
       analize_annotation_relation relation ~none annotation expr_env
@@ -312,22 +307,23 @@ and analize_annotations_of_relation relation ~none annotations expr_env =
     [] annotations
 
 and analize_annotation_relation relation ~none annotation expr_env =
+  Logger.info @@ Printf.sprintf "Analizing annotation %s of the relation %s" (string_of_template_annotation annotation) (List.map string_of_relation relation |> String.concat ", ");
   let module AnnotationEvaluator = MakeAnnotationEvaluator(struct type t = relation list end) in
   match annotation with 
   | When expr -> 
     AnnotationEvaluator.when_annotation ~body:relation ~none expr expr_env
-  | Foreach (x, expr) -> 
-    AnnotationEvaluator.foreach_annotation ~body:relation 
+  | Foreach (_x, _expr) -> Ok relation
+    (* AnnotationEvaluator.foreach_annotation ~body:relation 
     (fun body expr_env -> 
       fold_left_result
         (fun result relation -> 
           replace_relation relation expr_env
           >>| fun relation -> relation::result)
       [] body)
-     x expr expr_env
+     x expr expr_env *)
 
 and analize_annotations_of_inst instance ~none annotations expr_env = 
-  print_endline "Analizing annotations of insts";
+  (* print_endline "Analizing annotations of insts"; *)
   fold_left_result
     (fun result annotation -> 
       analize_annotation_inst instance ~none annotation expr_env
@@ -335,6 +331,7 @@ and analize_annotations_of_inst instance ~none annotations expr_env =
     [] annotations
 
 and analize_annotation_inst instance ~none annotation expr_env =
+  Logger.info @@ Printf.sprintf "Analizing annotation %s of the instance %s" (string_of_template_annotation annotation) (List.map string_of_template_inst instance |> String.concat ", ");
   let module AnnotationEvaluator = MakeAnnotationEvaluator(struct type t = template_instance list end) in
   match annotation with 
   | When expr -> 
@@ -357,7 +354,7 @@ and deannotate_events events =
     [] events
 
 and deannotate_event event =
-  Ok { event with annotations = [] }
+  Ok { event with data = { event.data with annotations = []} }
 
 and deannotate_template_insts insts = 
   fold_left_result
@@ -377,14 +374,15 @@ and deannotate_relations relations =
     [] relations
 
 and deannotate_relation relation =
-  match relation with
-  | SpawnRelation (from, guard, subprogram, _) -> Ok (SpawnRelation (from, guard, subprogram, []))
-  | ControlRelation (from, guard, dest, t, _) -> Ok (ControlRelation (from, guard, dest, t, []))
+  begin match relation.data with
+  | SpawnRelation (from, guard, subprogram, _) -> { relation with data = SpawnRelation (from, guard, subprogram, []) }
+  | ControlRelation (from, guard, dest, t, _) -> { relation with data = ControlRelation (from, guard, dest, t, []) }
+  end |> Result.ok 
 
 and evaluate_annotations ?(expr_env = empty_env) program  =
   (* Evaluate events *)
   let events = program.events in
-  let annotation_of_event event = event.annotations in
+  let annotation_of_event event = event.data.annotations in
   fold_left_result
     (fun result event -> 
       analize_annotations_of_event [event] ~none:[] (annotation_of_event event) expr_env
@@ -396,7 +394,7 @@ and evaluate_annotations ?(expr_env = empty_env) program  =
     [] events
   >>= deannotate_events
   >>= fun events ->
-      print_endline @@ Printf.sprintf "Events: %s" (String.concat "\n" (List.map string_of_event events));
+      (* print_endline @@ Printf.sprintf "Events: %s" (String.concat "\n" (List.map string_of_event events)); *)
 
 
   (* Evaluate instantiations *)
@@ -418,7 +416,7 @@ and evaluate_annotations ?(expr_env = empty_env) program  =
   (* Evaluate relations *)
   let relations = program.relations in
   let annotation_of_relation relation = 
-    match relation with 
+    match relation.data with 
     | SpawnRelation (_, _, _, annot) -> annot
     | ControlRelation (_, _, _, _, annot) -> annot in
   fold_left_result
@@ -434,15 +432,6 @@ and evaluate_annotations ?(expr_env = empty_env) program  =
   >>| fun relations ->
   (* Put it together *)
   { program with events ; template_insts; relations }
-
-
-
-(* module AnnotationEvaluator = sig
-  type t
-  val when_annotation: t list -> expr -> expr env -> t list 
-  val foreach_annotation: t list -> string -> expr -> expr env -> t list
-end *)
-
 
 (*
 ================================================================

@@ -4,15 +4,49 @@ open Syntax
 
 (*
 ===============================================================
+  Error message functions
+===============================================================
+*)
+
+let property_not_found p e = 
+  Error {
+    location = e.loc
+    ; message = "Property " ^ p.data ^ " not found in " ^ string_of_expr e
+    ; filepath = ""
+  }
+
+and is_not_type expected expr =  
+  Error {
+    location = expr.loc
+    ; message = Printf.sprintf "Expected type %s, but got %s" expected (string_of_expr expr)
+    ; filepath = ""
+  }
+
+and invalid_expr ?(loc = Nowhere) () = 
+  Error {
+    location = loc
+    ; message = "Invalid expression"
+    ; filepath = ""
+  }
+
+and id_not_found id = 
+  Error {
+    location = id.loc
+    ; message = "Identifier " ^ id.data ^ " not found"
+    ; filepath = ""
+  }
+
+(*
+===============================================================
   Expression Evaluation functions
 ===============================================================
 *)
 
 let rec eval_expr expr env =
-  match expr with
+  match expr.data with
   | Unit | True | False -> Ok expr
-  | IntLit i -> Ok (IntLit i)
-  | StringLit s -> Ok (StringLit s)
+  | IntLit _ as data -> Ok ({expr with data})
+  | StringLit _ as data-> Ok ({expr with data})
   | Parenthesized e -> eval_expr e env
   | BinaryOp (e1, e2, op) -> 
     eval_expr e1 env
@@ -25,16 +59,16 @@ let rec eval_expr expr env =
     >>= fun v -> 
     eval_unop v op
   | Identifier id -> find_id id env
-  | Trigger -> find_id "@trigger" env
+  | Trigger -> find_id (annotate ~loc:expr.loc ~ty:!(expr.ty) "@trigger") env
   | PropDeref (e, p) -> 
     eval_expr e env
     >>= fun v -> 
-    ( match v with
+    ( match v.data with
     | Record fields -> 
       ( match List.assoc_opt p fields with
-      | None -> Error ("Property " ^ p ^ " not found in " ^ string_of_expr e)
+      | None -> property_not_found p v
       | Some v -> Ok v )
-    | _ -> Error ((string_of_expr e) ^ "is not a record") )
+    | _ -> is_not_type "Record" v )
   | List es -> 
     fold_left_result 
       (fun result e -> 
@@ -42,108 +76,118 @@ let rec eval_expr expr env =
         >>= fun v -> Ok (v :: result)
         )
       [] es
-    >>| fun es -> List es
+    >>| fun es -> { expr with data = List es }
   | Record fields -> 
     fold_left_result 
       (fun fields (name, e) -> 
         eval_expr e env
         >>| fun v -> (name, v) :: fields)
       [] fields
-    >>| fun fields -> Record fields
+    >>| fun fields -> { expr with data = Record fields }
   (* | _ -> Ok (IntLit 0) *)
-  | _ -> Error "Invalid expression"
+  | _ -> invalid_expr ()
 
 and eval_binop v1 v2 op = 
   match op with
   | Add -> 
-    (match v1, v2 with
-    | IntLit i1, IntLit i2 -> Ok (IntLit (i1 + i2))
-    | _ -> failwith "Invalid arguments for Add")
+    (match v1.data, v2.data with
+    | IntLit i1, IntLit i2 -> Ok ({v1 with data = IntLit (i1 + i2)})
+    | IntLit _, _ -> is_not_type "Int" v2
+    | _ -> is_not_type "Int" v1
+    )
 
   | Mult -> 
-    (match v1, v2 with
-    | IntLit i1, IntLit i2 -> Ok (IntLit (i1 * i2))
-    | _ -> failwith "Invalid arguments for Mult")
+    (match v1.data, v2.data with
+    | IntLit i1, IntLit i2 -> Ok ({v1 with data = IntLit (i1 * i2)})
+    | IntLit _, _ -> is_not_type "Int" v2
+    | _ -> is_not_type "Int" v1
+    )
 
   | Eq ->
-    print_endline "Eq";
-    print_endline (string_of_expr v1);
-    print_endline (string_of_expr v2);
-    (match v1, v2 with
+    ( match v1.data, v2.data with
     | IntLit i1, IntLit i2 -> 
-      if i1 = i2 then Ok True else Ok False
+      if i1 = i2 then Ok (annotate ~loc:v1.loc True) else Ok (annotate ~loc:v1.loc False)
     | StringLit s1, StringLit s2 -> 
-      if s1 = s2 then Ok True else Ok False
-    | Record r1, Record r2 -> 
-      if r1 = r2 then Ok True else Ok False
-    | True, True -> Ok True
-    | False, False -> Ok True
-    | _ -> failwith "Invalid arguments for Eq")
+      if s1 = s2 then Ok (annotate ~loc:v1.loc True) else Ok (annotate ~loc:v1.loc False)
+    | True, True -> Ok (annotate ~loc:v1.loc True)
+    | False, False -> Ok (annotate ~loc:v1.loc True)
+    | _ -> is_not_type "Int or String" v1
+    )
 
   | NotEq ->
-    (match v1, v2 with
+    ( match v1.data, v2.data with
     | IntLit i1, IntLit i2 -> 
-      if i1 <> i2 then Ok True else Ok False
-    | StringLit s1, StringLit s2 -> 
-      if s1 <> s2 then Ok True else Ok False
-    | True, False -> Ok True
-    | False, True -> Ok True
-    | _ -> failwith "Invalid arguments for NotEq")
+      if i1 <> i2 then Ok (annotate ~loc:v1.loc True) else Ok (annotate ~loc:v1.loc False)
+    | StringLit s1, StringLit s2 ->
+      if s1 <> s2 then Ok (annotate ~loc:v1.loc True) else Ok (annotate ~loc:v1.loc False)
+    | True, False -> Ok (annotate ~loc:v1.loc True)
+    | False, True -> Ok (annotate ~loc:v1.loc True)
+    | _ -> is_not_type "Int or String" v1
+    )
 
   | GreaterThan ->
-    (match v1, v2 with
+    ( match v1.data, v2.data with
     | IntLit i1, IntLit i2 -> 
-      if i1 > i2 then Ok True else Ok False
-    | _ -> failwith "Invalid arguments for GreaterThan")
+      if i1 > i2 then Ok (annotate ~loc:v1.loc True) else Ok (annotate ~loc:v1.loc False)
+    | _ -> is_not_type "Int" v1
+    )
 
   | GreaterOrEqual ->
-    (match v1, v2 with
+    ( match v1.data, v2.data with
     | IntLit i1, IntLit i2 -> 
-      if i1 >= i2 then Ok True else Ok False
-    | _ -> failwith "Invalid arguments for GreaterOrEqual")
+      if i1 >= i2 then Ok (annotate ~loc:v1.loc True) else Ok (annotate ~loc:v1.loc False)
+    | _ -> is_not_type "Int" v1
+    )
 
   | LessThan ->
-    (match v1, v2 with
+    ( match v1.data, v2.data with
     | IntLit i1, IntLit i2 -> 
-      if i1 < i2 then Ok True else Ok False
-    | _ -> failwith "Invalid arguments for LessThan")
+      if i1 < i2 then Ok (annotate ~loc:v1.loc True) else Ok (annotate ~loc:v1.loc False)
+    | _ -> is_not_type "Int" v1
+    )
 
   | LessOrEqual ->
-    (match v1, v2 with
+    ( match v1.data, v2.data with
     | IntLit i1, IntLit i2 -> 
-      if i1 <= i2 then Ok True else Ok False
-    | _ -> failwith "Invalid arguments for LessOrEqual")
+      if i1 <= i2 then Ok (annotate ~loc:v1.loc True) else Ok (annotate ~loc:v1.loc False)
+    | _ -> is_not_type "Int" v1
+    )
 
   | And ->
-    (match v1, v2 with
-    | True, True -> Ok True
-    | _ -> Ok False)
+    ( match v1.data, v2.data with
+    | True, True -> Ok (annotate ~loc:v1.loc True)
+    | _ -> Ok (annotate ~loc:v1.loc False)
+    )
 
   | Or ->
-    (match v1, v2 with
-    | False, False -> Ok False
-    | _ -> Ok True)
+    ( match v1.data, v2.data with
+    | False, False -> Ok (annotate ~loc:v1.loc False)
+    | _ -> Ok (annotate ~loc:v1.loc True)
+    )
+
   (* | _ -> failwith "Invalid binary operator" *)
 
 and eval_unop v op = 
   match op with
   | Minus -> 
-    (match v with
-    | IntLit i -> Ok (IntLit (-i))
-    | _ -> failwith "Invalid argument for Minus")
+    ( match v.data with
+    | IntLit i -> Ok ({v with data = IntLit (-i)})
+    | _ -> is_not_type "Int" v
+    )
   | Negation -> 
-    (match v with
-    | True -> Ok False
-    | False -> Ok True
-    | _ -> failwith "Invalid argument for Negation")
+    ( match v.data with
+    | True -> Ok (annotate ~loc:v.loc False)
+    | False -> Ok (annotate ~loc:v.loc True)
+    | _ -> is_not_type "Bool" v
+    )
   (* | _ -> failwith "Invalid unary operator" *)
 
 and find_id id env = 
-  match find_flat id env with
-  | None -> Error ("Identifier " ^ id ^ " not found")
+  match find_flat id.data env with
+  | None -> id_not_found id
   | Some expr -> Ok expr
 
-and partial_eval_expr expr env = 
+(* and partial_eval_expr expr env = 
   match expr with
   | BinaryOp (e1, e2, op) -> 
     partial_eval_expr e1 env
@@ -170,4 +214,4 @@ and partial_eval_expr expr env =
         )
       [] _es
     >>| fun es -> List es
-  | _ -> Ok expr
+  | _ -> Ok expr *)

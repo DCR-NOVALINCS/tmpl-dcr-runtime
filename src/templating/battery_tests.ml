@@ -15,7 +15,7 @@ tmpl f(num: Number) {
 } => a
 
 *)
-let tmpl_f = {
+(* let tmpl_f = {
   id = "f";
   params = [("num", IntTy)];
   graph = (
@@ -25,7 +25,7 @@ let tmpl_f = {
     []
   );
   export = ["a"]
-}
+} *)
 
 (*
   tmpl g (n: Number, e: A) {
@@ -33,7 +33,13 @@ let tmpl_f = {
     e -->* b
   }
 *)
-let tmpl_g = {
+let tmpl_g = mk_template_def "g" [("n", IntTy); ("e", (EventTy "A"))] 
+  ([mk_event ~id:"b" ~label:"B" (Output (annotate (Identifier (annotate "n"))))],
+  [],
+  [mk_control_relation ~from:"e" Condition ~dest:"b"]
+  )
+  ~export:[]
+(* let tmpl_g = {
   id = "g";
   params = [("n", IntTy); ("a", (EventTy "A"))];
   graph = (
@@ -42,7 +48,7 @@ let tmpl_g = {
     [mk_control_relation ~from:"a" Condition ~dest:"b"]
   );
   export = [];
-}
+} *)
 
 (*
 tmpl h(a: A) {
@@ -50,7 +56,7 @@ tmpl h(a: A) {
   a -->% b
 } => b
 *)
-let tmpl_h = {
+(* let tmpl_h = {
   id = "h";
   params = [("a", (EventTy "A"))];
   graph = (
@@ -59,17 +65,15 @@ let tmpl_h = {
     [mk_control_relation ~from:"a" Exclude ~dest:"b"]
   );
   export = ["b"];
-}
+} *)
 
 (*
 tmpl i(e: [label]) {} => e
 *)
-let tmpl_i label = {
-  id = "i";
-  params = [("e", (EventTy label))];
-  graph = empty_subprogram;
-  export = ["e"];
-}
+let tmpl_i label = mk_template_def 
+  "i" [("e", (EventTy label))] 
+  ([], [], []) 
+  ~export:["e"]
 
 (*
 tmpl j() {
@@ -77,7 +81,7 @@ tmpl j() {
   k(e) => e2
 } => e2
 *)
-let tmpl_j = {
+(* let tmpl_j = {
   id = "j";
   params = [];
   graph = (
@@ -86,14 +90,14 @@ let tmpl_j = {
     []
   );
   export = ["e"];
-}
+} *)
 
 (*
 tmpl k(e: E[?]) E {
   j() => e
 } => e
 *)
-let tmpl_k = {
+(* let tmpl_k = {
   id = "k";
   params = [("e", (EventTy "E"))];
   graph = (
@@ -102,14 +106,14 @@ let tmpl_k = {
     []
   );
   export = ["e"];
-}
+} *)
 
 (*
 tmpl fac(n: Number) NumberHolder {
     fac_aux(1, 1, n) => r
 } => r
 *)
-let tmpl_fac = {
+(* let tmpl_fac = {
   id = "fac";
   params = [("n", IntTy)];
   graph = (
@@ -118,7 +122,7 @@ let tmpl_fac = {
     []
   );
   export = ["r"]
-}
+} *)
 
 (*
 tmpl fac_aux(acc: Number, i: Number, n: Number) NumberHolder {
@@ -127,7 +131,7 @@ tmpl fac_aux(acc: Number, i: Number, n: Number) NumberHolder {
     fac_aux(acc = i * acc, i = i + 1, n = n) => r -- when i < n
 } => r
 *)
-let tmpl_fac_aux = {
+(* let tmpl_fac_aux = {
   id = "fac_aux";
   params = [("acc", IntTy); ("i", IntTy); ("n", IntTy)];
   graph = (
@@ -143,7 +147,7 @@ let tmpl_fac_aux = {
     []
   );
   export = ["r"]
-}
+} *)
 
 (*
 =============================================================================
@@ -151,17 +155,17 @@ let tmpl_fac_aux = {
 =============================================================================
 *)
 
-let f ~num ~x = mk_template_inst "f" [("num", (IntLit num))] ~x:[x]
+(* let f ~num ~x = mk_template_inst "f" [("num", (IntLit num))] ~x:[x] *)
 
-let g ~n ~a = mk_template_inst "g" [("n", (IntLit n)); ("a", (Identifier a))] ~x:[]
+let g ~n ~e = mk_template_inst "g" [("n", (IntLit n)); ("e", (Identifier (annotate e)))] ~x:[]
 
-let h ~a ~x = mk_template_inst "h" [("a", (Identifier a))] ~x:[x]
+(* let h ~a ~x = mk_template_inst "h" [("a", (Identifier a))] ~x:[x] *)
 
 let i ~e ~x = mk_template_inst "i" [("e", (Identifier e))] ~x:[x]
 
-let j ~x = mk_template_inst "j" [] ~x:[x]
+(* let j ~x = mk_template_inst "j" [] ~x:[x] *)
 
-let k ~e ~x = mk_template_inst "k" [("e", (Identifier e))] ~x:[x]
+(* let k ~e ~x = mk_template_inst "k" [("e", (Identifier e))] ~x:[x] *)
 
 (*
 =============================================================================
@@ -178,11 +182,11 @@ a' -->> {
 *)
 let _test0 = {
   template_decls = [tmpl_g; tmpl_i "A"]
-; events = [mk_event ~id:"a'" ~label:"A" (Input (IntTy))]
+; events = [mk_event ~id:"a'" ~label:"A" (Input (annotate IntTy))]
 ; template_insts = []
 ; relations = [mk_spawn_relation ~from:"a'" (
-    [mk_event ~id:"b" ~label:"B" (Output (PropDeref (Trigger, "value")))],
-    [g ~n:0 ~a:"a'"],
+    [mk_event ~id:"b" ~label:"B" (Output (annotate @@ PropDeref (annotate Trigger, annotate "value")))],
+    [g ~n:0 ~e:"a'"],
     []
   )]
 }
@@ -191,23 +195,23 @@ let _test0 = {
 a': A[?];
 g(0, a')
 *)
-let _test1 = {
+(* let _test1 = {
   template_decls = [tmpl_g; tmpl_i "A"]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
 ; template_insts = [g ~n:0 ~a:"a'"]
 ; relations = []
-}
+} *)
 
 (*
 a': A[?];
 i(a') => a2
 *)
-let _test2 = {
+(* let _test2 = {
   template_decls = [tmpl_i "A"]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
 ; template_insts = [i ~e:"a'" ~x:"a2"]
 ; relations = []
-} 
+}  *)
 
 (*
 a': A[?];
@@ -218,7 +222,7 @@ a' -->> {
   g(0, a')
 }
 *)
-let _test3 = {
+(* let _test3 = {
   template_decls = [tmpl_h]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
 ; template_insts = [
@@ -232,7 +236,7 @@ let _test3 = {
     []
   )
 ]
-}
+} *)
 
 (*
 a': A[?];
@@ -245,7 +249,7 @@ a' -->> {
   g(1, a')
 }
 *)
-let _test4 = {
+(* let _test4 = {
   template_decls = [ tmpl_g ]
 ; events = [ mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
 ; template_insts = []
@@ -261,19 +265,19 @@ let _test4 = {
     []
   )
 ]
-}
+} *)
 
 (*
 f(5)
 *)
-let _test5 = {
+(* let _test5 = {
   template_decls = [tmpl_f; tmpl_g]
 ; events = []
 ; template_insts = [
   mk_template_inst "f" [("num", IntLit 5)] ~x:["a'"]
 ]
 ; relations = []
-}
+} *)
 
 (*
 a: A[?];
@@ -282,7 +286,7 @@ a -->> {
   f(2)
 }
 *)
-let _test6 = {
+(* let _test6 = {
   template_decls = [tmpl_f; tmpl_g]
 ; events = [
   mk_event ~id:"a" ~label:"A" (Input (UnitTy))
@@ -297,7 +301,7 @@ let _test6 = {
     []
   )
 ]
-}
+} *)
 
 (*
 TODO: Test feeding a param with a exported event
@@ -309,7 +313,7 @@ a: A[?];
 iA(a) => a'
 iA(a') => a''
 *)
-let _test7 = {
+(* let _test7 = {
   template_decls = [tmpl_i "A"]
 ; events = [
   mk_event ~id:"a" ~label:"A" (Input (UnitTy))
@@ -319,19 +323,19 @@ let _test7 = {
   ; mk_template_inst "i" [("e", (Identifier "a'"))] ~x:["a''"]
 ]
 ; relations = []
-}
+} *)
 
 (*
 j() => e
 *)
-let _test8 = {
+(* let _test8 = {
   template_decls = [tmpl_j; tmpl_k]
 ; events = []
 ; template_insts = [
   mk_template_inst "j" [] ~x:["e"]
 ]
 ; relations = []
-}
+} *)
 
 (*
 a: A[?] -- when 0 > 1
@@ -340,7 +344,7 @@ b: B[?]
 a -->* b
 b -->% a
 *)
-let _test9 = {
+(* let _test9 = {
   template_decls = []
 ; events = [
   mk_event ~id:"a" ~label:"A" (Input (UnitTy)) ~annotations:[When (BinaryOp (IntLit 0, IntLit 1, GreaterThan))];
@@ -351,7 +355,7 @@ let _test9 = {
   mk_control_relation ~from:"a" Condition ~dest:"b";
   mk_control_relation ~from:"b" Exclude ~dest:"a"
 ]
-}
+} *)
 
 (*
 a': A[?: Number]
@@ -360,7 +364,7 @@ a' -->> {
   g(0, a') -- when @trigger.value > 0
 }
 *)
-let _test10 = {
+(* let _test10 = {
   template_decls = [tmpl_g]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (IntTy))]
 ; template_insts = []
@@ -372,7 +376,7 @@ let _test10 = {
     []
   )
 ]
-}
+} *)
 
 (*
 a: A[?: Number]
@@ -381,7 +385,7 @@ a -->> {
   fac(@trigger.value) => result
 } 
 *)
-let _test11 = {
+(* let _test11 = {
   template_decls = [tmpl_fac; tmpl_fac_aux]
 ; events = [mk_event ~id:"a" ~label:"A" (Input (IntTy))]
 ; template_insts = []
@@ -394,7 +398,7 @@ let _test11 = {
     []
   ) 
 ]
-}
+} *)
 
 (*
 a: A[?]
@@ -403,7 +407,7 @@ a -->> {
   fac(i) => result -- foreach i in [0, 1, 2]
 } 
 *)
-let _test12 = {
+(* let _test12 = {
   template_decls = [tmpl_fac; tmpl_fac_aux]
 ; events = [mk_event ~id:"a" ~label:"A" (Input (UnitTy))]
 ; template_insts = []
@@ -417,7 +421,7 @@ let _test12 = {
     []
   ) 
 ]
-}
+} *)
 
 (*
 a: A[?]
@@ -425,7 +429,7 @@ b: B[i] -- foreach i in [0, 1, 2]
 c: C[?: Number] -- when false
 ;
 *)
-let _test13 = {
+(* let _test13 = {
   template_decls = []
 ; events = [
   mk_event ~id:"a" ~label:"A" (Input (UnitTy))
@@ -435,7 +439,7 @@ let _test13 = {
 ] 
 ; template_insts = []
 ; relations = []
-}
+} *)
 
 (*
 =============================================================================
@@ -443,7 +447,7 @@ let _test13 = {
 =============================================================================
 *)
 
-let robot_tmpl = {
+(* let robot_tmpl = {
   id = "robot";
   params = [("id", StringTy)];
   graph = (
@@ -468,11 +472,11 @@ let robot_tmpl = {
       ]
   );
   export = ["w"; "cf"; "t"]
-}
+} *)
 
-let robot ~id ~x ~annotations = mk_template_inst "robot" [("id", id)] ~x ~annotations
+(* let robot ~id ~x ~annotations = mk_template_inst "robot" [("id", id)] ~x ~annotations *)
 
-let plant_tmpl = {
+(* let plant_tmpl = {
   id = "plant";
   params = [
     ("id", StringTy);
@@ -493,16 +497,16 @@ let plant_tmpl = {
     ]
   );
   export = []
-}
+} *)
 
-let plant ~id ~position ~plantType ~wp ~annotations = mk_template_inst "plant" [
+(* let plant ~id ~position ~plantType ~wp ~annotations = mk_template_inst "plant" [
   ("id", id);
   ("position", position);
   ("plantType", plantType);
   ("wp", wp)
-] ~x:[] ~annotations:annotations
+] ~x:[] ~annotations:annotations *)
 
-let _robot_plant_watering_test = {
+(* let _robot_plant_watering_test = {
   template_decls = [robot_tmpl; plant_tmpl]
 ; events = [
   mk_event ~id:"ar" ~label:"addRobot" (Input (RecordTy [("id", StringTy); ("count", IntTy)]));
@@ -542,4 +546,4 @@ let _robot_plant_watering_test = {
   );
   
 ]
-}
+} *)

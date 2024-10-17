@@ -5,10 +5,6 @@ open Templating.Instantiation
 open Misc.Monads
 open Misc.Printing
 
-module CPrinter = MakePrinter (ASNIIColor)
-module CString = ASNIIString (ASNIIColor)
-module Logger = MakeLogger (ASNIIColor)
-
 (* open Misc.Env *)
 
 (*
@@ -17,13 +13,7 @@ module Logger = MakeLogger (ASNIIColor)
 =============================================================================
 *)  
 
-(* type detailed_error =
-  {location: int; message: string; error_type: string}
-
-let mk_detail_error ~filename ~loc ~msg ~error_type =
-  {location= 0; message= msg; error_type}
-
-let get_line_content file line =
+(* let get_line_content file line =
   let ic = open_in file in
   let rec read_line n =
     match input_line ic with
@@ -33,41 +23,47 @@ let get_line_content file line =
         read_line (n + 1)
   in
   let line = read_line 1 in
-  close_in ic ; line
+  close_in ic ; line *)
 
-let extract_location_info loc =
-  let {filename; location= loc} = loc in
-  match loc with
-  | Nowhere ->
-      (filename, 0, 0, 0)
-  | Range (start_p, end_p) ->
-      ( filename
-      , start_p.pos_lnum
-      , start_p.pos_cnum - start_p.pos_bol
-      , end_p.pos_cnum - start_p.pos_bol )
-  | Position pos ->
-      ( filename
-      , pos.pos_lnum
-      , pos.pos_cnum - pos.pos_bol
-      , pos.pos_cnum - pos.pos_bol )
+(* let extract_location_info loc =
+  match loc with 
+  | Nowhere -> (0, 0, 0)
+  | Location (start_pos, end_pos) -> 
+    let line = start_pos.Lexing.pos_lnum in
+    let start_char = start_pos.Lexing.pos_cnum - start_pos.Lexing.pos_bol in
+    let end_char = end_pos.Lexing.pos_cnum - end_pos.Lexing.pos_bol in
+    (line, start_char, end_char)  *)
 
 (*┌*)
-let print_error {location= loc; message= msg; error_type= _} =
-  let open Misc in
-  let open Printing in
-  let file, line, start_char, end_char = extract_location_info loc in
-  let line_content = get_line_content file line in
-  CPrinter.eprintf "error: %s\n" msg ;
-  CPrinter.cprintf "  ──▶ %s:%d:%d\n" file line start_char ;
+let print_error detailed_error =
+  let { location = _ ; message ; filepath = _ } = detailed_error in
+  (* let line, start_char, end_char = extract_location_info location in *)
+  (* let line_content = get_line_content file line in *)
+  (* let line_content = "" in *)
+  CPrinter.eprintf "error: %s\n" message ; ()
+  (* CPrinter.cprintf "  ──▶ %s:%d:%d\n" filepath line start_char ;
   CPrinter.cprintln "  │" ;
   CPrinter.cprintf "%d │ %s\n" line line_content ;
   let marker =
     String.concat ""
       [ String.make start_char ' '
-      ; ColorString.colorize ~color:ASNIIColor.Red
+      ; CString.colorize ~color:ASNIIColor.Red
           (String.make (end_char - start_char) '^') ]
   in
   CPrinter.cprintf "  │ %s\n" marker *)
+
+(*
+=============================================================================
+  Error messages
+=============================================================================
+*)  
+
+let invalid_command cmd = 
+  Error {
+    location = Nowhere
+    ; message = Printf.sprintf "Invalid command %s" (String.concat " " cmd)
+    ; filepath = ""
+  }
 
 (*
 =============================================================================
@@ -95,7 +91,7 @@ let debug_program program =
 (* TODO: *)
 let parse_expression _expr_string = 
   (* let n = Random.full_int 2 in *)
-  Ok (Record [("id", IntLit 1); ("count", IntLit 2); ("typename", StringLit "tree")])
+  Ok (annotate ~loc:Nowhere Unit)
 
 let read_command cmd program = 
   match cmd with
@@ -111,7 +107,7 @@ let read_command cmd program =
   | "exec"::event_id::expr | "e"::event_id::expr -> 
     parse_expression expr
     >>= fun parsed_expr ->
-    execute_event ~event_id ~expr:parsed_expr program
+    execute_event ~event_id ~expr:parsed_expr.data program
     >>= fun program -> Ok (program, "Event executed with expression " ^ (string_of_expr parsed_expr))
   | ["view"] | ["v"] -> 
     view_program program 
@@ -119,28 +115,33 @@ let read_command cmd program =
   | ["debug"] | ["d"] -> 
     debug_program program 
     >>= fun unparsed_program -> Ok (program, unparsed_program)
-  | _ -> Error "Invalid command"
+  | _ -> invalid_command cmd
 
 let rec prompt lexbuf program =
-  print_string "> ";
+  CPrinter.cprint ~color:BrightGreen "> " ;
   let cmd = read_line () 
   |> String.split_on_char ' ' 
   |> List.filter (fun s -> s <> "") in
   read_command cmd program
   |> function
   | Ok (program, msg) -> 
-    print_endline msg;
+    CPrinter.cprintln msg;
+    CPrinter.cprintln "";
     prompt lexbuf program
   | Error e ->
-    CPrinter.eprint "error: ";
-    CPrinter.eprintln e;
+    print_error e;
     prompt lexbuf program
 
 let _ = 
+  Logger.enable () ;
+  (* Logger.set_logger_level Error; *)
   let lexbuf = Lexing.from_channel stdin in
-  let program = _test4 in
+  let program = _test0 in
   preprocess_program program
   >>= fun (_, expr_env) ->
   instantiate ~expr_env program
   >>= fun (program, _) ->
+  CPrinter.cprint "To get started, type ";
+  CPrinter.cprint ~color:Green "help";
+  CPrinter.cprintln " to see the available commands.\n";
   prompt lexbuf program

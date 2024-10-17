@@ -131,6 +131,8 @@ module type Logger = sig
 
   val disable : unit -> unit
 
+  val set_logger_level : log_t -> unit
+
   val log : ?log_type:log_t -> ?indent:string -> string -> unit
 
   val error : string -> unit
@@ -166,25 +168,36 @@ module MakeLogger (Color : ColorType) : Logger = struct
     let open P.Color in
     function
     | Log ->
-        ("LOG", Default)
-    | Error ->
-        ("ERROR", Red)
-    | Warn ->
-        ("WARN", Yellow)
-    | Info ->
-        ("INFO", Cyan)
+        ("LOG", 0,  Default)
     | Debug ->
-        ("DEBUG", Blue)
+        ("DEBUG", 1, Blue)
+    | Info ->
+        ("INFO", 2, Cyan)
+    | Warn ->
+        ("WARN", 3, Yellow)
+    | Error ->
+        ("ERROR", 4, Red)
+    
+  let logger_level = 
+    let (_, log_level, _) = convert_log_type Log in
+    ref log_level
+
+  let set_logger_level level = 
+    let (_, log_level, _) = convert_log_type level in
+    logger_level := log_level
 
   (*"│ "*)
   let log ?(log_type = Log) ?(indent = "") text =
-    if is_enabled () then (
-      let log_type_str, log_color = convert_log_type log_type in
-      let group_size = GroupStack.length group_stack in
-      let indent = if group_size > 0 then "│ " ^ indent else indent in
-      P.cprint ~color:Cyan indent ;
-      P.cprintf "[%s]: " ~color:log_color log_type_str ;
-      P.cprintln text )
+    if not @@ is_enabled () then ()
+    else 
+    let log_type_str, log_level, log_color = convert_log_type log_type in
+    if log_level < !logger_level then ()
+    else
+    let group_size = GroupStack.length group_stack in
+    let indent = if group_size > 0 then "│ " ^ indent else indent in
+    P.cprint ~color:Cyan indent ;
+    P.cprintf "[%s]: " ~color:log_color log_type_str ;
+    P.cprintln text 
 
   let error text = log ~log_type:Error text
 
@@ -216,3 +229,5 @@ module MakeLogger (Color : ColorType) : Logger = struct
 end
 
 module Logger = MakeLogger (ASNIIColor)
+module CPrinter = MakePrinter (ASNIIColor)
+module CString = ASNIIString (ASNIIColor)

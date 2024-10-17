@@ -1,5 +1,5 @@
 open OUnit2
-open Templating.Battery_tests
+(* open Templating.Battery_tests *)
 open Templating.Syntax
 open Templating.Runtime
 open Misc.Monads
@@ -11,7 +11,7 @@ open Misc.Monads
 let get_event id program = 
   let events = program.events in
   List.find_opt (fun e -> 
-    let (id', _) = e.info in id' = id) events
+    let (id', _) = e.data.info in id'.data = id) events
 
 (**
   [has_event id program]
@@ -27,9 +27,9 @@ let has_event id program =
 let get_relation id program = 
   let relations = program.relations in
   List.find_opt (fun r -> 
-    match r with
-    | ControlRelation (from, _, dest, _, _) -> from = id || dest = id
-    | SpawnRelation (from, _, _, _) -> from = id) relations
+    match r.data with
+    | ControlRelation (from, _, dest, _, _) -> from.data = id || dest.data = id
+    | SpawnRelation (from, _, _, _) -> from.data = id) relations
 
 (**
   [has_relation id program]
@@ -43,7 +43,8 @@ let test_suite =
   "test_templating" >::: [
     "test0" >:: 
     (fun test_ctxt -> 
-      (Ok (build_state _test0 test_ctxt) 
+      let program = empty_program in
+      (Ok (build_state program test_ctxt) 
       >>= fun (program, event_env, expr_env) ->
       assert_bool "Event a' not found" (has_event "a'" program);
       assert_bool "Event a' don't have any relations" (has_relation "a'" program);
@@ -54,12 +55,13 @@ let test_suite =
       Ok program)
       |> function
       | Ok _ -> ()
-      | Error e -> assert_failure e
+      | Error e -> assert_failure e.message
       );
     
     "test1" >:: 
     (fun test_ctxt -> 
-      Ok (build_state _test1 test_ctxt) 
+      let program = empty_program in
+      Ok (build_state program test_ctxt)  
       >>| fun (_program, _, _) ->
       assert_bool "TODO TEST" true;
       |> Result.get_ok
@@ -67,7 +69,8 @@ let test_suite =
 
     "test2" >::
     (fun test_ctxt -> 
-      Ok (build_state _test2 test_ctxt)
+      let program = empty_program in
+      Ok (build_state program test_ctxt)  
       >>| fun (_program, _, _) ->
       assert_bool "TODO TEST" true;
       |> Result.get_ok
@@ -75,7 +78,8 @@ let test_suite =
 
     "test3" >::
     (fun test_ctxt -> 
-      Ok (build_state _test3 test_ctxt)
+      let program = empty_program in
+      Ok (build_state program test_ctxt)  
       >>| fun (_program, _, _) ->
       assert_bool "TODO TEST" true;
       |> Result.get_ok
@@ -83,7 +87,8 @@ let test_suite =
 
     "test4" >::
     (fun test_ctxt ->
-      Ok (build_state _test4 test_ctxt)
+      let program = empty_program in
+      Ok (build_state program test_ctxt)  
       >>| fun (_program, _, _) ->
       assert_bool "TODO TEST" true;
       |> Result.get_ok
@@ -91,7 +96,8 @@ let test_suite =
 
     "test5" >::
     (fun test_ctxt ->
-      Ok (build_state _test5 test_ctxt)
+      let program = empty_program in
+      Ok (build_state program test_ctxt)  
       >>| fun (_program, _, _) ->
       assert_bool "TODO TEST" true;
       |> Result.get_ok
@@ -99,7 +105,8 @@ let test_suite =
 
     "test6" >::
     (fun test_ctxt ->
-      Ok (build_state _test6 test_ctxt)
+      let program = empty_program in
+      Ok (build_state program test_ctxt)  
       >>| fun (_program, _, _) ->
       assert_bool "TODO TEST" true;
       |> Result.get_ok
@@ -107,7 +114,8 @@ let test_suite =
 
     "test7" >::
     (fun test_ctxt ->
-      Ok (build_state _test7 test_ctxt)
+      let program = empty_program in
+      Ok (build_state program test_ctxt)  
       >>| fun (_program, _, _) ->
       assert_bool "TODO TEST" true;
       |> Result.get_ok

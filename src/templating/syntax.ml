@@ -1,9 +1,33 @@
+
+(*  
+=============================================================================
+  Annotation related types.
+=============================================================================
+*)
+
+type loc =
+  | Nowhere
+  | Location of Lexing.position * Lexing.position
+
+type 'a annotated =
+  { data : 'a
+  ; loc : loc
+  ; ty : type_expr' option ref
+  }
+
+and detailed_error = 
+  { location : loc
+  ; message : string
+  ; filepath : string
+  }
+
 (*
   =============================================================================
   Expressions / Type Expressions
   =============================================================================
 *)
-type type_expr =
+and type_expr = type_expr' annotated
+and type_expr' =
   | UnitTy
   | StringTy
   | IntTy
@@ -14,7 +38,8 @@ type type_expr =
   (* ADD Template Type *)
   (* | TemplateTy of template_def *)
 
-and expr =
+and expr = expr' annotated
+and expr' =
   | Unit
   | True
   | False
@@ -23,9 +48,9 @@ and expr =
   | Parenthesized of expr
   | BinaryOp of expr * expr * binary_op_type
   | UnaryOp of expr * unary_op_type
-  | Identifier of string
+  | Identifier of string annotated
   | Trigger
-  | PropDeref of expr * string
+  | PropDeref of expr * string annotated
   | List of expr list
   | Record of (expr) record_field list
   (* ADD Template Expr *)
@@ -47,7 +72,7 @@ and unary_op_type =
   | Minus
   | Negation
 
-and ('a) record_field = string * 'a
+and ('a) record_field = string annotated * 'a
 
 (*
   =============================================================================
@@ -71,10 +96,10 @@ and subprogram = event list * template_instance list * relation list
 
 (* TODO: Types for template definition*)
 and template_def = {
-  export: string list;
-  params : (string * type_expr) list;
+  export: event_id list;
+  params : (string annotated * type_expr) list;
   graph : subprogram;
-  id : string;
+  id : string annotated;
 }
 
 (*
@@ -85,10 +110,10 @@ and template_def = {
 
 (* TODO: Types for template definition*)
 and template_instance = {
-  args : (string * expr) list;
-  x: string list;
-  tmpl_id: string;
-  tmpl_annotations: template_annotation list;
+  args : (string annotated * expr) list;
+  x: event_id list;
+  tmpl_id: string annotated;
+  tmpl_annotations: template_annotation' list;
 }
 
 (*
@@ -97,9 +122,10 @@ and template_instance = {
   =============================================================================
 *)
 
-and template_annotation = 
+and template_annotation = template_annotation' annotated 
+and template_annotation' = 
   | When of expr
-  | Foreach of string * expr
+  | Foreach of string annotated * expr
 
 (*
   =============================================================================
@@ -107,23 +133,30 @@ and template_annotation =
   =============================================================================
 *)
 
-and event =
-  { info : event_info
+and event = event' annotated
+and event' =
+  { info : event_info'
   ; io : event_io
   ; marking : event_marking
-  ; annotations : template_annotation list
+  ; annotations : template_annotation' list
   }
 
-and event_info = string * string (* id : label *)
+and event_id = string annotated
 
-and event_io =
+and event_label = string annotated
+
+and event_info' = event_id * event_label
+
+and event_io = event_io' annotated
+and event_io' =
   | Input of type_expr
   | Output of expr
 
-and event_marking =
-  { executed : bool 
-  ; pending : bool 
-  ; included : bool 
+and event_marking = event_marking' annotated
+and event_marking' =
+  { executed : bool annotated
+  ; pending : bool annotated
+  ; included : bool annotated
   ; value: expr
   }
 
@@ -133,9 +166,10 @@ and event_marking =
   =============================================================================
 *)
 
-and relation =
-  | ControlRelation of string * expr * string * relation_type * template_annotation list
-  | SpawnRelation of string * expr * subprogram * template_annotation list
+and relation = relation' annotated
+and relation' =
+  | ControlRelation of event_id * expr * event_id * relation_type * template_annotation' list
+  | SpawnRelation of event_id * expr * subprogram * template_annotation' list
 
 and relation_type =
   | Condition
@@ -151,19 +185,56 @@ and relation_type =
   =============================================================================
 *)
 
-let mk_marking ?(executed=false) ?(pending=false) ?(included=true) ?(value=Unit) () = { executed; pending; included; value = value }
+let annotate ?(loc = Nowhere) ?(ty = None) data = { data; loc; ty = ref ty }
+
+let deannotate { data; _ } = data
+
+let deannotate_list lst = List.map deannotate lst
+
+let mk_marking ?(executed=false) ?(pending=false) ?(included=true) ?(value=Unit) () = 
+  annotate { 
+    executed = annotate executed
+    ; pending = annotate pending
+    ; included = annotate included
+    ; value = annotate value 
+  }
 
 let default_marking = mk_marking ()
 
-let mk_event ?(marking=default_marking) ?(annotations = []) ~id ~label io = { info = (id, label); io = io; marking; annotations }
+let mk_event 
+  ?(marking=default_marking) 
+  ?(annotations = []) 
+  ~id ~label io = 
+  annotate { info = (annotate id, annotate label)
+  ; io = annotate io
+  ; marking
+  ; annotations 
+  }
 
-let mk_control_relation ?(annotations = []) ~from ?(guard = True) ~dest t = ControlRelation (from, guard, dest, t, annotations)
+let mk_control_relation 
+  ?(annotations = []) 
+  ~from 
+  ?(guard = True) 
+  ~dest t = annotate @@ ControlRelation (annotate from, annotate guard, annotate dest, t, annotations)
 
-let mk_spawn_relation ?(annotations = []) ~from ?(guard= True) subprogram = SpawnRelation (from, guard, subprogram, annotations)
+let mk_spawn_relation 
+  ?(annotations = []) 
+  ~from 
+  ?(guard = True) subprogram = annotate @@ SpawnRelation (annotate from, annotate guard, subprogram, annotations)
 
-let mk_template_def id params graph ~export = { id; params; graph; export }
+let mk_template_def id params graph ~export = 
+  { id = annotate id
+  ; params = List.map (fun (name, ty) -> (annotate name, annotate ty)) params
+  ; graph
+  ; export = List.map annotate export
+  }
 
-let mk_template_inst ?(annotations = []) id args ~x = { tmpl_id = id; args; x; tmpl_annotations=annotations }
+let mk_template_inst ?(annotations = []) id args ~x = 
+  { tmpl_id = annotate id
+  ; args = List.map (fun (name, e) -> (annotate name, annotate e)) args
+  ; x = List.map annotate x
+  ; tmpl_annotations=annotations 
+  }
 
 let mk_program 
   ?(template_decls=[])
@@ -192,18 +263,21 @@ let empty_template_inst = mk_template_inst "" [] ~x:[]
   =============================================================================
 *)
 
-let rec string_of_type_expr = function
-  | UnitTy -> "Unit"
+let rec string_of_type_expr ty = 
+  match ty.data with
+  | UnitTy -> "()"
   | StringTy -> "String"
   | IntTy -> "Number"
   | BoolTy -> "Boolean"
   | EventTy s -> s
   | RecordTy fields -> 
-    let string_of_field (name, ty) = name ^ " : " ^ (string_of_type_expr ty) in
+    let string_of_field (name, ty) = name.data ^ " : " ^ (string_of_type_expr ty) in
     "{ " ^ (String.concat "; " (List.map string_of_field fields)) ^ " }"
-  | ListTy ty -> Printf.sprintf "[%s]" (string_of_type_expr ty)
+  | ListTy ty -> "[" ^ (string_of_type_expr ty) ^ "]"
+  
 
-and string_of_expr = function
+and string_of_expr expr = 
+  match expr.data with
   | Unit -> "()"
   | True -> "true"
   | False -> "false"
@@ -211,7 +285,8 @@ and string_of_expr = function
   | StringLit s -> "\"" ^ s ^ "\""
   | Parenthesized e -> "(" ^ (string_of_expr e) ^ ")"
   | BinaryOp (e1, e2, op) -> 
-    let string_of_op = function
+    let op_str = 
+      match op with
       | Add -> "+"
       | Mult -> "*"
       | Eq -> "=="
@@ -223,39 +298,44 @@ and string_of_expr = function
       | And -> "&&"
       | Or -> "||"
     in
-    (string_of_expr e1) ^ " " ^ (string_of_op op) ^ " " ^ (string_of_expr e2)
-  | UnaryOp (e, op) -> 
-    let string_of_op = function
+    Printf.sprintf "%s %s %s" (string_of_expr e1) op_str (string_of_expr e2)
+  | UnaryOp (e, op) ->
+    let op_str = 
+      match op with
       | Minus -> "-"
       | Negation -> "!"
     in
-    (string_of_op op) ^ (string_of_expr e)
-  | Identifier s -> s
-  | Trigger -> "@trigger"
-  | PropDeref (e, p) -> (string_of_expr e) ^ "." ^ p
+    Printf.sprintf "%s%s" op_str (string_of_expr e)
+  | Identifier s -> s.data
+  | Trigger -> "trigger"
+  | PropDeref (e, prop) -> Printf.sprintf "%s.%s" (string_of_expr e) prop.data
   | List es -> "[" ^ (String.concat ", " (List.map string_of_expr es)) ^ "]"
   | Record fields -> 
-    let string_of_field (name, e) = name ^ " = " ^ (string_of_expr e) in
+    let string_of_field (name, e) = name.data ^ " = " ^ (string_of_expr e) in
     "{ " ^ (String.concat "; " (List.map string_of_field fields)) ^ " }"
-  | _ -> "unknown"
+  | Template t -> string_of_template_inst t
 
-and string_of_event_io = function
-  | Input ty -> Printf.sprintf "[?:%s]" (string_of_type_expr ty)
+and string_of_event_io io = 
+  match io.data with
+  | Input ty -> Printf.sprintf "[?: %s]" (string_of_type_expr ty)
   | Output e -> Printf.sprintf "[%s]" (string_of_expr e)
 
 and string_of_event_marking m = 
-  Printf.sprintf "{ ex = %b; res = %b; in = %b; va = %s }" m.executed m.pending m.included (string_of_expr m.value)
+  let m = m.data in
+  Printf.sprintf "{ ex = %b; res = %b; in = %b; va = %s }" m.executed.data m.pending.data m.included.data (string_of_expr m.value)
 
-and string_of_event ?(abbreviated = true) (e : event) =
-  let annots = List.map string_of_template_annotation e.annotations in
+and string_of_event ?(abbreviated = true) e =
+  let annots = List.map string_of_template_annotation e.data.annotations in
+  let (id, label) = e.data.info in
   if not abbreviated then
-    Printf.sprintf "%s:%s%s %s" (fst e.info) (snd e.info) (string_of_event_io e.io) (string_of_event_marking e.marking)
+    Printf.sprintf "%s:%s%s %s" id.data label.data (string_of_event_io e.data.io) (string_of_event_marking e.data.marking)
   else 
-    let excluded = if not e.marking.included then "%" else "" in
-    let pending = if e.marking.pending then "!" else "" in
-    let executed = if e.marking.executed then "✓" else "" in
-    let value = string_of_expr e.marking.value in
-    Printf.sprintf "%s%s%s%s:%s%s -> %s %s" excluded pending executed (fst e.info) (snd e.info) (string_of_event_io e.io) value (String.concat " | " annots)
+    let marking = e.data.marking.data in
+    let excluded = if not marking.included.data then "%" else "" in
+    let pending = if marking.pending.data then "!" else "" in
+    let executed = if marking.executed.data then "✓" else "" in
+    let value = string_of_expr marking.value in
+    Printf.sprintf "%s%s%s%s:%s%s -> %s %s" excluded pending executed id.data label.data (string_of_event_io e.data.io) value (String.concat " | " annots)
 
 and string_of_relation_type = function
   | Condition -> Printf.sprintf "-%s->*"
@@ -264,48 +344,49 @@ and string_of_relation_type = function
   | Milestone -> Printf.sprintf "-%s-><>"
   | Response -> Printf.sprintf "*-%s->"
 
-and string_of_relation = function
-| ControlRelation (from, guard, dest, t, annot) -> 
-  let guard = if guard = True then "" else Printf.sprintf "[%s]" (string_of_expr guard) in
-  let rel = string_of_relation_type t guard in
-  let annot = 
-    if List.length annot <= 0 then ""
-    else List.map string_of_template_annotation annot
-    |> String.concat " | " 
-    |> Printf.sprintf "-- %s"
-  in
-  Printf.sprintf "%s %s %s %s" from rel dest annot
-| SpawnRelation (from, guard, subprogram, annot) -> 
-  let guard = if guard = True then "" else Printf.sprintf "[%s]" (string_of_expr guard) in
-  let rel = Printf.sprintf "-%s->>" guard in
-  let annot = 
-    if List.length annot <= 0 then ""
-    else List.map string_of_template_annotation annot
-    |> String.concat " | " 
-    |> Printf.sprintf "-- %s"
-  in
-  Printf.sprintf "%s %s {\n%s\n} %s" from rel (string_of_subprogram ~indent:"  " subprogram) annot
+and string_of_relation relation =
+  match relation.data with 
+  | ControlRelation (from, guard, dest, t, annot) -> 
+    let guard = if guard.data = True then "" else Printf.sprintf "[%s]" (string_of_expr guard) in
+    let rel = string_of_relation_type t guard in
+    let annot = 
+      if List.length annot <= 0 then ""
+      else List.map string_of_template_annotation annot
+      |> String.concat " | " 
+      |> Printf.sprintf "-- %s"
+    in
+    Printf.sprintf "%s %s %s %s" from.data rel dest.data annot
+  | SpawnRelation (from, guard, subprogram, annot) -> 
+    let guard = if guard.data = True then "" else Printf.sprintf "[%s]" (string_of_expr guard) in
+    let rel = Printf.sprintf "-%s->>" guard in
+    let annot = 
+      if List.length annot <= 0 then ""
+      else List.map string_of_template_annotation annot
+      |> String.concat " | " 
+      |> Printf.sprintf "-- %s"
+    in
+    Printf.sprintf "%s %s {\n%s\n} %s" from.data rel (string_of_subprogram ~indent:"  " subprogram) annot
 
 and string_of_template_inst = 
-  let string_of_arg (name, e) = Printf.sprintf "%s = %s" name (string_of_expr e) in
+  let string_of_arg (name, e) = Printf.sprintf "%s = %s" name.data (string_of_expr e) in
   fun { tmpl_id; args; x; tmpl_annotations = annotations } -> 
     let args = List.map string_of_arg args in
     let args = String.concat ", " args in
-    let xs = String.concat ", " x in
+    let xs = String.concat ", " (deannotate_list x) in
     let annots = if List.length annotations <= 0 then "" 
     else List.map string_of_template_annotation annotations 
     |> String.concat " | " 
     |> Printf.sprintf "-- %s" in
-    Printf.sprintf "%s(%s) => %s %s" tmpl_id args xs annots
+    Printf.sprintf "%s(%s) => %s %s" tmpl_id.data args xs annots
 
 and string_of_template_annotation = 
-  function 
+  function
   | When e -> Printf.sprintf "when %s" (string_of_expr e)
-  | Foreach (name, e) -> Printf.sprintf "foreach %s in %s" name (string_of_expr e)
+  | Foreach (name, e) -> Printf.sprintf "foreach %s in %s" name.data (string_of_expr e)
 
-and string_of_subprogram ?(indent = "") (events, _templates, relations) = 
+and string_of_subprogram ?(indent = "") (events, templates, relations) = 
   let string_of_event_list = List.map string_of_event events in
-  let string_of_template_inst_list = List.map string_of_template_inst _templates in
+  let string_of_template_inst_list = List.map string_of_template_inst templates in
   let string_of_relation_list = List.map string_of_relation relations in
   List.flatten [
     string_of_event_list;
@@ -334,25 +415,27 @@ and fresh name =
   res
 
 and fresh_event event = 
-  let (id, label) = event.info in
-  let new_id = fresh id in
-  { event with info = (new_id, label) }
+  let (id, label) = event.data.info in
+  let new_id = fresh id.data in
+  { event with data = { event.data with info = (annotate ~loc:id.loc ~ty:!(id.ty) new_id, label) } }
 
 and fresh_event_ids events relations _exports_mapping  = 
   let fresh_events = List.map fresh_event events in
-  let _fresh_relations = List.map (function
+  let _fresh_relations = List.map (fun relation ->
+    match relation.data with
     | ControlRelation (from, guard, dest, t, _annot) -> 
-      let new_from = fresh from in
-      let new_dest = fresh dest in
-      ControlRelation (new_from, guard, new_dest, t, _annot)
+      let new_from = fresh from.data in
+      let new_dest = fresh dest.data in
+      ControlRelation (annotate ~loc:from.loc ~ty:!(from.ty) new_from, guard, annotate ~loc:dest.loc ~ty:!(dest.ty) new_dest, t, _annot)
     | SpawnRelation (from, guard, subprogram, _annot) -> 
-      let new_from = fresh from in
-      SpawnRelation (new_from, guard, subprogram, _annot)
+      let new_from = fresh from.data in
+      SpawnRelation (annotate ~loc:from.loc ~ty:!(from.ty) new_from, guard, subprogram, _annot)
   ) relations in
   Ok (fresh_events, relations)
   
 and record_event event = 
-  let { marking; _ } = event in
-  Record [
-    ("value", marking.value)
-  ]
+  let { marking; _ } = event.data in
+  annotate ~loc:event.loc ~ty:!(event.ty) 
+  (Record [
+    (annotate ~loc:event.loc "value", marking.data.value)
+  ])

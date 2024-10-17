@@ -8,7 +8,7 @@ build:
 	make pre-build
 	make clean
 	dune build
-	cp _build/default/bin/main.exe ./gratusi.exe
+	# cp _build/default/bin/main.exe ./gratusi.exe
 
 .SILENT: watch
 watch:
