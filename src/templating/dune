@@ -1,3 +1,10 @@
 (library
  (name templating)
  (libraries misc))
+
+(ocamllex lexer)
+
+(menhir
+ (modules parser)
+ ; (flags --explain)
+ )

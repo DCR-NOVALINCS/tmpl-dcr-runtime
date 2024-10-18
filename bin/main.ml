@@ -1,7 +1,7 @@
 open Templating.Syntax
 open Templating.Runtime
-open Templating.Battery_tests
 open Templating.Instantiation
+open Templating.Lex_and_parse
 open Misc.Monads
 open Misc.Printing
 
@@ -13,44 +13,59 @@ open Misc.Printing
 =============================================================================
 *)  
 
-(* let get_line_content file line =
-  let ic = open_in file in
-  let rec read_line n =
-    match input_line ic with
-    | content when n = line ->
-        content
-    | _ ->
-        read_line (n + 1)
-  in
-  let line = read_line 1 in
-  close_in ic ; line *)
+let get_line_content filepath line =
+  if Sys.file_exists filepath then
+    let file = open_in filepath in
+    let rec read_line n =
+      match input_line file with
+      | content when n = line -> content
+      | _ -> read_line (n + 1)
+    in
+    let line_content = read_line 1 in
+    close_in file;
+    line_content
+  else ""
+  
 
-(* let extract_location_info loc =
+let extract_location_info loc =
   match loc with 
   | Nowhere -> (0, 0, 0)
   | Location (start_pos, end_pos) -> 
     let line = start_pos.Lexing.pos_lnum in
     let start_char = start_pos.Lexing.pos_cnum - start_pos.Lexing.pos_bol in
     let end_char = end_pos.Lexing.pos_cnum - end_pos.Lexing.pos_bol in
-    (line, start_char, end_char)  *)
+    (line, start_char, end_char) 
 
 (*┌*)
 let print_error detailed_error =
-  let { location = _ ; message ; filepath = _ } = detailed_error in
-  (* let line, start_char, end_char = extract_location_info location in *)
-  (* let line_content = get_line_content file line in *)
-  (* let line_content = "" in *)
-  CPrinter.eprintf "error: %s\n" message ; ()
-  (* CPrinter.cprintf "  ──▶ %s:%d:%d\n" filepath line start_char ;
-  CPrinter.cprintln "  │" ;
-  CPrinter.cprintf "%d │ %s\n" line line_content ;
-  let marker =
-    String.concat ""
-      [ String.make start_char ' '
-      ; CString.colorize ~color:ASNIIColor.Red
-          (String.make (end_char - start_char) '^') ]
+  let { location ; message ; filepath } = detailed_error in
+  let message_header = 
+    CPrinter.eprint "error: "; 
+    CPrinter.cprint (message ^ " ");
+    CPrinter.cprint ~color:Cyan (string_of_loc location);
+  
   in
-  CPrinter.cprintf "  │ %s\n" marker *)
+  
+  let message_file_section =
+    begin match filepath with 
+    | "" -> ()
+    | _ -> 
+      let line, start_char, end_char = extract_location_info location in
+      let line_content = get_line_content filepath line in
+      let marker =
+        String.concat ""
+          [ String.make start_char ' '
+          ; CString.colorize ~color:Red
+              (String.make (end_char - start_char) '^') ]
+      in
+      CPrinter.cprintf "  ──▶ %s:%d:%d\n" filepath line start_char ;
+      CPrinter.cprintln "  │" ;
+      CPrinter.cprintf "%d │ %s\n" line line_content ;
+      CPrinter.cprintf "  │ %s\n" marker
+    end in
+  
+  message_header;
+  message_file_section
 
 (*
 =============================================================================
@@ -89,59 +104,104 @@ let debug_program program =
   view ~should_print_relations:true ~event_env ~expr_env program
 
 (* TODO: *)
-let parse_expression _expr_string = 
-  (* let n = Random.full_int 2 in *)
-  Ok (annotate ~loc:Nowhere Unit)
+let parse_expression expr_string = 
+  let expr = expr_string |> String.concat "" in
+  let expr_lexbuf = Lexing.from_string (expr) in
+  Logger.info "Parsing expression";
+  Logger.debug @@ "Expression: " ^ expr;
+  parse_expression expr_lexbuf
+  (* let n = Random.full_int 10 in
+  Ok (annotate ~loc:Nowhere (IntLit n)) *)
 
 let read_command cmd program = 
+  Logger.debug @@ "Command: " ^ (String.concat " | " cmd);
   match cmd with
   | ["exit"] | ["q"] -> exit 0
+
   | ["help"] | ["h"] -> 
     Ok (program, 
-    CString.colorize ~color:ASNIIColor.BrightCyan "Available Commands:\n" ^
+    CString.colorize ~color:BrightCyan "Available Commands:\n" ^
     "- view (v): View the current program\n\
     - debug (d): View the current program with relations\n\
     - exec (e) <event_id> <expr>: Execute an event with an expression\n\
     - exit (q): Exit the program\n\
     - help (h): Display this message")
+
   | "exec"::event_id::expr | "e"::event_id::expr -> 
-    parse_expression expr
+    (if expr = [] then Ok (annotate Unit) else
+    parse_expression expr)
     >>= fun parsed_expr ->
     execute_event ~event_id ~expr:parsed_expr.data program
-    >>= fun program -> Ok (program, "Event executed with expression " ^ (string_of_expr parsed_expr))
+    >>= fun program -> 
+    Ok (program, 
+    "Event executed with expression " ^ (CString.colorize ~color:Yellow @@ string_of_expr parsed_expr))
+
   | ["view"] | ["v"] -> 
     view_program program 
     >>= fun unparsed_program -> Ok (program, unparsed_program)
+
   | ["debug"] | ["d"] -> 
     debug_program program 
     >>= fun unparsed_program -> Ok (program, unparsed_program)
+
   | _ -> invalid_command cmd
 
-let rec prompt lexbuf program =
-  CPrinter.cprint ~color:BrightGreen "> " ;
-  let cmd = read_line () 
+let sanatize_input input = 
+  input
   |> String.split_on_char ' ' 
-  |> List.filter (fun s -> s <> "") in
+  |> List.filter (fun s -> s <> "")
+
+let rec prompt program =
+  CPrinter.cprint ~color:BrightGreen "> " ;
+
+  (* Read line *)
+  let cmd = read_line () |> sanatize_input in
+
+  (* Process command *)
   read_command cmd program
   |> function
   | Ok (program, msg) -> 
     CPrinter.cprintln msg;
     CPrinter.cprintln "";
-    prompt lexbuf program
+    prompt program
   | Error e ->
     print_error e;
-    prompt lexbuf program
+    CPrinter.cprintln "";
+    prompt program 
 
-let _ = 
+let runtime = 
+  (* Logger settings *)
   Logger.enable () ;
-  (* Logger.set_logger_level Error; *)
-  let lexbuf = Lexing.from_channel stdin in
-  let program = _test0 in
+  (* Logger.set_logger_level Warn; *)
+  
+  (* --- Main program --- *)
+  (* Get & Parse the initial input *)
+  let filename = Sys.argv.(1) in
+  let in_channel = open_in filename in
+  let lexbuf = Lexing.from_channel in_channel in
+  Logger.debug @@ "Reading file: " ^ lexbuf.lex_curr_p.pos_fname;
+  parse_program lexbuf
+  >>! fun e -> 
+  print_error e;
+  exit 1
+  >>= fun program ->
+  close_in in_channel;
+  
+  (* Preprocess program *)
+  Logger.info "Program parsed successfully";
   preprocess_program program
   >>= fun (_, expr_env) ->
+  
+  (* Instantiate initial templates *)
   instantiate ~expr_env program
   >>= fun (program, _) ->
+    
+  (* Display welcome message *)
   CPrinter.cprint "To get started, type ";
   CPrinter.cprint ~color:Green "help";
   CPrinter.cprintln " to see the available commands.\n";
-  prompt lexbuf program
+
+  (* Start the prompt *)
+  prompt program
+
+let _ = runtime

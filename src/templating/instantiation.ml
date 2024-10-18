@@ -90,11 +90,11 @@ let rec bind_tmpls tmpls env =
 
 and bind_tmpl tmpl env = 
   let id = tmpl.id in
-  Logger.info @@ Printf.sprintf "Binding template %s" id.data;
+  Logger.info @@ Printf.sprintf "Binding template %s" (CString.colorize ~color:Yellow id.data);
   Ok (bind id.data tmpl env)
 
 and bind_arg (name, expr) env = 
-  Logger.info @@ Printf.sprintf "Binding argument %s" name;
+  Logger.info @@ Printf.sprintf "Binding argument %s" (CString.colorize ~color:Yellow name);
   (* print_endline @@ Printf.sprintf "Binding %s: %s" name (string_of_expr expr); *)
   (* print_endline @@ Printf.sprintf " in %s\n" (string_of_env string_of_expr env); *)
   eval_expr expr env
@@ -115,20 +115,36 @@ and instantiate_tmpls tmpl_insts tmpl_env expr_env =
 
 and instantiate_tmpl result_program inst tmpl_env expr_env  = 
   let id = inst.tmpl_id in
-  Logger.info @@ Printf.sprintf "Instantiating %s" id.data;
+  (* Logger.info @@ Printf.sprintf "Instantiating %s" (CString.colorize ~color:Yellow id.data); *)
   match find_flat id.data tmpl_env with
   | None -> tmpl_not_found id
   | Some tmpl ->
-    Logger.info @@ Printf.sprintf "Instantiating %s" (string_of_template_inst inst);
+    Logger.info @@ Printf.sprintf "Instantiating %s" (CString.colorize ~color:Yellow @@ string_of_template_inst inst);
     (* TODO: Verify if the length of the args are the same as the params *)
     let (e_ti, q_ti, r_ti) = tmpl.graph in
     let exports_mapping = List.combine tmpl.export inst.x in
     let (result_events, _, result_relations) = result_program in 
     (* Instantiations should be empty! *)
 
-    (* DEBUG: Expr_env*)
-    (* print_endline "Expr env:";
-    print_endline (string_of_env string_of_expr expr_env); *)
+    (* Bind all arguments to its identifier *)
+    Ok (begin_scope expr_env)
+    >>= fun expr_env ->
+    fold_left_result
+      (fun env event -> 
+        let (id, _) = event.data.info in
+        bind_arg (id.data, record_event event) env)
+      expr_env e_ti
+    >>= fun expr_env -> 
+      Logger.debug "After binding the events";
+      Logger.debug @@ string_of_env string_of_expr expr_env;
+
+    (* Bind all the arguments to its identifier *)
+    fold_left_result
+      (fun env (prop, expr) -> bind_arg (prop.data, expr) env)
+      expr_env inst.args
+    >>= fun expr_env -> 
+      Logger.debug "After binding the args";
+      Logger.debug @@ string_of_env string_of_expr expr_env;
 
     (* Evaluate the annotations *)
     let program = {
@@ -140,19 +156,6 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     evaluate_annotations program ~expr_env
     >>= fun { events = e_ti; template_insts = q_ti; relations = r_ti; _ } ->
 
-    (* Bind all arguments to its identifier *)
-    Ok (begin_scope expr_env)
-    >>= fun expr_env ->
-    fold_left_result
-      (fun env event -> 
-        let (id, _) = event.data.info in
-        bind_arg (id.data, record_event event) env)
-      expr_env e_ti
-    >>= fun expr_env -> 
-    fold_left_result
-      (fun env (prop, expr) -> bind_arg (prop.data, expr) env)
-      expr_env inst.args
-    >>= fun expr_env -> 
 
     (* Instantiate events *)
     fold_left_result 
@@ -224,13 +227,17 @@ and replace_relation relation expr_env =
   | ControlRelation (from, guard, dest, t, annot) -> 
     eval_expr guard expr_env
     >>= fun guard ->
-            Logger.debug @@ from.data;
-            Logger.debug @@ string_of_env string_of_expr expr_env;
+      Logger.debug @@ Printf.sprintf "From: %s" from.data;
+      Logger.debug @@ string_of_env string_of_expr expr_env;
     begin match find_flat from.data expr_env with
     | Some { data = (Identifier id); _ } -> id
+    | Some { data = (Record [({ data = prop_name; _}, _)]); _} when prop_name = "value" -> 
+      (* This case is weird... *)
+      Logger.debug "From is a record with the property value";
+      from
     | _ ->
-      Logger.debug "Has none";
-      Logger.debug @@ from.data;
+      Logger.warn "From not found in the expr_env";
+      Logger.warn @@ Printf.sprintf "Found %s" (string_of_expr (find_flat from.data expr_env |> Option.get));
       from end
     |> fun from ->
             Logger.debug @@ from.data;
@@ -277,7 +284,7 @@ and analize_annotations_of_event event ~none annotations expr_env =
     [] annotations
 
 and analize_annotation_event event ~none annotation expr_env =
-  Logger.info @@ Printf.sprintf "Analizing annotation %s of the event %s" (string_of_template_annotation annotation) (List.map string_of_event event |> String.concat ", ");
+  Logger.info @@ Printf.sprintf "Analizing annotation %s of the event %s" (string_of_template_annotation annotation |> CString.colorize ~color:Yellow) (List.map string_of_event event |> String.concat ", " |> CString.colorize ~color:Yellow);
   let module AnnotationEvaluator = MakeAnnotationEvaluator(struct type t = event list end) in
   match annotation with 
   | When expr ->
@@ -307,7 +314,7 @@ and analize_annotations_of_relation relation ~none annotations expr_env =
     [] annotations
 
 and analize_annotation_relation relation ~none annotation expr_env =
-  Logger.info @@ Printf.sprintf "Analizing annotation %s of the relation %s" (string_of_template_annotation annotation) (List.map string_of_relation relation |> String.concat ", ");
+  Logger.info @@ Printf.sprintf "Analizing annotation %s of the relation %s" (string_of_template_annotation annotation |> CString.colorize ~color:Yellow) (List.map string_of_relation relation |> String.concat ", " |> CString.colorize ~color:Yellow);
   let module AnnotationEvaluator = MakeAnnotationEvaluator(struct type t = relation list end) in
   match annotation with 
   | When expr -> 
@@ -331,7 +338,7 @@ and analize_annotations_of_inst instance ~none annotations expr_env =
     [] annotations
 
 and analize_annotation_inst instance ~none annotation expr_env =
-  Logger.info @@ Printf.sprintf "Analizing annotation %s of the instance %s" (string_of_template_annotation annotation) (List.map string_of_template_inst instance |> String.concat ", ");
+  Logger.info @@ Printf.sprintf "Analizing annotation %s of the instance %s" (string_of_template_annotation annotation |> CString.colorize ~color:Yellow) (List.map string_of_template_inst instance |> String.concat ", " |> CString.colorize ~color:Yellow);
   let module AnnotationEvaluator = MakeAnnotationEvaluator(struct type t = template_instance list end) in
   match annotation with 
   | When expr -> 

@@ -192,7 +192,7 @@ let deannotate { data; _ } = data
 let deannotate_list lst = List.map deannotate lst
 
 let mk_marking ?(executed=false) ?(pending=false) ?(included=true) ?(value=Unit) () = 
-  annotate { 
+   { 
     executed = annotate executed
     ; pending = annotate pending
     ; included = annotate included
@@ -201,26 +201,41 @@ let mk_marking ?(executed=false) ?(pending=false) ?(included=true) ?(value=Unit)
 
 let default_marking = mk_marking ()
 
+let default_marking_excl = mk_marking ~included:false ()
+
+let default_marking_pend = mk_marking ~pending:true ()
+
+let default_marking_pend_excl = mk_marking ~pending:true ~included:false ()
+
 let mk_event 
   ?(marking=default_marking) 
   ?(annotations = []) 
-  ~id ~label io = 
-  annotate { info = (annotate id, annotate label)
-  ; io = annotate io
-  ; marking
+  info io = 
+  annotate { info
+  ; io
+  ; marking = annotate marking
   ; annotations 
   }
 
-let mk_control_relation 
+let mk_ctrl_relation 
   ?(annotations = []) 
   ~from 
-  ?(guard = True) 
-  ~dest t = annotate @@ ControlRelation (annotate from, annotate guard, annotate dest, t, annotations)
+  ?(guard = annotate True) 
+  ~dest t = annotate @@ ControlRelation (from, guard, dest, t, annotations)
+
+let mk_ctrl_relations left_ids expr right_ids t =
+  List.concat_map
+    (fun id1 ->
+      List.map (fun id2 -> mk_ctrl_relation ~from:id1 ~guard:expr ~dest:id2 t) right_ids)
+    left_ids
 
 let mk_spawn_relation 
   ?(annotations = []) 
   ~from 
-  ?(guard = True) subprogram = annotate @@ SpawnRelation (annotate from, annotate guard, subprogram, annotations)
+  ?(guard = annotate True) subprogram = annotate @@ SpawnRelation (from, guard, subprogram, annotations)
+
+let mk_spawn_relations left_ids expr prog = 
+  List.map (fun id -> mk_spawn_relation ~from:id ~guard:expr prog) left_ids
 
 let mk_template_def id params graph ~export = 
   { id = annotate id
@@ -262,6 +277,19 @@ let empty_template_inst = mk_template_inst "" [] ~x:[]
   Program Section: Pretty Printers
   =============================================================================
 *)
+
+let string_of_pos pos = 
+  let line = pos.Lexing.pos_lnum in
+  let start_char = pos.Lexing.pos_cnum - pos.Lexing.pos_bol in
+  Printf.sprintf "%d:%d" line start_char
+
+let string_of_loc loc = 
+  match loc with 
+  | Nowhere -> ""
+  | Location (start_pos, end_pos) -> 
+    let start = string_of_pos start_pos in
+    let end_ = string_of_pos end_pos in
+    Printf.sprintf "%s-%s" start end_
 
 let rec string_of_type_expr ty = 
   match ty.data with
@@ -325,6 +353,8 @@ and string_of_event_marking m =
   Printf.sprintf "{ ex = %b; res = %b; in = %b; va = %s }" m.executed.data m.pending.data m.included.data (string_of_expr m.value)
 
 and string_of_event ?(abbreviated = true) e =
+  (* let open Misc.Printing in *)
+  (* Logger.debug @@ Printf.sprintf "event: %s" (fst e.data.info).data; *)
   let annots = List.map string_of_template_annotation e.data.annotations in
   let (id, label) = e.data.info in
   if not abbreviated then
@@ -335,6 +365,7 @@ and string_of_event ?(abbreviated = true) e =
     let pending = if marking.pending.data then "!" else "" in
     let executed = if marking.executed.data then "✓" else "" in
     let value = string_of_expr marking.value in
+    (* Logger.debug @@ Printf.sprintf "tokens: |%s| |%s| |%s|" excluded pending executed; *)
     Printf.sprintf "%s%s%s%s:%s%s -> %s %s" excluded pending executed id.data label.data (string_of_event_io e.data.io) value (String.concat " | " annots)
 
 and string_of_relation_type = function

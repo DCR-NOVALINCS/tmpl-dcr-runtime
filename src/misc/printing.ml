@@ -20,7 +20,7 @@ module type ColorType = sig
   val color_code : t -> string
 end
 
-module ASNIIColor : ColorType = struct
+module ASNIColor : ColorType = struct
   type t =
     | Red
     | Green
@@ -74,7 +74,7 @@ module ASNIIColor : ColorType = struct
         "\027[97m"
 end
 
-module ASNIIString (Color : ColorType) = struct
+module ASNIString (Color : ColorType) = struct
   include String
 
   let colorize ?(color = Color.Default) text =
@@ -99,8 +99,9 @@ module type Printer = sig
   val eprintf : ('a, unit, string, unit) format4 -> 'a
 end
 
-module MakePrinter (Color : ColorType) : Printer = struct
-  module Color = Color
+module MakePrinter (C : ColorType) : Printer = struct
+  include (Printf) 
+  module Color = C
 
   let cprint ?(color = Color.Default) text =
     let color_start = Color.color_code color in
@@ -167,8 +168,6 @@ module MakeLogger (Color : ColorType) : Logger = struct
   let convert_log_type =
     let open P.Color in
     function
-    | Log ->
-        ("LOG", 0,  Default)
     | Debug ->
         ("DEBUG", 1, Blue)
     | Info ->
@@ -177,9 +176,11 @@ module MakeLogger (Color : ColorType) : Logger = struct
         ("WARN", 3, Yellow)
     | Error ->
         ("ERROR", 4, Red)
+    | Log ->
+        ("LOG", 99,  Default)
     
   let logger_level = 
-    let (_, log_level, _) = convert_log_type Log in
+    let (_, log_level, _) = convert_log_type Debug in
     ref log_level
 
   let set_logger_level level = 
@@ -228,6 +229,6 @@ module MakeLogger (Color : ColorType) : Logger = struct
           P.cprintln ~color:Cyan indent
 end
 
-module Logger = MakeLogger (ASNIIColor)
-module CPrinter = MakePrinter (ASNIIColor)
-module CString = ASNIIString (ASNIIColor)
+module Logger = MakeLogger (ASNIColor)
+module CPrinter = MakePrinter (ASNIColor)
+module CString = ASNIString (ASNIColor)

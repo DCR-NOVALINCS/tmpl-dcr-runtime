@@ -9,18 +9,24 @@
 
 (authors "bfibraga")
 
-; (maintainers "Maintainer Name")
+(maintainers "bfibraga")
 
 (license
  "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License")
 
 (documentation https://url/to/documentation)
 
+(using menhir 3.0)
+
 (package
  (name tmpl_dcr)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune)
+ (depends
+  ocaml
+  dune
+  (menhir
+   (>= 3.0)))
  (tags
   (topics "to describe" your project)))
 

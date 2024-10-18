@@ -71,7 +71,7 @@ and propagate_effect relation event (event_env, expr_env) program =
   let (id, _) = event.data.info in
   match relation.data with 
   | SpawnRelation (from, _guard, spawn_prog, _annot) -> 
-    if not (from = id) then Ok program
+    if not (from.data = id.data) then Ok program
     else
     (* check_guard guard expr_env
     >>= fun _ -> *)
@@ -95,8 +95,8 @@ and propagate_effect relation event (event_env, expr_env) program =
     >>= fun expr_env ->
     Ok (bind "@trigger" (record_event event) expr_env)
     >>= fun expr_env ->
-    print_endline "Expr env:";
-    print_endline (string_of_env string_of_expr expr_env);
+    (* print_endline "Expr env:";
+    print_endline (string_of_env string_of_expr expr_env); *)
 
     (* Update values of the event inside of the spawn *)
     fold_left_result
@@ -134,7 +134,7 @@ and propagate_effect relation event (event_env, expr_env) program =
     }
 
   | ControlRelation (from, guard, dest, op, _annot) -> 
-    if not (from = id) then Ok program
+    if not (from.data = id.data) then Ok program
     else
     check_guard guard expr_env
     >>= fun _guard_value ->
@@ -252,7 +252,7 @@ and execute_event event expr env =
   let expr = annotate ~loc expr in
   eval_expr expr env
   >>= fun expr ->
-  let marking = { event.data.marking with data = { event.data.marking.data with value = expr } } in
+  let marking = { event.data.marking with data = { event.data.marking.data with value = expr; executed = annotate true } } in
   let event = { event with data = { event.data with marking } } in
   Ok event
 

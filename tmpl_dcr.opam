@@ -2,6 +2,7 @@
 opam-version: "2.0"
 synopsis: "A short synopsis"
 description: "A longer description"
+maintainer: ["bfibraga"]
 authors: ["bfibraga"]
 license:
   "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License"
@@ -12,6 +13,7 @@ bug-reports: "https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.14"}
+  "menhir" {>= "3.0"}
   "odoc" {with-doc}
 ]
 build: [

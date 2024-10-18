@@ -33,12 +33,12 @@ tmpl f(num: Number) {
     e -->* b
   }
 *)
-let tmpl_g = mk_template_def "g" [("n", IntTy); ("e", (EventTy "A"))] 
+(* let tmpl_g = mk_template_def "g" [("n", IntTy); ("e", (EventTy "A"))] 
   ([mk_event ~id:"b" ~label:"B" (Output (annotate (Identifier (annotate "n"))))],
   [],
   [mk_control_relation ~from:"e" Condition ~dest:"b"]
   )
-  ~export:[]
+  ~export:[] *)
 (* let tmpl_g = {
   id = "g";
   params = [("n", IntTy); ("a", (EventTy "A"))];
@@ -113,41 +113,37 @@ tmpl fac(n: Number) NumberHolder {
     fac_aux(1, 1, n) => r
 } => r
 *)
-(* let tmpl_fac = {
-  id = "fac";
-  params = [("n", IntTy)];
-  graph = (
-    [],
-    [mk_template_inst "fac_aux" [("acc", IntLit 1); ("i", IntLit 1); ("n", (Identifier "n"))] ~x:["r"]],
-    []
-  );
-  export = ["r"]
-} *)
+(* let tmpl_fac = mk_template_def "fac" [("n", IntTy)] 
+  ([],
+   [mk_template_inst "fac_aux" [("acc", IntLit 1); ("i", IntLit 1); ("n", (Identifier (annotate "n")))] ~x:["r"]],
+   [])
+  ~export:["r"] *)
 
 (*
 tmpl fac_aux(acc: Number, i: Number, n: Number) NumberHolder {
-    r: NumberHolder[acc] -- when i >= n
+    r: NumberHolder[acc] -- when i > n
     ;
-    fac_aux(acc = i * acc, i = i + 1, n = n) => r -- when i < n
+    fac_aux(acc = i * acc, i = i + 1, n = n) => r -- when i <= n
 } => r
 *)
-(* let tmpl_fac_aux = {
-  id = "fac_aux";
-  params = [("acc", IntTy); ("i", IntTy); ("n", IntTy)];
-  graph = (
-    [mk_event ~id:"r" ~label:"NumberHolder" (Output (Identifier "acc")) 
-    ~annotations:[When (BinaryOp (Identifier "i", Identifier "n", GreaterOrEqual))]],
-    [mk_template_inst "fac_aux" 
-      [ ("acc", BinaryOp (Identifier "i", Identifier "acc", Mult))
-      ; ("i", BinaryOp (Identifier "i", IntLit 1, Add))
-      ; ("n", (Identifier "n"))
-      ]
-      ~x:["r"] ~annotations:[When (BinaryOp (Identifier "i", Identifier "n", LessThan))]
-    ],
-    []
-  );
-  export = ["r"]
-} *)
+(* let tmpl_fac_aux = mk_template_def "fac_aux" [("acc", IntTy); ("i", IntTy); ("n", IntTy)] 
+  ([
+    mk_event ~id:"r" ~label:"NumberHolder" (Output (annotate (Identifier (annotate "acc"))))
+    ~annotations:[
+      When (annotate @@ BinaryOp (annotate @@ Identifier (annotate "i"), annotate @@ Identifier (annotate "n"), GreaterThan))
+    ]
+  ],[
+    mk_template_inst "fac_aux" [
+      ("acc", BinaryOp (annotate @@ Identifier (annotate "i"), annotate @@ Identifier (annotate "acc"), Mult));
+      ("i", BinaryOp (annotate @@ Identifier (annotate "i"), annotate @@ IntLit 1, Add));
+      ("n", (Identifier (annotate "n")))
+    ] ~x:["r"] ~annotations:[
+      When (annotate @@ BinaryOp (annotate @@ Identifier (annotate "i"), annotate @@ Identifier (annotate "n"), LessOrEqual))
+    ]
+  ],[
+
+  ]) 
+  ~export:["r"] *)
 
 (*
 =============================================================================
@@ -180,7 +176,7 @@ a' -->> {
   g(0, a')
 }
 *)
-let _test0 = {
+(* let _test0 = {
   template_decls = [tmpl_g; tmpl_i "A"]
 ; events = [mk_event ~id:"a'" ~label:"A" (Input (annotate IntTy))]
 ; template_insts = []
@@ -189,7 +185,7 @@ let _test0 = {
     [g ~n:0 ~e:"a'"],
     []
   )]
-}
+} *)
 
 (*
 a': A[?];
@@ -197,8 +193,8 @@ g(0, a')
 *)
 (* let _test1 = {
   template_decls = [tmpl_g; tmpl_i "A"]
-; events = [mk_event ~id:"a'" ~label:"A" (Input (UnitTy))]
-; template_insts = [g ~n:0 ~a:"a'"]
+; events = [mk_event ~id:"a'" ~label:"A" (Input (annotate UnitTy))]
+; template_insts = [g ~n:0 ~e:"a'"]
 ; relations = []
 } *)
 
@@ -347,8 +343,11 @@ b -->% a
 (* let _test9 = {
   template_decls = []
 ; events = [
-  mk_event ~id:"a" ~label:"A" (Input (UnitTy)) ~annotations:[When (BinaryOp (IntLit 0, IntLit 1, GreaterThan))];
-  mk_event ~id:"b" ~label:"B" (Input (UnitTy))
+  mk_event ~id:"a" ~label:"A" (Input (annotate UnitTy)) 
+  ~annotations:[
+    When (annotate @@ BinaryOp (annotate @@ IntLit 0, annotate @@ IntLit 1, GreaterThan))
+  ];
+  mk_event ~id:"b" ~label:"B" (Input (annotate UnitTy))
 ]
 ; template_insts = []
 ; relations = [
@@ -387,13 +386,13 @@ a -->> {
 *)
 (* let _test11 = {
   template_decls = [tmpl_fac; tmpl_fac_aux]
-; events = [mk_event ~id:"a" ~label:"A" (Input (IntTy))]
+; events = [mk_event ~id:"a" ~label:"A" (Input (annotate IntTy))]
 ; template_insts = []
 ; relations = [
   mk_spawn_relation ~from:"a" (
     [],
     [
-      mk_template_inst "fac" [("n", PropDeref (Trigger, "value"))] ~x:["result"]
+      mk_template_inst "fac" [("n", PropDeref (annotate Trigger, annotate "value"))] ~x:["result"]
     ],
     []
   ) 

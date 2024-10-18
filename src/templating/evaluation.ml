@@ -165,8 +165,6 @@ and eval_binop v1 v2 op =
     | _ -> Ok (annotate ~loc:v1.loc True)
     )
 
-  (* | _ -> failwith "Invalid binary operator" *)
-
 and eval_unop v op = 
   match op with
   | Minus -> 
@@ -187,31 +185,26 @@ and find_id id env =
   | None -> id_not_found id
   | Some expr -> Ok expr
 
-(* and partial_eval_expr expr env = 
-  match expr with
+(*
+===============================================================
+  Expression Partial Evaluation functions
+===============================================================
+*)
+
+(* See more: https://link.springer.com/chapter/10.1007/3-540-11980-9_13 *)
+and partial_eval_expr expr = 
+  match expr.data with 
+  | Parenthesized e -> 
+    partial_eval_expr e
+    >>= fun v -> Ok ({expr with data = Parenthesized v})
   | BinaryOp (e1, e2, op) -> 
-    partial_eval_expr e1 env
-    >>= fun v1-> partial_eval_expr e2 env
-    >>= fun v2 -> Ok (BinaryOp (v1, v2, op))
-  | UnaryOp (e, op) ->
-    partial_eval_expr e env
-    >>= fun v -> Ok (UnaryOp (v, op))
-  | PropDeref (e, p) ->
-    partial_eval_expr e env
-    >>= fun v -> Ok (PropDeref (v, p))
-  | Record fields ->
-    fold_left_result 
-      (fun fields (name, e) -> 
-        partial_eval_expr e env
-        >>| fun v -> (name, v) :: fields)
-      [] fields
-    >>| fun fields -> Record fields
-  | List _es -> 
-    fold_left_result 
-      (fun result e -> 
-        partial_eval_expr e env
-        >>= fun v -> Ok (v :: result)
-        )
-      [] _es
-    >>| fun es -> List es
-  | _ -> Ok expr *)
+    partial_eval_expr e1
+    >>= fun v1 -> 
+    partial_eval_expr e2
+    >>= fun v2 ->
+    Ok ({expr with data = BinaryOp (v1, v2, op)})
+  | UnaryOp (e, op) -> 
+    partial_eval_expr e
+    >>= fun v -> Ok ({expr with data = UnaryOp (v, op)})
+  (* TODO: Put more cases *)
+  | _ -> Ok expr
