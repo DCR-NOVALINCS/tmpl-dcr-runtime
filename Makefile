@@ -3,12 +3,12 @@ default:
 	opam install . --deps-only --yes
 	make build
 
-.PHONY: build
+.SILENT: build
 build:
 	make pre-build
 	make clean
 	dune build
-	# cp _build/default/bin/main.exe ./gratusi.exe
+	printf "\nBuild successful! 🎉\n"
 
 .SILENT: watch
 watch:
@@ -37,7 +37,6 @@ clean:
 	make pre-build
 	dune clean
 	rm -rf docs
-	rm -f gratusi.exe
 
 doc:
 	make clean

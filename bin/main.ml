@@ -67,6 +67,15 @@ let print_error detailed_error =
   message_header;
   message_file_section
 
+let print_output =
+  function
+  | Ok (_, msg) -> 
+    CPrinter.cprintln msg;
+    CPrinter.cprintln ""
+  | Error e ->
+    print_error e;
+    CPrinter.cprintln ""
+
 (*
 =============================================================================
   Error messages
@@ -85,6 +94,15 @@ let invalid_command cmd =
   Main Section
 =============================================================================
 *)  
+
+let help_message cmds = 
+  let header = CString.colorize ~color:BrightCyan "Available Commands:" in
+  let cmds_section = 
+    cmds
+    |> List.map (fun (cmd, alias, desc) -> 
+      Printf.sprintf "- %s (%s): %s" (CString.colorize ~color:Green cmd) (CString.colorize ~color:Green alias) desc)
+    |> String.concat "\n" in
+  String.concat "\n" [header; cmds_section]
 
 let execute_event ~event_id ?(expr = Unit) program = 
   preprocess_program program
@@ -119,13 +137,20 @@ let read_command cmd program =
   | ["exit"] | ["q"] -> exit 0
 
   | ["help"] | ["h"] -> 
-    Ok (program, 
+    Ok (program, help_message [
+      ("view", "v", "View the current program")
+      ; ("debug", "d", "View the current program with relations")
+      ; ("exec", "e", "Execute an event with an expression")
+      ; ("exit", "q", "Exit the program")
+      ; ("help", "h", "Display this message")
+    ])
+    (* Ok (program, 
     CString.colorize ~color:BrightCyan "Available Commands:\n" ^
     "- view (v): View the current program\n\
     - debug (d): View the current program with relations\n\
     - exec (e) <event_id> <expr>: Execute an event with an expression\n\
     - exit (q): Exit the program\n\
-    - help (h): Display this message")
+    - help (h): Display this message") *)
 
   | "exec"::event_id::expr | "e"::event_id::expr -> 
     (if expr = [] then Ok (annotate Unit) else
@@ -150,42 +175,35 @@ let sanatize_input input =
   input
   |> String.split_on_char ' ' 
   |> List.filter (fun s -> s <> "")
+  |> Result.ok
 
 let rec prompt program =
   CPrinter.cprint ~color:BrightGreen "> " ;
 
   (* Read line *)
-  let cmd = read_line () |> sanatize_input in
+  sanatize_input (read_line ())
+  >>= fun cmd ->
 
   (* Process command *)
   read_command cmd program
-  |> function
-  | Ok (program, msg) -> 
-    CPrinter.cprintln msg;
-    CPrinter.cprintln "";
-    prompt program
-  | Error e ->
-    print_error e;
-    CPrinter.cprintln "";
-    prompt program 
+  |> print_output; 
+     prompt program
+    
+let parse filename = 
+  Logger.debug @@ "Reading file: ";
+  let lexbuf = Lexing.from_channel (open_in filename) in
+  let prog = parse_program lexbuf in
+  prog
 
 let runtime = 
   (* Logger settings *)
   Logger.enable () ;
-  (* Logger.set_logger_level Warn; *)
-  
+  Logger.set_logger_level Debug;
   (* --- Main program --- *)
   (* Get & Parse the initial input *)
-  let filename = Sys.argv.(1) in
-  let in_channel = open_in filename in
-  let lexbuf = Lexing.from_channel in_channel in
-  Logger.debug @@ "Reading file: " ^ lexbuf.lex_curr_p.pos_fname;
-  parse_program lexbuf
-  >>! fun e -> 
-  print_error e;
-  exit 1
+  ( let filename = Sys.argv.(1) in
+  parse filename
   >>= fun program ->
-  close_in in_channel;
   
   (* Preprocess program *)
   Logger.info "Program parsed successfully";
@@ -199,9 +217,12 @@ let runtime =
   (* Display welcome message *)
   CPrinter.cprint "To get started, type ";
   CPrinter.cprint ~color:Green "help";
+  CPrinter.cprint " or ";
+  CPrinter.cprint ~color:Green "h";
   CPrinter.cprintln " to see the available commands.\n";
 
   (* Start the prompt *)
   prompt program
+  ) |> print_output
 
 let _ = runtime

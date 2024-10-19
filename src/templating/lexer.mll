@@ -60,9 +60,12 @@ rule read_token = parse
 	| "AND" 			{ AND } 
 	| "OR" 				{ OR } 
 	| "==" 				{ EQ } 
+	| "="               { ASSIGN }
 	| "!=" 				{ NEQ }
 	| '<'				{ LESSTHAN }
+	| "<="              { LESSEQTHAN }
 	| '>'				{ GREATERTHAN }
+	| ">="              { GREATEREQTHAN }
 	| '.'				{ PROP_DEREF }
 	| ','				{ COMMA }
 	| ';'				{ SEMICOLON }
@@ -84,6 +87,9 @@ rule read_token = parse
 	| "Boolean" 		{ BOOLTY }
 	| "List" 			{ LISTTY }
 	| "tmpl" | "template" | "process" { TEMPLATE }
+	| "when" 			{ WHEN }
+	| "foreach"  		{ FOREACH }
+	| "in"				{ IN }
 	| "executed"		{ ID "executed" }
 	| "included"		{ ID "included" }
 	| "pending"			{ ID "pending" }

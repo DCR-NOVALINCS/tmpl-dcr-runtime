@@ -25,6 +25,7 @@
  (depends
   ocaml
   dune
+  odoc
   (menhir
    (>= 3.0)))
  (tags

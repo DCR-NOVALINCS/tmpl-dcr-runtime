@@ -13,8 +13,8 @@ bug-reports: "https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.14"}
+  "odoc"
   "menhir" {>= "3.0"}
-  "odoc" {with-doc}
 ]
 build: [
   ["dune" "subst"] {dev}

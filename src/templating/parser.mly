@@ -17,7 +17,7 @@ open Syntax
 // separators
 %token COMMA COLON SEMICOLON PIPE
 // binary ops
-%token PLUS MULT AND OR EQ NEQ LESSTHAN GREATERTHAN
+%token PLUS MULT AND OR EQ NEQ LESSTHAN LESSEQTHAN GREATERTHAN GREATEREQTHAN ASSIGN
 // unary ops
 %token NEG MINUS
 // ====== DCR
@@ -33,6 +33,7 @@ open Syntax
 // %token FLOWS TOP BOT
 // templates
 %token TEMPLATE
+%token FOREACH WHEN IN
 // misc
 %token QUESTION PROP_DEREF BOLDARROW ARROW
 // %token PIPE // TODO revise utility
@@ -59,12 +60,12 @@ main_expr:
 
 // program: mark_loc_ty(plain_program) {$1}
 plain_program:
-    template_decls = terminated(list(plain_template_decl), SEMICOLON)?;
+    template_decls = terminated(list(plain_template_decl), SEMICOLON);
     spawn_prog = plain_program_spawn;
     { 
       let (events, template_insts, relations) = spawn_prog in
       {
-        template_decls = Option.value ~default:[] template_decls
+        template_decls
         ; events
         ; template_insts
         ; relations
@@ -75,9 +76,13 @@ plain_program:
 /* program_spawn: mark_loc_ty(plain_program_spawn) {$1} */
 plain_program_spawn:
     events = plain_event_decl_list;
-    template_insts = terminated(list(plain_template_inst), SEMICOLON)?;
+    template_insts = preceded(SEMICOLON, nonempty_list(plain_template_inst))?;
     relations = preceded(SEMICOLON, plain_ctrl_relation_decl_list)?;
-    { (events, Option.value ~default:[] template_insts, Option.value ~default:[] relations) } 
+    { (
+        events, 
+        Option.value ~default:[] template_insts, 
+        Option.value ~default:[] relations
+      ) } 
 ;
 
 // =====
@@ -85,26 +90,38 @@ plain_program_spawn:
 // template_decl: mark_loc_ty(plain_template_decl) {$1}
 plain_template_decl:
   | TEMPLATE; id = id; 
-    params=delimited(LPAR, separated_list(COMMA, pair(id, type_expr)), RPAR);
+    params = delimited(LPAR, separated_list(COMMA, plain_param_pair), RPAR);
     (* TODO: Add types to the exported events *)
-    graph= delimited(LBRACE, plain_program_spawn, RBRACE);
-    export=preceded(BOLDARROW, separated_nonempty_list(COMMA, id))?;
+    _types = separated_list(COMMA, id);
+    graph = delimited(LBRACE, plain_program_spawn, RBRACE);
+    export = preceded(BOLDARROW, separated_nonempty_list(COMMA, id))?;
     { { id; params; graph; export=Option.value ~default:[] export } }
+
+plain_param_pair:
+  | id=id; COLON; ty=type_expr { (id, ty) }
 
 // ===== template instantiation
 plain_template_inst:
   | tmpl_id = id;
-    args = delimited(LPAR, separated_list(COMMA, pair(id, expr)), RPAR);
+    args = delimited(LPAR, separated_list(COMMA, plain_arg_pair), RPAR);
     x = preceded(BOLDARROW, separated_nonempty_list(COMMA, id))?;
+    tmpl_annotations = separated_list(PIPE, plain_template_annotation);
     {
       {
         tmpl_id
         ; args
         ; x=Option.value ~default:[] x
-        ; tmpl_annotations = []
+        ; tmpl_annotations
       }
     }
 
+plain_arg_pair:
+  | id=id; ASSIGN; expr=expr { (id, expr) }
+
+// template annotations 
+plain_template_annotation:
+  | WHEN; expr = expr { When(expr) }
+  | FOREACH; id=id; IN; l=expr { Foreach (id, l) }
 
 // =====
 // ===== event declarations
@@ -116,14 +133,28 @@ event_decl: mark_loc_ty(plain_event_decl) {$1}
 plain_event_decl:
   // event has marking as prefix (one of !, %, !%, %!)
   | marking = marking_prefix?;
-    info = delimited(LPAR, plain_event_info , RPAR); 
+    info = plain_event_info; (* CHANGED FROM TARDIS! *) 
     io = delimited(LBRACKET, event_io, RBRACKET);
-    { { marking = (Option.value ~default:(annotate default_marking) marking); info; io; annotations = [] } }
+    annotations = separated_list(PIPE, plain_template_annotation);
+    { 
+      { marking = (Option.value ~default:(annotate default_marking) marking)
+      ; info
+      ; io
+      ; annotations
+      } 
+    }
   // (optionally) event has marking after the input/output expression
-  | info = delimited(LPAR, plain_event_info , RPAR); 
+  | info = plain_event_info; 
     io = delimited(LBRACKET, event_io, RBRACKET);
     marking = delimited(LBRACE, node_marking, RBRACE)?;
-    { { marking = (Option.value ~default:(annotate default_marking) marking); info; io; annotations = [] } }
+    annotations = separated_list(PIPE, plain_template_annotation);
+    { 
+      { marking = (Option.value ~default:(annotate default_marking) marking)
+      ; info
+      ; io
+      ; annotations
+      } 
+    }
 ;
 
 marking_prefix: mark_loc_ty(plain_marking_prefix) {$1}
@@ -273,7 +304,9 @@ plain_compareop:
 | compareop EQ arith                                { BinaryOp($1,$3,Eq) }
 | compareop NEQ arith                               { BinaryOp($1,$3,NotEq) }
 | compareop GREATERTHAN arith                       { BinaryOp($1,$3,GreaterThan) }
+| compareop GREATEREQTHAN arith                     { BinaryOp($1,$3,GreaterOrEqual) }
 | compareop LESSTHAN arith                          { BinaryOp($1,$3,LessThan) }
+| compareop LESSEQTHAN arith                          { BinaryOp($1,$3,LessOrEqual) }
 | plain_arith                                       { $1 } 
 ;
 

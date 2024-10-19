@@ -65,9 +65,10 @@ let rec eval_expr expr env =
     >>= fun v -> 
     ( match v.data with
     | Record fields -> 
-      ( match List.assoc_opt p fields with
+      let fields = List.map (fun (prop, expr) -> (prop.data, expr.data) ) fields in
+      ( match List.assoc_opt p.data fields with
       | None -> property_not_found p v
-      | Some v -> Ok v )
+      | Some v -> Ok (annotate ~loc:p.loc ~ty:!(p.ty) v) )
     | _ -> is_not_type "Record" v )
   | List es -> 
     fold_left_result 
