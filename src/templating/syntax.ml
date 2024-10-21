@@ -178,7 +178,6 @@ and relation_type =
   | Milestone
   | Response
 
-
 (*
   =============================================================================
   Program Section: Type makers
@@ -285,7 +284,7 @@ let string_of_pos pos =
 
 let string_of_loc loc = 
   match loc with 
-  | Nowhere -> ""
+  | Nowhere -> "?"
   | Location (start_pos, end_pos) -> 
     let start = string_of_pos start_pos in
     let end_ = string_of_pos end_pos in

@@ -1,6 +1,7 @@
 open Syntax
 open Misc.Monads
 open Misc.Env
+open Misc.Printing
 open Evaluation
 
 (*
@@ -61,9 +62,6 @@ and propagate_effects event (event_env, expr_env) program =
   fold_left_result
     (fun program relation -> 
       propagate_effect relation event (event_env, expr_env) program
-      (* |> function
-      | Ok program' -> Ok program'
-      | Error _ -> Ok program *)
       )  
     program relations
 
@@ -115,6 +113,8 @@ and propagate_effect relation event (event_env, expr_env) program =
       [] spawn_events
     >>= fun spawn_events ->
 
+    (* Update values of the relations inside of the spawn *)
+
     (* Instantiate template instances present in the spawn *)
     (* FIXME: Maybe use instantiate_tmpls instead of this function *)
     let open Instantiation in
@@ -124,6 +124,11 @@ and propagate_effect relation event (event_env, expr_env) program =
     ; relations = [] 
     } |> instantiate ~expr_env 
     >>= fun ({ events = inst_spawn_events; relations = inst_spawn_relations; _ }, _) -> 
+
+    Logger.debug "Instantiated events from spawn:";
+    Logger.debug @@ (List.map string_of_event inst_spawn_events |> String.concat "\n");
+    Logger.debug "Instantiated relations from spawn:";
+    Logger.debug @@ (List.map string_of_relation inst_spawn_relations |> String.concat "\n");
 
     (* Put it all together *)
     Ok {

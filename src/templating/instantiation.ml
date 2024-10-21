@@ -115,7 +115,6 @@ and instantiate_tmpls tmpl_insts tmpl_env expr_env =
 
 and instantiate_tmpl result_program inst tmpl_env expr_env  = 
   let id = inst.tmpl_id in
-  (* Logger.info @@ Printf.sprintf "Instantiating %s" (CString.colorize ~color:Yellow id.data); *)
   match find_flat id.data tmpl_env with
   | None -> tmpl_not_found id
   | Some tmpl ->
@@ -397,7 +396,7 @@ and evaluate_annotations ?(expr_env = empty_env) program  =
       | [events] -> Ok (List.flatten [result; events])
       | [] -> Ok (event::result)
       (* Grouping annotations is not available rn, didn't have the time to implement, don't blame me... :) *)
-      | _ -> failwith "Unsuported annotation")
+      | _ -> failwith "Unsuported annotation for event")
     [] events
   >>= deannotate_events
   >>= fun events ->
@@ -414,7 +413,7 @@ and evaluate_annotations ?(expr_env = empty_env) program  =
       | [inst] -> Ok (List.flatten [result; inst])
       | [] -> Ok (inst::result)
       (* In case of grouping annotations is not available rn, didn't have the time to implement, don't blame me... :) *)
-      | _ -> failwith "Unsuported annotation")
+      | _ -> failwith "Unsuported annotation for instantiation")
     [] insts
   >>= deannotate_template_insts
   >>= fun template_insts ->
@@ -433,7 +432,7 @@ and evaluate_annotations ?(expr_env = empty_env) program  =
       | [relation] -> Ok (List.flatten [result; relation])
       | [] -> Ok (relation::result)
       (* In case of grouping annotations is not available rn, didn't have the time to implement, don't blame me... :) *)
-      | _ -> failwith "Unsuported annotation")
+      | _ -> failwith "Unsuported annotation for relation")
     [] relations
   >>= deannotate_relations
   >>| fun relations ->

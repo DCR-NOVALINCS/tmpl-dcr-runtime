@@ -41,37 +41,49 @@ let print_error detailed_error =
   let { location ; message ; filepath } = detailed_error in
   let message_header = 
     CPrinter.eprint "error: "; 
-    CPrinter.cprint (message ^ " ");
-    CPrinter.cprint ~color:Cyan (string_of_loc location);
-  
+    CPrinter.cprint message;
+    begin match location with
+    | Nowhere -> ()
+    | _ -> 
+      CPrinter.cprint " at ";
+      CPrinter.cprintln ~color:Cyan (string_of_loc location)
+    end
   in
   
   let message_file_section =
+    let line, start_char, end_char = extract_location_info location in
+    let line_size = String.length (string_of_int line) in
+    let line_margin = String.make line_size ' ' in
+    let marker =
+      String.concat ""
+        [ String.make start_char ' '
+        ; CString.colorize ~color:Red
+            (String.make (end_char - start_char) '^') ] in
     begin match filepath with 
-    | "" -> ()
+    | "" -> 
+      CPrinter.cprintf "  > %s\n" line start_char ;
+
     | _ -> 
-      let line, start_char, end_char = extract_location_info location in
       let line_content = get_line_content filepath line in
-      let marker =
-        String.concat ""
-          [ String.make start_char ' '
-          ; CString.colorize ~color:Red
-              (String.make (end_char - start_char) '^') ]
-      in
-      CPrinter.cprintf "  ──▶ %s:%d:%d\n" filepath line start_char ;
+      CPrinter.cprintf " %s:%d:%d\n" filepath line start_char ;
+      CPrinter.cprintf " %s│\n" line_margin ;
+      CPrinter.cprintf "%d │ %s\n" line line_content ;
+      CPrinter.cprintf " %s│ %s" line_margin marker
+      (* CPrinter.cprintf "  ──▶ %s:%d:%d\n" filepath line start_char ;
       CPrinter.cprintln "  │" ;
       CPrinter.cprintf "%d │ %s\n" line line_content ;
-      CPrinter.cprintf "  │ %s\n" marker
+      CPrinter.cprintf "  │ %s" marker *)
     end in
   
   message_header;
   message_file_section
+  (* CPrinter.cprintln "" *)
 
 let print_output =
   function
   | Ok (_, msg) -> 
-    CPrinter.cprintln msg;
-    CPrinter.cprintln ""
+    CPrinter.cprintln msg
+    (* CPrinter.cprintln "" *)
   | Error e ->
     print_error e;
     CPrinter.cprintln ""
@@ -85,7 +97,7 @@ let print_output =
 let invalid_command cmd = 
   Error {
     location = Nowhere
-    ; message = Printf.sprintf "Invalid command %s" (String.concat " " cmd)
+    ; message = Printf.sprintf "Invalid command %s" (String.concat " " cmd |> CString.colorize ~color:Yellow)
     ; filepath = ""
   }
 
@@ -144,13 +156,6 @@ let read_command cmd program =
       ; ("exit", "q", "Exit the program")
       ; ("help", "h", "Display this message")
     ])
-    (* Ok (program, 
-    CString.colorize ~color:BrightCyan "Available Commands:\n" ^
-    "- view (v): View the current program\n\
-    - debug (d): View the current program with relations\n\
-    - exec (e) <event_id> <expr>: Execute an event with an expression\n\
-    - exit (q): Exit the program\n\
-    - help (h): Display this message") *)
 
   | "exec"::event_id::expr | "e"::event_id::expr -> 
     (if expr = [] then Ok (annotate Unit) else
@@ -168,6 +173,8 @@ let read_command cmd program =
   | ["debug"] | ["d"] -> 
     debug_program program 
     >>= fun unparsed_program -> Ok (program, unparsed_program)
+
+  | [] -> Ok (program, "")
 
   | _ -> invalid_command cmd
 
@@ -190,9 +197,9 @@ let rec prompt program =
      prompt program
     
 let parse filename = 
-  Logger.debug @@ "Reading file: ";
+  Logger.debug @@ "Reading file: " ^ (CString.colorize ~color:Yellow filename);
   let lexbuf = Lexing.from_channel (open_in filename) in
-  let prog = parse_program lexbuf in
+  let prog = parse_program ~filename lexbuf in
   prog
 
 let runtime = 
@@ -202,9 +209,14 @@ let runtime =
   (* --- Main program --- *)
   (* Get & Parse the initial input *)
   ( let filename = Sys.argv.(1) in
-  parse filename
-  >>= fun program ->
   
+  (* FIXME: Better variable name! *)
+  let entry = if not @@ Sys.file_exists filename then Ok (empty_program)
+  else parse filename in 
+  
+  entry
+  >>= fun program ->
+
   (* Preprocess program *)
   Logger.info "Program parsed successfully";
   preprocess_program program

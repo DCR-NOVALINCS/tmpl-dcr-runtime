@@ -1,24 +1,19 @@
 
 tmpl fac(n: Number) NumberHolder {
-    a: A[-1]
-    ;
     fac_aux(acc = 1, i = 1, n = n) => r
 } => r
 
-tmpl fac_aux(acc: Number, i: Number, n: Number) NumberHolder {
-    r: NumberHolder[acc] when i > n
-    ;
-    fac_aux(acc = i * acc, i = i + 1, n = n) => r when i <= n
+template fac_aux(acc: Number, i: Number, n: Number) NumberHolder {
+    (r: NumberHolder)[acc] - when i > n
+    fac_aux(acc = i * acc, i = i + 1, n = n) => r - when i <= n
 } => r
 
-;
-n: N[?: Number]
-;
-fac(n = 5) => r
-;
+(l: L)[[0, 1, 2]]
+(n: N)[?: Number]
+
+fac(n = i) => r - foreach i in l.value
+
 n -->> {
-    d: Dummy[?]
-    ;
     fac(n = @trigger.value) => r 
 }
 

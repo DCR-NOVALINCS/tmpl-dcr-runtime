@@ -20,6 +20,28 @@ module type ColorType = sig
   val color_code : t -> string
 end
 
+module NoColor: ColorType = struct
+  type t =
+    | Red
+    | Green
+    | Yellow
+    | Blue
+    | Magenta
+    | Cyan
+    | White
+    | Default
+    | Black
+    | BrightRed
+    | BrightGreen
+    | BrightYellow
+    | BrightBlue
+    | BrightMagenta
+    | BrightCyan
+    | BrightWhite
+
+  let color_code _ = ""
+end
+
 module ASNIColor : ColorType = struct
   type t =
     | Red
@@ -229,6 +251,10 @@ module MakeLogger (Color : ColorType) : Logger = struct
           P.cprintln ~color:Cyan indent
 end
 
-module Logger = MakeLogger (ASNIColor)
 module CPrinter = MakePrinter (ASNIColor)
+module Printer = MakePrinter (NoColor)
+
 module CString = ASNIString (ASNIColor)
+module String = ASNIString (NoColor)
+
+module Logger = MakeLogger (ASNIColor)

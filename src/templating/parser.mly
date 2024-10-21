@@ -1,6 +1,23 @@
 %{
 open Syntax
+
+type top_level_input = 
+  (*| TemplateDef of template_def*)
+  | Event of event
+  | TemplateInst of template_instance
+  | Relations of relation list
+
+let mk_program_from_top_level_input =
+  List.fold_left (fun program x -> match x with
+    (* | TemplateDef x -> { program with template_decls = x :: program.template_decls }*)
+    | Event event -> { program with events = event :: program.events }
+    | TemplateInst inst -> { program with template_insts = inst :: program.template_insts }
+    | Relations relations -> { program with relations = List.append relations program.relations }
+  ) empty_program
+
 %}
+
+%[@trace true]
 
 // declarations
 %token EOL
@@ -60,7 +77,7 @@ main_expr:
 
 // program: mark_loc_ty(plain_program) {$1}
 plain_program:
-    template_decls = terminated(list(plain_template_decl), SEMICOLON);
+    template_decls = list(plain_template_decl);
     spawn_prog = plain_program_spawn;
     { 
       let (events, template_insts, relations) = spawn_prog in
@@ -74,16 +91,28 @@ plain_program:
 ;
 
 /* program_spawn: mark_loc_ty(plain_program_spawn) {$1} */
+// plain_program_spawn:
+//     events = plain_event_decl_list;
+//     template_insts = preceded(SEMICOLON, nonempty_list(plain_template_inst))?;
+//     relations = preceded(SEMICOLON, plain_ctrl_relation_decl_list)?;
+//     { (
+//         events, 
+//         Option.value ~default:[] template_insts, 
+//         Option.value ~default:[] relations
+//       ) } 
+// ;
+
 plain_program_spawn:
-    events = plain_event_decl_list;
-    template_insts = preceded(SEMICOLON, nonempty_list(plain_template_inst))?;
-    relations = preceded(SEMICOLON, plain_ctrl_relation_decl_list)?;
-    { (
-        events, 
-        Option.value ~default:[] template_insts, 
-        Option.value ~default:[] relations
-      ) } 
-;
+  | input = list(plain_top_input); 
+    { let { events; template_insts; relations; _ } = mk_program_from_top_level_input input in
+    (events, template_insts, relations) }
+
+
+plain_top_input:
+  // | plain_template_decl { TemplateDef($1) }
+  | event_decl { Event($1) }
+  | plain_template_inst { TemplateInst($1) }
+  | plain_ctrl_relation_decl_list { Relations($1) }
 
 // =====
 // ===== template declaration 
@@ -105,13 +134,13 @@ plain_template_inst:
   | tmpl_id = id;
     args = delimited(LPAR, separated_list(COMMA, plain_arg_pair), RPAR);
     x = preceded(BOLDARROW, separated_nonempty_list(COMMA, id))?;
-    tmpl_annotations = separated_list(PIPE, plain_template_annotation);
+    tmpl_annotations = preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
     {
       {
         tmpl_id
         ; args
-        ; x=Option.value ~default:[] x
-        ; tmpl_annotations
+        ; x = Option.value ~default:[] x
+        ; tmpl_annotations = Option.value ~default:[] tmpl_annotations
       }
     }
 
@@ -133,26 +162,26 @@ event_decl: mark_loc_ty(plain_event_decl) {$1}
 plain_event_decl:
   // event has marking as prefix (one of !, %, !%, %!)
   | marking = marking_prefix?;
-    info = plain_event_info; (* CHANGED FROM TARDIS! *) 
+    info = delimited(LPAR, plain_event_info, RPAR); 
     io = delimited(LBRACKET, event_io, RBRACKET);
-    annotations = separated_list(PIPE, plain_template_annotation);
+    annotations = preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
     { 
       { marking = (Option.value ~default:(annotate default_marking) marking)
       ; info
       ; io
-      ; annotations
+      ; annotations = Option.value ~default:[] annotations
       } 
     }
   // (optionally) event has marking after the input/output expression
-  | info = plain_event_info; 
+  | info = delimited(LPAR, plain_event_info, RPAR); 
     io = delimited(LBRACKET, event_io, RBRACKET);
     marking = delimited(LBRACE, node_marking, RBRACE)?;
-    annotations = separated_list(PIPE, plain_template_annotation);
+    annotations = preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
     { 
       { marking = (Option.value ~default:(annotate default_marking) marking)
       ; info
       ; io
-      ; annotations
+      ; annotations = Option.value ~default:[] annotations
       } 
     }
 ;
@@ -334,6 +363,8 @@ plain_fact:
 | expr = preceded(NEG, fact)                                        { UnaryOp(expr,Negation) }
 | MINUS fact                                                        { UnaryOp($2, Minus) }
 | expr = fact; PROP_DEREF; prop = id;                               { PropDeref(expr, prop) }
+| expr = delimited(LPAR, plain_expr, RPAR)                                { expr }
+| list = delimited(LBRACKET, separated_list(COMMA, expr), RBRACKET)                        { List(list) }
 ;
 
 bool: mark_loc_ty(plain_bool) { $1 }
