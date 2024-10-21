@@ -3,6 +3,7 @@ open Misc.Env
 open Misc.Printing
 open Syntax
 open Evaluation
+open Errors
 
 (*
 ================================================================
@@ -10,25 +11,6 @@ open Evaluation
 ================================================================
 *)
 
-(*
-================================================================
- Error messages
-================================================================
-*)
-
-let tmpl_not_found id = 
-  Error {
-    location = id.loc
-    ; message = "Template " ^ id.data ^ " not found"
-    ; filepath = ""
-  }
-
-and invalid_annotation_value value ty = 
-  Error {
-    location = value.loc
-    ; message = Printf.sprintf "Invalid annotation value %s for type %s" (string_of_expr value) (string_of_type_expr (annotate ty))
-    ; filepath = ""
-  }
 
 (*
 ================================================================

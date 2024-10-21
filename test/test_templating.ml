@@ -55,7 +55,7 @@ let test_suite =
       Ok program)
       |> function
       | Ok _ -> ()
-      | Error e -> assert_failure e.message
+      | Error e -> List.iter (fun e -> assert_failure e.message) e
       );
     
     "test1" >:: 

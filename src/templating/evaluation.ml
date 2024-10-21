@@ -1,40 +1,7 @@
 open Misc.Env 
 open Misc.Monads 
 open Syntax
-
-(*
-===============================================================
-  Error message functions
-===============================================================
-*)
-
-let property_not_found p e = 
-  Error {
-    location = e.loc
-    ; message = "Property " ^ p.data ^ " not found in " ^ string_of_expr e
-    ; filepath = ""
-  }
-
-and is_not_type expected expr =  
-  Error {
-    location = expr.loc
-    ; message = Printf.sprintf "Expected type %s, but got %s" expected (string_of_expr expr)
-    ; filepath = ""
-  }
-
-and invalid_expr ?(loc = Nowhere) () = 
-  Error {
-    location = loc
-    ; message = "Invalid expression"
-    ; filepath = ""
-  }
-
-and id_not_found id = 
-  Error {
-    location = id.loc
-    ; message = "Identifier " ^ id.data ^ " not found"
-    ; filepath = ""
-  }
+open Errors
 
 (*
 ===============================================================

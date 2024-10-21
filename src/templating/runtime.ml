@@ -3,6 +3,7 @@ open Misc.Monads
 open Misc.Env
 open Misc.Printing
 open Evaluation
+open Errors
 
 (*
 ===============================================================
@@ -163,37 +164,6 @@ and propagate_effect relation event (event_env, expr_env) program =
     Ok (update_event dest_event program)
 
     (* | _ -> Ok program *)
-    
-
-
-
-(*
-===============================================================
-  Error messages
-===============================================================
-*)
-
-and event_not_found ?(loc=Nowhere) id = 
-  Error {
-    location = loc
-    ; message = Printf.sprintf "Event %s not found" id
-    ; filepath = ""
-  }
-
-and event_not_enabled event = 
-  let (id, _) = event.data.info in
-  Error {
-    location = event.loc
-    ; message = Printf.sprintf "Event %s is not enabled" id.data
-    ; filepath = ""
-  }
-
-and invalid_guard_value value = 
-  Error {
-    location = value.loc
-    ; message = Printf.sprintf "Invalid guard value. Expecting boolean expression, got %s" (string_of_expr value)
-    ; filepath = ""
-  }
 
 (*
 ===============================================================

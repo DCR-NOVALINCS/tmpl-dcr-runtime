@@ -4,6 +4,7 @@ open Templating.Instantiation
 open Templating.Lex_and_parse
 open Misc.Monads
 open Misc.Printing
+open Templating.Errors
 
 (* open Misc.Env *)
 
@@ -41,13 +42,13 @@ let print_error detailed_error =
   let { location ; message ; filepath } = detailed_error in
   let message_header = 
     CPrinter.eprint "error: "; 
-    CPrinter.cprint message;
-    begin match location with
+    CPrinter.cprintln message;
+    (* begin match location with
     | Nowhere -> ()
     | _ -> 
       CPrinter.cprint " at ";
       CPrinter.cprintln ~color:Cyan (string_of_loc location)
-    end
+    end *)
   in
   
   let message_file_section =
@@ -61,8 +62,11 @@ let print_error detailed_error =
             (String.make (end_char - start_char) '^') ] in
     begin match filepath with 
     | "" -> 
-      CPrinter.cprintf "  > %s\n" line start_char ;
-
+      let line_content = "" in
+      CPrinter.cprintf " stdin:%d:%d\n" line start_char ;
+      CPrinter.cprintf " %s│\n" line_margin ;
+      CPrinter.cprintf "%d │ %s\n" line line_content ;
+      CPrinter.cprintf " %s│ %s" line_margin marker
     | _ -> 
       let line_content = get_line_content filepath line in
       CPrinter.cprintf " %s:%d:%d\n" filepath line start_char ;
@@ -84,22 +88,9 @@ let print_output =
   | Ok (_, msg) -> 
     CPrinter.cprintln msg
     (* CPrinter.cprintln "" *)
-  | Error e ->
-    print_error e;
+  | Error errors ->
+    List.iter print_error errors;
     CPrinter.cprintln ""
-
-(*
-=============================================================================
-  Error messages
-=============================================================================
-*)  
-
-let invalid_command cmd = 
-  Error {
-    location = Nowhere
-    ; message = Printf.sprintf "Invalid command %s" (String.concat " " cmd |> CString.colorize ~color:Yellow)
-    ; filepath = ""
-  }
 
 (*
 =============================================================================
@@ -204,7 +195,8 @@ let parse filename =
 
 let runtime = 
   (* Logger settings *)
-  Logger.enable () ;
+  (* Logger.enable () ; *)
+  Logger.disable () ;
   Logger.set_logger_level Debug;
   (* --- Main program --- *)
   (* Get & Parse the initial input *)
