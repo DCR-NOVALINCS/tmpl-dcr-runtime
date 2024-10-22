@@ -1,6 +1,6 @@
 (executable
  (name main)
- (public_name main)
+ (public_name tmpl_dcr)
  (libraries templating))
 
 (executable
