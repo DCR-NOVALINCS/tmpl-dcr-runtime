@@ -2,9 +2,10 @@ tmpl f(n: Number) {
     (a: A)[n]
 } => a
 
-#a: A[0]
+(a: A)[0]
 %(b: B)[?: Number]
 
 #f(n = 1) => a
 
-a -->% b
+a -->+ b
+b -->% a

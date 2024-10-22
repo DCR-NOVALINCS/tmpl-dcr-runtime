@@ -76,9 +76,7 @@ and bind_tmpl tmpl env =
   Ok (bind id.data tmpl env)
 
 and bind_arg (name, expr) env = 
-  Logger.info @@ Printf.sprintf "Binding argument %s" (CString.colorize ~color:Yellow name);
-  (* print_endline @@ Printf.sprintf "Binding %s: %s" name (string_of_expr expr); *)
-  (* print_endline @@ Printf.sprintf " in %s\n" (string_of_env string_of_expr env); *)
+  Logger.debug @@ Printf.sprintf "Binding argument %s" (CString.colorize ~color:Yellow name);
   eval_expr expr env
   >>| fun value -> bind name value env
 
