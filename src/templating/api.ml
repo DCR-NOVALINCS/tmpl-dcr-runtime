@@ -12,7 +12,13 @@ open Runtime
 ===============================================================
 *)
 
-let rec execute ~event_id ?(expr = Unit) ?(event_env = empty_env) ?(expr_env = empty_env) program  =
+let rec execute 
+  ~event_id ?(expr = Unit) 
+  (* ?(event_env = empty_env)  *)
+  (* ?(expr_env = empty_env)  *)
+  program  =
+  preprocess_program program
+  >>= fun (event_env, expr_env) ->
   match find_flat event_id event_env with
   | None -> event_not_found event_id
   | Some event ->
@@ -62,11 +68,13 @@ and preprocess_program ?(expr_env = empty_env) program =
 
 and view
   ?(filter = (fun _ _ -> true))
-  ?(event_env = empty_env)
-  ?(expr_env = empty_env)
+  (* ?(event_env = empty_env)
+  ?(expr_env = empty_env) *)
   ?(should_print_events = true)
   ?(should_print_relations = false)
   program =
+  preprocess_program program
+  >>= fun (event_env, expr_env) ->
   ( if not should_print_events then ""
   else
     List.filter (filter (event_env, expr_env)) program.events
@@ -87,11 +95,11 @@ and view_debug program =
   view ~should_print_relations:true program
 
 and view_enabled
-  ?(event_env = empty_env)
-  ?(expr_env = empty_env)
+  (* ?(event_env = empty_env)
+  ?(expr_env = empty_env) *)
   ?(should_print_relations = false)
   program =
-  view ~event_env ~expr_env ~should_print_relations ~filter:(fun (event_env, expr_env) event ->
+  view ~should_print_relations ~filter:(fun (event_env, expr_env) event ->
     is_enabled event program (event_env, expr_env)) program
 
 and _view_disabled program =

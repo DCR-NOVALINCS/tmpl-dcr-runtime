@@ -1,6 +1,10 @@
 open Js_of_ocaml
+open Misc.Monads
+open Misc.Printing
 open Templating.Api
+(* open Templating.Errors *)
 open Templating.Syntax
+open Templating.Lex_and_parse
 (* open Misc.Monads *)
 
 (*
@@ -9,27 +13,61 @@ open Templating.Syntax
 
   Available functions:
   - view
-  - execute (not implemented)
-  - 
+  - view debug
+  - execute
+  - parse
 
 *)
 
+(* TODO: Maybe put this in another place to preserve the state... *)
 let active_program = ref empty_program
 
-let add_event ~id ~label = 
-  let info = (annotate id, annotate label) in
-  let io = annotate @@ Input (annotate UnitTy) in
-  active_program := { !active_program with events = mk_event info io :: !active_program.events }
+let stringify_errors errors = 
+  List.map (fun e -> e.message |> CString.colorize ~color:Red) errors
+  |> String.concat "\n"
+  |> Js.string
 
 let view =
-  fun () ->
-  view !active_program
+  view_enabled !active_program
   |> function
-  | Error _ -> Js.string ("Error on view")
+  | Error errors -> 
+    stringify_errors errors
   | Ok unparsed_program -> Js.string unparsed_program
 
-let runtime () = 
-  Js.export "view" view;
-  Js.export "add_event" (fun (id: Js.js_string Js.t) (label: Js.js_string Js.t) -> add_event ~id:(Js.to_string id) ~label:(Js.to_string label))
+let debug_view =
+  view_debug !active_program
+  |> function
+  | Error errors -> 
+    stringify_errors errors
+  | Ok unparsed_program -> Js.string unparsed_program
 
-let _ = runtime ()
+let execute event_id expr = 
+  ( let expr_lexbuf = Lexing.from_string expr in
+  parse_expression expr_lexbuf
+  >>= fun expr ->
+  execute ~event_id ~expr:expr.data !active_program )
+  |> function
+  | Error errors -> 
+    stringify_errors errors
+  | Ok program -> 
+    active_program := program; 
+    Js.string @@ "Executed successfully with event id " ^ event_id
+
+let parse program_str = 
+  let program_lexbuf = Lexing.from_string program_str in
+  parse_program program_lexbuf
+  |> function
+  | Error errors -> 
+    stringify_errors errors
+  | Ok program -> 
+    active_program := program; 
+    Js.string @@ CString.colorize ~color:Green ("Parsed successfully\n" ^ string_of_program program)
+
+let runtime = 
+  Js.export "view" (fun () -> view);
+  Js.export "debugView" (fun () -> debug_view);
+  Js.export "execute" (fun event_id expr -> execute (Js.to_string event_id) (Js.to_string expr));
+  Js.export "parse" (fun program_str -> parse (Js.to_string program_str));
+  ()
+
+let _ = runtime

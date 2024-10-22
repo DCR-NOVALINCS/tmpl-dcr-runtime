@@ -8,8 +8,6 @@ open Templating.Errors
 
 (* open Misc.Env *)
 
-
-
 (*
 =============================================================================
   Aux functions
@@ -31,11 +29,10 @@ let sanatize_input input =
   |> List.filter (fun s -> s <> "")
   |> Result.ok
 
-(*
-=============================================================================
-  Main Section
-=============================================================================
-*)  
+(* let sanatize_inputs inputs = 
+  inputs
+  |> List.map sanatize_input
+  |> Result.ok *)
 
 let help_message cmds = 
   let header = CString.colorize ~color:BrightCyan "Available Commands:" in
@@ -46,23 +43,6 @@ let help_message cmds =
     |> String.concat "\n" in
   String.concat "\n" [header; cmds_section]
 
-let execute_event ~event_id ?(expr = Unit) program = 
-  preprocess_program program
-  >>= fun (event_env, expr_env) ->
-  instantiate ~expr_env program
-  >>= fun (program, expr_env) ->
-  execute ~event_env ~expr_env ~event_id ~expr program
-    
-let view_program program = 
-  preprocess_program program
-  >>= fun (event_env, expr_env) ->
-  view_enabled ~event_env ~expr_env program
-
-let debug_program program = 
-  preprocess_program program
-  >>= fun (event_env, expr_env) ->
-  view ~should_print_relations:true ~event_env ~expr_env program
-
 (* TODO: *)
 let parse_expression expr_string = 
   let expr = expr_string |> String.concat "" in
@@ -72,6 +52,12 @@ let parse_expression expr_string =
   parse_expression expr_lexbuf
   (* let n = Random.full_int 10 in
   Ok (annotate ~loc:Nowhere (IntLit n)) *)
+
+(*
+=============================================================================
+  Main Section
+=============================================================================
+*)  
 
 let read_command tokens program = 
   Logger.debug @@ "Command: " ^ (String.concat " | " tokens);
@@ -91,17 +77,17 @@ let read_command tokens program =
     (if expr = [] then Ok (annotate Unit) else
     parse_expression expr)
     >>= fun parsed_expr ->
-    execute_event ~event_id ~expr:parsed_expr.data program
+    execute ~event_id ~expr:parsed_expr.data program
     >>= fun program -> 
     Ok (program, 
     "Event executed with expression " ^ (CString.colorize ~color:Yellow @@ string_of_expr parsed_expr))
 
   | ["view"] | ["v"] -> 
-    view_program program 
+    view program 
     >>= fun unparsed_program -> Ok (program, unparsed_program)
 
   | ["debug"] | ["d"] -> 
-    debug_program program 
+    view_debug program 
     >>= fun unparsed_program -> Ok (program, unparsed_program)
 
   | [] -> Ok (program, "")

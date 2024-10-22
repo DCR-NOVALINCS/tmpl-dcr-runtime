@@ -45,10 +45,10 @@ let test_suite =
     (fun test_ctxt -> 
       let program = empty_program in
       (Ok (build_state program test_ctxt) 
-      >>= fun (program, event_env, expr_env) ->
+      >>= fun (program, _, _) ->
       assert_bool "Event a' not found" (has_event "a'" program);
       assert_bool "Event a' don't have any relations" (has_relation "a'" program);
-      execute ~event_env ~expr_env ~event_id:"a'" program
+      execute ~event_id:"a'" program
       >>= fun program -> 
       assert_bool "Event a' not found" (has_event "a'" program);
       assert_bool "Event a' don't have any relations" (has_relation "a'" program);

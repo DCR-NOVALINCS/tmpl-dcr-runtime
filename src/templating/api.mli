@@ -14,8 +14,8 @@ open Misc.Env
 val execute :
   event_id:string ->
   ?expr:expr' ->
-  ?event_env:(event env) ->
-  ?expr_env:(expr env) ->
+  (* ?event_env:(event env) ->
+  ?expr_env:(expr env) -> *)
   program -> (program, detailed_error list) result
 
 (** [preprocess_program ?expr_env program] preprocesses the [program] by
@@ -40,10 +40,10 @@ val preprocess_program :
     @return The result of the view.
 *)
 val view :
-  ?filter:((event env) * 'a list list ->
+  ?filter:((event env) * (expr env)->
            event -> bool) ->
-  ?event_env:(event env) ->
-  ?expr_env:'a list list ->
+  (* ?event_env:(event env) ->
+  ?expr_env:'a list list -> *)
   ?should_print_events:bool ->
   ?should_print_relations:bool -> program -> (string, detailed_error list) result
 
@@ -51,7 +51,7 @@ val view :
     @param program The program to be viewed
     @return The result of the view.
 *)
-val view_debug : program -> (string, 'a) result
+val view_debug : program -> (string, detailed_error list) result
 
 (** [view_enabled ?event_env ?expr_env ?should_print_relations program]
     views the [program] by unpacking the events that are enabled in the program.
@@ -62,6 +62,6 @@ val view_debug : program -> (string, 'a) result
     @return The result of the view.
 *)
 val view_enabled :
-  ?event_env:(event env) ->
-  ?expr_env:'a list list ->
+  (* ?event_env:(event env) ->
+  ?expr_env:'a list list -> *)
   ?should_print_relations:bool -> program -> (string, detailed_error list) result
