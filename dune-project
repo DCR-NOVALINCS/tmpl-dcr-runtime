@@ -27,7 +27,8 @@
   dune
   odoc
   (menhir
-   (>= 3.0)))
+   (>= 3.0))
+  js_of_ocaml)
  (tags
   (topics "to describe" your project)))
 

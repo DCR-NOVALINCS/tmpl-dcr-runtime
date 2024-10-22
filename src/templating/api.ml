@@ -11,6 +11,12 @@ open Errors
 ===============================================================
 *)
 
+(** [update_event event program] updates the [event] in the [program]
+    by replacing the old event with the new one.
+    @param event The new event to be updated.
+    @param program The program where the event is to be updated.
+    @return The updated program.
+*)
 let rec update_event event program = 
   let events = List.map (fun e -> 
     let (id, _) = e.data.info in
@@ -18,6 +24,13 @@ let rec update_event event program =
     if id = id' then event else e) program.events in
   { program with events }
 
+(** [is_enabled] checks if the [event] is enabled in the [program] by
+    checking all the relations in the program, given the current environment.
+    @param event The event to be checked.
+    @param program The program where the event is to be checked.
+    @param env The environment to be used for evaluation.
+    @return [true] if the event is enabled, [false] otherwise.
+*)
 and is_enabled event program (event_env, expr_env) = 
   let relations = program.relations in
   let enabled = event.data.marking.data.included.data in
@@ -30,7 +43,7 @@ and is_enabled_by relation event (event_env, _expr_env) =
   match relation.data with
   | SpawnRelation (_, _, _, _) -> true
   | ControlRelation (from, _guard, dest, _op, _annot) ->
-    (* TODO: *)
+    (* TODO: Check guards!! *)
     begin match find_flat dest.data event_env with
     | None -> true
     | Some dest_event when id = fst dest_event.data.info -> 
@@ -69,20 +82,14 @@ and propagate_effects event (event_env, expr_env) program =
 and propagate_effect relation event (event_env, expr_env) program = 
   let (id, _) = event.data.info in
   match relation.data with 
-  | SpawnRelation (from, _guard, spawn_prog, _annot) -> 
+  | SpawnRelation (from, guard, spawn_prog, _annot) -> 
     if not (from.data = id.data) then Ok program
     else
-    (* check_guard guard expr_env
-    >>= fun _ -> *)
-    (* TODO: Check if the guard evaluates to True *)
-    (*
-      TODO: 
-      Get events / isnts / relations [X]
-      Alpha - renaming local events [+/-]
-      Bind "@trigger" in the env [X]
-      Instantiate all insts [X]
-      Put in the program [X] 
-    *)
+    check_guard guard expr_env
+    >>= fun is_guard_true ->
+    if not is_guard_true then Ok program
+    else
+    (* FIXME: Alpha rename correctly the events!! *)
     let (spawn_events, spawn_insts, spawn_relations) = spawn_prog in
 
     (* Rename the event ids to new ones, to prevent id clashing *)
@@ -94,11 +101,16 @@ and propagate_effect relation event (event_env, expr_env) program =
     >>= fun expr_env ->
     Ok (bind "@trigger" (record_event event) expr_env)
     >>= fun expr_env ->
-    (* print_endline "Expr env:";
-    print_endline (string_of_env string_of_expr expr_env); *)
 
     (* Update values of the event inside of the spawn *)
-    fold_left_result
+    map_result
+      (fun event ->
+        (* TODO: Update values of the event *) 
+        Ok event
+      )
+      spawn_events
+    >>= fun spawn_events ->
+    (* fold_left_result
       (fun events event -> 
         let { marking; io; _ } = event.data in 
         begin match io.data with 
@@ -112,7 +124,7 @@ and propagate_effect relation event (event_env, expr_env) program =
         let marking = { marking with data = { marking.data with value } } in
         Ok ({ event with data = { event.data with marking; io } } :: events))
       [] spawn_events
-    >>= fun spawn_events ->
+    >>= fun spawn_events -> *)
 
     (* Update values of the relations inside of the spawn *)
 
@@ -134,20 +146,23 @@ and propagate_effect relation event (event_env, expr_env) program =
     (* Put it all together *)
     Ok {
       program with 
-      events = List.flatten [program.events; spawn_events; inst_spawn_events];
+      events = List.flatten [program.events; inst_spawn_events; spawn_events ];
       template_insts = [];
-      relations = List.flatten [program.relations; spawn_relations; inst_spawn_relations];
+      relations = List.flatten [program.relations; inst_spawn_relations; spawn_relations];
     }
 
   | ControlRelation (from, guard, dest, op, _annot) -> 
     if not (from.data = id.data) then Ok program
     else
     check_guard guard expr_env
-    >>= fun _guard_value ->
-    (* TODO: Check if the guard evaluates to True *)
+    >>= fun is_guard_true ->
+    if not is_guard_true then Ok program
+    else
+
     (* Get the event [dest] *)
     (find_flat dest.data event_env |> Option.to_result ~none:(event_not_found dest.data |> Result.get_error) )
     >>= fun dest_event ->
+
     (* According to [op], apply the effect on the marking for both events *)
     (* Order of applying the relations: response -> exclude -> include -> other (do nothing)  *)
     let { marking = dest_marking; _ } = dest_event.data in
@@ -172,53 +187,20 @@ and propagate_effect relation event (event_env, expr_env) program =
 *)
 
 let rec execute ~event_id ?(expr = Unit) ?(event_env = empty_env) ?(expr_env = empty_env) program  = 
-  (* 
-    TODO: 
-    - Find the event in the program [X]
-    - Check if the event is enabled [+/-]
-    - Execute the event
-      - Update the event marking [X]
-      - Execute the effects of the relations (propagate the relation effects) [+/-] (TESTING)
-  *)
-  (* preprocess_program program
-  >>= fun (event_env, expr_env) -> *)
-
   match find_flat event_id event_env with
   | None -> event_not_found event_id
   | Some event -> 
     is_enabled event program (event_env, expr_env) 
     |> function
     | false -> event_not_enabled event
-    | true -> Ok program 
-    >>= fun program -> 
-    begin match event.data.io.data with
-      | Input _ -> execute_event event expr expr_env
-      | Output data_expr -> execute_event event data_expr.data expr_env
-    end
-    >>= fun event ->
-    propagate_effects event (event_env, expr_env) (update_event event program)
-    
-
-and preprocess_program ?(expr_env = empty_env) program = 
-  fold_left_result
-    (fun env event -> 
-      let (id , _) = event.data.info in
-      Ok (bind id.data event env))
-    expr_env program.events
-  >>= fun event_env ->
-  (* print_endline "Event env:";
-  print_endline (string_of_env string_of_event event_env); *)
-
-  fold_left_result
-    (fun env event -> 
-      let (id, _) = event.data.info in
-      Ok (bind id.data (record_event event) env))
-    empty_env program.events
-  >>= fun expr_env ->
-  (* print_endline "Expr env:";
-  print_endline (string_of_env string_of_expr expr_env); *)
-
-  Ok (event_env, expr_env)
+    | true -> 
+      let io = event.data.io in
+      begin match io.data with
+        | Input _ -> execute_event event expr expr_env
+        | Output data_expr -> execute_event event data_expr.data expr_env (* [expr] is ignored *)
+      end
+      >>= fun event ->
+      propagate_effects event (event_env, expr_env) (update_event event program)
 
 and execute_event event expr env =
   let loc = match event.data.io.data with 
@@ -231,6 +213,25 @@ and execute_event event expr env =
   let event = { event with data = { event.data with marking } } in
   Ok event
 
+and preprocess_program ?(expr_env = empty_env) program = 
+  fold_left_result
+    (fun env event -> 
+      let (id , _) = event.data.info in
+      Ok (bind id.data event env))
+    expr_env program.events
+  >>= fun event_env ->
+
+  fold_left_result
+    (fun env event -> 
+      let (id, _) = event.data.info in
+      Ok (bind id.data (record_event event) env))
+    empty_env program.events
+  >>= fun expr_env ->
+
+  Ok (event_env, expr_env)
+
+(* --- Vizualization functions --- *)
+
 and view 
   ?(filter = (fun _ _ -> true)) 
   ?(event_env = empty_env) 
@@ -238,20 +239,20 @@ and view
   ?(should_print_events = true)
   ?(should_print_relations = false)
   program = 
-  (* preprocess_program program 
-  >>= fun (event_env, expr_env) -> *)
-  ( if should_print_events then
+  ( if not should_print_events then ""
+  else
     List.filter (filter (event_env, expr_env)) program.events
     |> List.sort compare
     |> List.map (fun event -> string_of_event event)
     |> String.concat "\n"
-  else "")
+  )
   |> fun events_str -> 
-  ( if should_print_relations then 
+  ( if not should_print_relations then events_str
+  else
       List.map (fun relation -> string_of_relation relation) program.relations
       |> String.concat "\n"
       |> Printf.sprintf "%s\n;\n%s" events_str
-    else events_str )
+  )
   |> Result.ok
 
 and view_debug program =

@@ -1,16 +1,26 @@
+# Description: Makefile for building and testing the project
+
+INTERPRETER_PATH := .
+OUTPUT_DOC_PATH := docs
+OUTPUT_JS_FILE := runtime.js
+
+.SILENT: pre-build build watch clean js
+
 default:
 	opam update
 	opam install . --deps-only --yes
 	make build
 
-.SILENT: build
+pre-build:
+	cd $(INTERPRETER_PATH)
+	eval $(opam env)
+
 build:
 	make pre-build
 	make clean
 	dune build
-	printf "\nBuild successful! 🎉\n"
+	printf "\nBuild successful\n"
 
-.SILENT: watch
 watch:
 	make pre-build
 	dune build -w --terminal-persistence=clear-on-rebuild
@@ -32,7 +42,6 @@ format:
 	make pre-build
 	dune build @fmt --auto-promote
 
-.SILENT: clean
 clean:
 	make pre-build
 	dune clean
@@ -42,10 +51,12 @@ doc:
 	make clean
 	make pre-build
 	dune build @doc
-	mkdir -p docs 
-	cp -r _build/default/_doc/_html/* docs
+	mkdir -p $(OUTPUT_DOC_PATH) 
+	cp -r _build/default/_doc/_html/* $(OUTPUT_DOC_PATH)
 
-.SILENT: pre-build
-pre-build:
-	eval $(opam env)
-
+js:
+	make pre-build
+	dune build @js
+	rm -rf $(OUTPUT_JS_FILE)
+	cp -r _build/default/bin/runtime.js $(OUTPUT_JS_FILE)
+	printf "\nGenerated runtime successful\n"

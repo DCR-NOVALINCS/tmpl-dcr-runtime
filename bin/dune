@@ -1,4 +1,20 @@
 (executable
- (public_name tmpl_dcr)
  (name main)
+ (public_name main)
  (libraries templating))
+
+(executable
+ (name gen_runtime)
+ (public_name gen_runtime)
+ (modes byte)
+ (libraries templating js_of_ocaml)
+ (preprocess
+  (pps js_of_ocaml-ppx)))
+
+(rule
+ (alias js)
+ (deps
+  (file gen_runtime.bc))
+ (targets runtime.js)
+ (action
+  (run js_of_ocaml -o %{targets} %{deps})))

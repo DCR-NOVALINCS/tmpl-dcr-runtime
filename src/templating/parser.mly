@@ -53,8 +53,6 @@ let mk_program_from_top_level_input =
 %token FOREACH WHEN IN
 // misc
 %token QUESTION PROP_DEREF BOLDARROW ARROW
-// %token PIPE // TODO revise utility
-// %token UDRSCR // TODO revise utility
 
 %nonassoc NEG
 %nonassoc PROP_DEREF 

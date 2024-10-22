@@ -52,3 +52,6 @@ _build-*/
 .dune-project
 .dune-workspace
 .dune-workspace.dev
+
+# Ignore docs folder
+docs/
