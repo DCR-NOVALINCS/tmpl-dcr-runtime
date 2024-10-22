@@ -334,11 +334,16 @@ and analize_annotation_inst instance ~none annotation expr_env =
         x expr expr_env
 
 and deannotate_events events = 
-  fold_left_result
+  map_result
+    (fun event -> 
+      deannotate_event event
+      >>= fun event -> Ok event)
+    events
+  (* fold_left_result
     (fun result event -> 
       deannotate_event event
       >>= fun event -> Ok (event::result))
-    [] events
+    [] events *)
 
 and deannotate_event event =
   Ok { event with data = { event.data with annotations = []} }
@@ -367,6 +372,7 @@ and deannotate_relation relation =
   end |> Result.ok 
 
 and evaluate_annotations ?(expr_env = empty_env) program  =
+  Logger.info "Evaluating annotations";
   (* Evaluate events *)
   let events = program.events in
   let annotation_of_event event = event.data.annotations in
@@ -382,7 +388,6 @@ and evaluate_annotations ?(expr_env = empty_env) program  =
   >>= deannotate_events
   >>= fun events ->
       (* print_endline @@ Printf.sprintf "Events: %s" (String.concat "\n" (List.map string_of_event events)); *)
-
 
   (* Evaluate instantiations *)
   let insts = program.template_insts in

@@ -119,7 +119,7 @@ plain_template_decl:
   | TEMPLATE; id = id; 
     params = delimited(LPAR, separated_list(COMMA, plain_template_param_pair), RPAR);
     (* TODO: Add types to the exported events *)
-    export_types = separated_list(COMMA, type_expr)?;
+    export_types = preceded(COLON, separated_list(COMMA, type_expr))?;
     graph = delimited(LBRACE, plain_program_spawn, RBRACE);
     export = preceded(BOLDARROW, separated_nonempty_list(COMMA, id))?;
     { { id; params; export_types = Option.value ~default:[] export_types; graph; export = Option.value ~default:[] export } }
@@ -409,6 +409,6 @@ plain_id:
 
 mark_loc_ty(X):
   x = X
-  { annotate ~loc:(Location($startpos, $endpos)) x}
+  { annotate ~loc:(Location($startpos, $endpos, if $startpos.pos_fname = "" then (Some $startpos.pos_fname) else None)) x}
 ;
 %%

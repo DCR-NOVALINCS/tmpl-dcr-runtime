@@ -2,6 +2,7 @@ open OUnit2
 (* open Templating.Battery_tests *)
 open Templating.Syntax
 open Templating.Api
+open Templating.Errors
 open Misc.Monads
 
 (**

@@ -7,18 +7,12 @@
 
 type loc =
   | Nowhere
-  | Location of Lexing.position * Lexing.position
+  | Location of Lexing.position * Lexing.position * string option
 
 type 'a annotated =
   { data : 'a
   ; loc : loc
   ; ty : type_expr' option ref
-  }
-
-and detailed_error = 
-  { location : loc
-  ; message : string
-  ; filepath : string
   }
 
 (*
@@ -287,10 +281,11 @@ let string_of_pos pos =
 let string_of_loc loc = 
   match loc with 
   | Nowhere -> "?"
-  | Location (start_pos, end_pos) -> 
+  | Location (start_pos, end_pos, filename) -> 
+    let filename = Option.value filename ~default:"" in
     let start = string_of_pos start_pos in
     let end_ = string_of_pos end_pos in
-    Printf.sprintf "%s-%s" start end_
+    Printf.sprintf "%s:%s:%s" filename start end_
 
 let rec string_of_type_expr ty = 
   match ty.data with

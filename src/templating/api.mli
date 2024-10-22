@@ -1,4 +1,5 @@
 open Syntax
+open Errors
 open Misc.Env
 
 (** [execute ~event_id ~expr ?event_env ?expr_env program] executes the event

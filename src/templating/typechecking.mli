@@ -1,4 +1,5 @@
 open Syntax
+open Errors
 open Misc.Env
 
 val typecheck : program -> (unit, detailed_error list) result

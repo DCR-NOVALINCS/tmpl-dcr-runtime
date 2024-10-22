@@ -1,11 +1,9 @@
 open Js_of_ocaml
 open Misc.Monads
-(* open Misc.Printing *)
 open Templating.Api
-(* open Templating.Errors *)
 open Templating.Syntax
 open Templating.Lex_and_parse
-(* open Misc.Monads *)
+open Templating.Errors
 
 (*
 ==============================
