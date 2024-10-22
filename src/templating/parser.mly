@@ -117,15 +117,15 @@ plain_top_input:
 // template_decl: mark_loc_ty(plain_template_decl) {$1}
 plain_template_decl:
   | TEMPLATE; id = id; 
-    params = delimited(LPAR, separated_list(COMMA, plain_param_pair), RPAR);
+    params = delimited(LPAR, separated_list(COMMA, plain_template_param_pair), RPAR);
     (* TODO: Add types to the exported events *)
-    _types = separated_list(COMMA, id);
+    export_types = separated_list(COMMA, type_expr)?;
     graph = delimited(LBRACE, plain_program_spawn, RBRACE);
     export = preceded(BOLDARROW, separated_nonempty_list(COMMA, id))?;
-    { { id; params; graph; export=Option.value ~default:[] export } }
+    { { id; params; export_types = Option.value ~default:[] export_types; graph; export = Option.value ~default:[] export } }
 
-plain_param_pair:
-  | id=id; COLON; ty=type_expr { (id, ty) }
+plain_template_param_pair:
+  | id=id; COLON; ty=type_expr; default_expr=preceded(ASSIGN, expr)?; { (id, ty, default_expr) }
 
 // ===== template instantiation
 plain_template_inst:

@@ -97,7 +97,8 @@ and subprogram = event list * template_instance list * relation list
 (* TODO: Types for template definition*)
 and template_def = {
   export: event_id list;
-  params : (string annotated * type_expr) list;
+  params : (string annotated * type_expr * expr option) list;
+  export_types: type_expr list;
   graph : subprogram;
   id : string annotated;
 }
@@ -236,9 +237,10 @@ let mk_spawn_relation
 let mk_spawn_relations left_ids expr prog = 
   List.map (fun id -> mk_spawn_relation ~from:id ~guard:expr prog) left_ids
 
-let mk_template_def id params graph ~export = 
+let mk_template_def id params types graph ~export = 
   { id = annotate id
-  ; params = List.map (fun (name, ty) -> (annotate name, annotate ty)) params
+  ; params = List.map (fun (name, ty, def_expr) -> (annotate name, annotate ty, Some def_expr)) params
+  ; export_types = List.map annotate types
   ; graph
   ; export = List.map annotate export
   }

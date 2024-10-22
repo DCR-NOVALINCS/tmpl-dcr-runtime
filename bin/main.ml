@@ -2,6 +2,7 @@ open Templating.Syntax
 open Templating.Api
 open Templating.Instantiation
 open Templating.Lex_and_parse
+open Templating.Typechecking
 open Misc.Monads
 open Misc.Printing
 open Templating.Errors
@@ -133,6 +134,10 @@ let runtime =
   preprocess_program program
   >>= fun (_, expr_env) ->
   
+  (* Typecheck program *)
+  typecheck program 
+  >>= fun _ ->
+
   (* Instantiate initial templates *)
   instantiate ~expr_env program
   >>= fun (program, _) ->

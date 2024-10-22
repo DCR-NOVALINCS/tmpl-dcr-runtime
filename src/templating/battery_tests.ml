@@ -70,10 +70,10 @@ tmpl h(a: A) {
 (*
 tmpl i(e: [label]) {} => e
 *)
-let tmpl_i label = mk_template_def 
+(* let tmpl_i label = mk_template_def 
   "i" [("e", (EventTy label))] 
   ([], [], []) 
-  ~export:["e"]
+  ~export:["e"] *)
 
 (*
 tmpl j() {

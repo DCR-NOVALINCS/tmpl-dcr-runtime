@@ -118,6 +118,7 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
       Logger.debug @@ string_of_env string_of_expr expr_env;
 
     (* Bind all the arguments to its identifier *)
+    (* FIXME: Check if the template has default value for each parameter! *)
     fold_left_result
       (fun env (prop, expr) -> bind_arg (prop.data, expr) env)
       expr_env inst.args
