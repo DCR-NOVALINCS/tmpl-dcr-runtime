@@ -50,30 +50,30 @@ and invalid_annotation_value ?(errors = []) value ty =
     ; hint = None
   } :: errors)
 
-and lexing_error ?(errors = []) ?filepath lexbuf message =
+and lexing_error ?(errors = []) lexbuf message =
   Error ({
-    location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, filepath)
+    location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, Some lexbuf.lex_curr_p.pos_fname)
     ; message = "Lexing error: " ^ message
     ; hint = None
   } :: errors)
 
-and syntax_error ?(errors = []) ?filepath lexbuf =
+and syntax_error ?(errors = []) lexbuf =
   Error ({
-    location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, filepath)
+    location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, Some lexbuf.lex_curr_p.pos_fname)
     ; message = "Syntax error"
     ; hint = None
   } :: errors)
 
-and unexpected_eof ?(errors = []) ?filepath lexbuf =
+and unexpected_eof ?(errors = []) lexbuf =
   Error ({
-    location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, filepath)
+    location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, Some lexbuf.lex_curr_p.pos_fname)
     ; message = "Unexpected end of file"
     ; hint = None
   } :: errors)
 
-and unknown_error ?(errors = []) ?filepath lexbuf =
+and unknown_error ?(errors = []) lexbuf =
   Error ({
-    location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, filepath)
+    location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, Some lexbuf.lex_curr_p.pos_fname)
     ; message = "Something went wrong..."
     ; hint = None
   } :: errors)
@@ -128,13 +128,12 @@ let get_line_content filepath line =
 
 let extract_location_info loc =
   match loc with
-  | Nowhere -> ("", 0, 0, 0)
+  | Nowhere -> (None, 0, 0, 0)
   | Location (start_pos, end_pos, filename) ->
     let line = start_pos.Lexing.pos_lnum in
     let start_char = start_pos.Lexing.pos_cnum - start_pos.Lexing.pos_bol in
     let end_char = end_pos.Lexing.pos_cnum - end_pos.Lexing.pos_bol in
-    let filepath = Option.value ~default:"" filename in
-    (filepath, line, start_char, end_char)
+    (filename, line, start_char, end_char)
 
 (*┌*)
 let print_error detailed_error =
@@ -160,22 +159,13 @@ let print_error detailed_error =
         ; CString.colorize ~color:Red
             (String.make (end_char - start_char) '^') ] in
     begin match filepath with
-    | "" -> ()
-      (* let line_content = "" in *)
-      (* CPrinter.cprintf " stdin:%d:%d\n" line start_char ; *)
-      (* CPrinter.cprintf " %s│\n" line_margin ;
-      CPrinter.cprintf "%d │ %s\n" line line_content ;
-      CPrinter.cprintf " %s│ %s" line_margin marker *)
-    | _ ->
+    | None -> ()
+    | Some filepath ->
       let line_content = get_line_content filepath line in
-      CPrinter.cprintf " %s:%d:%d\n" filepath line start_char ;
+      CPrinter.cprintf " %s:%d:%d\n" filepath line (start_char + 1) ;
       CPrinter.cprintf " %s│\n" line_margin ;
       CPrinter.cprintf "%d │ %s\n" line line_content ;
       CPrinter.cprintf " %s│ %s" line_margin marker
-      (* CPrinter.cprintf "  ──▶ %s:%d:%d\n" filepath line start_char ;
-      CPrinter.cprintln "  │" ;
-      CPrinter.cprintf "%d │ %s\n" line line_content ;
-      CPrinter.cprintf "  │ %s" marker *)
     end in
 
   let message_hint = 

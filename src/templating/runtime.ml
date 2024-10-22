@@ -209,10 +209,10 @@ and propagate_effect relation event (event_env, expr_env) program =
         set_marking ~marking:(mk_marking ~executed:dest_marking.data.executed.data ~pending:true ~included:dest_marking.data.included.data ~value:dest_marking.data.value.data ()) dest_event
       (* { dest_marking with data = { dest_marking.data with pending = { dest_marking.data.pending with data = true} } }  *)
     | Exclude ->
-        set_marking ~marking:(mk_marking ~executed:dest_marking.data.executed.data ~pending:true ~included:dest_marking.data.included.data ~value:dest_marking.data.value.data ()) dest_event
+        set_marking ~marking:(mk_marking ~executed:dest_marking.data.executed.data ~pending:dest_marking.data.pending.data ~included:false ~value:dest_marking.data.value.data ()) dest_event
       (* { dest_marking with data = { dest_marking.data with included = { dest_marking.data.included with data = false} } }  *)
     | Include ->
-        set_marking ~marking:(mk_marking ~executed:dest_marking.data.executed.data ~pending:true ~included:dest_marking.data.included.data ~value:dest_marking.data.value.data ()) dest_event
+        set_marking ~marking:(mk_marking ~executed:dest_marking.data.executed.data ~pending:dest_marking.data.pending.data ~included:true ~value:dest_marking.data.value.data ()) dest_event
       (* { dest_marking with data = { dest_marking.data with included = { dest_marking.data.included with data = true} } }  *)
     | _ -> Ok dest_event
     end >>= fun dest_event ->

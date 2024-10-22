@@ -101,7 +101,7 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     Logger.info @@ Printf.sprintf "Instantiating %s" (CString.colorize ~color:Yellow @@ string_of_template_inst inst);
     (* TODO: Verify if the length of the args are the same as the params *)
     let (e_ti, q_ti, r_ti) = tmpl.graph in
-    let exports_mapping = List.combine tmpl.export inst.x in
+    let exports_mapping = List.combine (deannotate_list tmpl.export) inst.x in
     let (result_events, _, result_relations) = result_program in 
     (* Instantiations should be empty! *)
 
@@ -150,7 +150,7 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     
     (* Instantations inside of the Template *)
     instantiate_tmpls q_ti tmpl_env expr_env
-    >>= fun (_other_tmpled_events, _, _other_tmpled_relations) ->
+    >>= fun (other_tmpled_events, _, other_tmpled_relations) ->
 
     (* Instantiate relations *)
     fold_left_result 
@@ -162,11 +162,13 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     fresh_event_ids events relations exports_mapping
     >>| fun (events, relations) ->
 
+    Logger.debug "After freshing the ids";
+    Logger.debug @@ "Relations: " ^ (List.map string_of_relation relations |> String.concat "\n");
     (* Unbind the declared params from the template instance *)
     (* Ok (end_scope expr_env)
     >>| fun _ -> *)
 
-    ( List.flatten [result_events; events; _other_tmpled_events], [], List.flatten [result_relations; relations; _other_tmpled_relations] ) 
+    ( List.flatten [result_events; events; other_tmpled_events], [], List.flatten [result_relations; relations; other_tmpled_relations] ) 
 
 and instantiate_event _expr_env tmpl_events target_event  =
 (* Filter/Iterate the events based on its annotations  *)
@@ -245,9 +247,9 @@ and export_map_events events export_mapping =
 
 and map_event_id event export_mapping = 
   let (id, label) = event.data.info in
-  match List.assoc_opt id export_mapping with
+  match List.assoc_opt id.data export_mapping with
   | None -> event
-  | Some id -> { event with data = { event.data with info = (id, label) } }
+  | Some new_id -> { event with data = { event.data with info = (new_id, label) } }
 
 (*
 ================================================================

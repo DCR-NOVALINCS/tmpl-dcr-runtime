@@ -27,7 +27,7 @@ and type_expr' =
   | IntTy
   | BoolTy
   | EventTy of string
-  | RecordTy of (type_expr) record_field list
+  | RecordTy of type_expr record_field list
   | ListTy of type_expr
   (* ADD Template Type *)
   (* | TemplateTy of template_def *)
@@ -428,12 +428,15 @@ and string_of_program p =
   string_of_subprogram (events, template_insts, relations)
 
 (*
-=============================================================================
-  Aux functions
-=============================================================================
+===============================================================
+  Alpha-renaming functions
+===============================================================
 *)
 
-(* the alpha-renaming function *)
+open Misc.Monads
+open Misc.Printing
+
+
 let rec _counter = ref 0
 
 and fresh name =
@@ -446,8 +449,58 @@ and fresh_event event =
   let new_id = fresh id.data in
   { event with data = { event.data with info = (annotate ~loc:id.loc ~ty:!(id.ty) new_id, label) } }
 
-and fresh_event_ids events relations _exports_mapping  = 
-  let fresh_events = List.map fresh_event events in
+and get_relation_of_event id relation = 
+  match relation.data with
+  | ControlRelation (from, _, dest, _, _) -> from.data = id.data || dest.data = id.data
+  | SpawnRelation (from, _, _, _) -> from.data = id.data
+
+and change_relation old_id new_id relation = 
+  match relation.data with
+  | ControlRelation (from, guard, dest, t, annot) -> 
+    let new_from = if from.data = old_id.data then new_id else from in
+    let new_dest = if dest.data = old_id.data then new_id else dest in
+    { relation with data = ControlRelation (new_from, guard, new_dest, t, annot) }
+  | SpawnRelation (from, guard, subprogram, annot) -> 
+    let new_from = if from.data = old_id.data then new_id else from in
+    { relation with data = SpawnRelation (new_from, guard, subprogram, annot) }
+
+and fresh_event_ids events relations exports_mapping =
+  map_result
+    (fun event -> 
+      let (id, _) = event.data.info in
+      match List.assoc_opt id.data exports_mapping with
+      | None -> Ok event
+      | Some new_id -> Ok { event with data = { event.data with info = (new_id, snd event.data.info) } }
+      )
+    events
+  >>= fun events ->
+  map_result
+    (fun event -> Ok (event, fresh_event event))
+    events 
+  >>= fun events_mapping ->
+  let old_events = List.map fst events_mapping in
+  let fresh_events = List.map snd events_mapping in
+  map_result
+    (fun relation -> 
+      fold_left_result
+        (fun relation old_event -> 
+          let (old_id, _) = old_event.data.info in
+          fold_left_result
+            (fun relation fresh_event -> 
+              let (new_id, _) = fresh_event.data.info in
+              if get_relation_of_event old_id relation then 
+                (Logger.debug @@ Printf.sprintf "Changing relation %s" old_id.data; 
+                Ok (change_relation old_id new_id relation))
+              else Ok relation
+              )
+              relation fresh_events
+          )
+        relation old_events
+      )
+    relations
+  >>= fun fresh_relations -> 
+  Ok (fresh_events, fresh_relations)
+  (* let fresh_events = List.map fresh_event events in
   let _fresh_relations = List.map (fun relation ->
     match relation.data with
     | ControlRelation (from, guard, dest, t, _annot) -> 
@@ -458,8 +511,15 @@ and fresh_event_ids events relations _exports_mapping  =
       let new_from = fresh from.data in
       SpawnRelation (annotate ~loc:from.loc ~ty:!(from.ty) new_from, guard, subprogram, _annot)
   ) relations in
-  Ok (fresh_events, relations)
-  
+  Ok (fresh_events, relations) *)
+
+
+(*
+=============================================================================
+  Aux functions
+=============================================================================
+*)
+
 and record_event event = 
   let { marking; _ } = event.data in
   annotate ~loc:event.loc ~ty:!(event.ty) 

@@ -305,6 +305,7 @@ plain_type_expr:
 | BOOLTY                                            { BoolTy   }
 | plain_id                                          { EventTy($1) }
 | delimited(LBRACE, plain_record_type_field_list, RBRACE)    { RecordTy($1) }
+| LISTTY; item_type=delimited(LBRACKET, type_expr, RBRACKET)             { ListTy(item_type) }
 ;
 
 // ================= expressions

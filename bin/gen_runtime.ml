@@ -10,11 +10,12 @@ open Templating.Errors
   Runtime for the web editor
 
   Available functions:
-  - view
-  - view debug
-  - execute
-  - parse
+  - view (see enabled events)
+  - view in debug mode (see all the details of the graph)
+  - execute <event_id> <expr>
+  - parse <program>
 
+==============================
 *)
 
 exception ExecutionError of detailed_error list

@@ -5,10 +5,10 @@ let parse_with_error_handling ?(filepath = "") lexbuf (parse_fun : Lexing.lexbuf
     lexbuf.Lexing.lex_curr_p <- { lexbuf.Lexing.lex_curr_p with pos_fname = filepath }; 
     Ok (parse_fun lexbuf) 
   with
-  | Lexer.Error message -> lexing_error ~filepath lexbuf message
-  | Parser.Error -> syntax_error ~filepath lexbuf
-  | End_of_file -> unexpected_eof ~filepath lexbuf
-  | _ -> unknown_error ~filepath lexbuf
+  | Lexer.Error message -> lexing_error lexbuf message
+  | Parser.Error -> syntax_error lexbuf
+  | End_of_file -> unexpected_eof lexbuf
+  | _ -> unknown_error lexbuf
 
 let parse_program ?(filename = "") lexbuf = 
   parse_with_error_handling ~filepath:filename lexbuf (Parser.main Lexer.read_token)

@@ -15,14 +15,15 @@ open Templating.Errors
 =============================================================================
 *)  
 
-let print_output =
-  function
-  | Ok (_, msg) -> 
-    CPrinter.cprintln msg
-    (* CPrinter.cprintln "" *)
-  | Error errors ->
+let print_output ?(previous_program = empty_program) =
+  function  
+  | Ok (program, msg) -> 
+    CPrinter.cprintln msg;
+    Ok program
+  | Error errors -> 
     List.iter print_error errors;
-    CPrinter.cprintln ""
+    Ok (previous_program)
+
 
 let sanatize_input input = 
   input
@@ -39,8 +40,8 @@ let help_message cmds =
   let header = CString.colorize ~color:BrightCyan "Available Commands:" in
   let cmds_section = 
     cmds
-    |> List.map (fun (cmd, alias, desc) -> 
-      Printf.sprintf "- %s (%s): %s" (CString.colorize ~color:Green cmd) (CString.colorize ~color:Green alias) desc)
+    |> List.map (fun (cmd, alias, params, desc) -> 
+      Printf.sprintf "- %s (%s) %s : %s" (CString.colorize ~color:Green cmd) (CString.colorize ~color:Green alias) (String.concat " " (List.map (CString.colorize ~color:Red) params)) desc)
     |> String.concat "\n" in
   String.concat "\n" [header; cmds_section]
 
@@ -48,11 +49,8 @@ let help_message cmds =
 let parse_expression expr_string = 
   let expr = expr_string |> String.concat "" in
   let expr_lexbuf = Lexing.from_string (expr) in
-  Logger.info "Parsing expression";
-  Logger.debug @@ "Expression: " ^ expr;
+  Logger.debug @@ "Parsing expression " ^ expr;
   parse_expression expr_lexbuf
-  (* let n = Random.full_int 10 in
-  Ok (annotate ~loc:Nowhere (IntLit n)) *)
 
 (*
 =============================================================================
@@ -67,11 +65,11 @@ let read_command tokens program =
 
   | ["help"] | ["h"] -> 
     Ok (program, help_message [
-      ("view", "v", "View the current program")
-      ; ("debug", "d", "View the current program with relations")
-      ; ("exec", "e", "Execute an event with an expression")
-      ; ("exit", "q", "Exit the program")
-      ; ("help", "h", "Display this message")
+      ("view", "v", [], "View the current program")
+      ; ("debug", "d", [], "View the current program with relations")
+      ; ("exec", "e", ["event_id"; "[expr]"], "Execute an event with an expression")
+      ; ("exit", "q", [], "Exit the program")
+      ; ("help", "h", [], "Display this message")
     ])
 
   | "exec"::event_id::expr | "e"::event_id::expr -> 
@@ -104,8 +102,11 @@ let rec prompt program =
 
   (* Process command *)
   read_command tokens program
-  |> print_output; 
-     prompt program
+  |> print_output ~previous_program:program
+  >>= fun program ->
+
+  (* Continue... *)
+  prompt program
     
 let parse filename = 
   Logger.debug @@ "Reading file: " ^ (CString.colorize ~color:Yellow filename);
@@ -115,12 +116,12 @@ let parse filename =
 
 let runtime = 
   (* Logger settings *)
-  (* Logger.enable () ; *)
-  Logger.disable () ;
+  Logger.enable () ;
+  (* Logger.disable () ; *)
   Logger.set_logger_level Debug;
   (* --- Main program --- *)
   (* Get & Parse the initial input *)
-  ( let filename = Sys.argv.(1) in
+  (let filename = Sys.argv.(1) in
   
   (* FIXME: Better variable name! *)
   let entry = if not @@ Sys.file_exists filename then Ok (empty_program)
@@ -150,7 +151,8 @@ let runtime =
   CPrinter.cprintln " to see the available commands.\n";
 
   (* Start the prompt *)
-  prompt program
-  ) |> print_output
+  prompt program)
+  |> print_output
+  
 
 let _ = runtime
