@@ -1,24 +1,16 @@
-import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 
 import * as runtime from '@/runtime/runtime';
 
 @Injectable()
 export class RuntimeService {
 
-    view(): string {
+    view(isDebugMode: boolean): string {
         try {
-            return runtime.view();
+            return isDebugMode ? runtime.debugView() : runtime.view();
         } catch (e: any) {
             console.error(e);
             throw InternalServerErrorException;
-        }
-    }
-
-    debugView(): string {
-        try {
-            return runtime.debugView();
-        } catch (e: any) {
-            console.error(e);
         }
     }
 

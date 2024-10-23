@@ -18,7 +18,7 @@ export class AppController {
   @Sse()
   view(@Query("debug") inDebug: boolean = false): Observable<{ data: string }> {
     return new Observable((subscriber) => {
-      subscriber.next({ data: inDebug ? this.runtimeService.debugView() : this.runtimeService.view() });
+      subscriber.next({ data: this.runtimeService.view(inDebug) });
 
       return () => subscriber.complete();
     })
