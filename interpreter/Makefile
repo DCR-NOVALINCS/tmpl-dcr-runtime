@@ -1,9 +1,11 @@
-# Description: Makefile for building and testing the project
+# Description: Makefile for building and testing the ocaml project
 
+# Variables
 INTERPRETER_PATH := .
 OUTPUT_DOC_PATH := docs
-OUTPUT_JS_FILE := runtime.js
+OUTPUT_JS_FILE := ../runtime.js
 
+# Targets
 .SILENT: pre-build build watch clean js
 
 default:
