@@ -107,6 +107,12 @@ and invalid_command ?(errors = []) cmd =
     ; hint = Some ("Maybe you mistyped the command? Try " ^ CString.colorize ~color:Green "help" ^ " to see the available commands")
   } :: errors)
 
+(*
+=============================================================================
+  Error printing
+=============================================================================
+*)
+
 let get_line_content filepath line =
   if Sys.file_exists filepath then
     let file = open_in filepath in
@@ -119,12 +125,6 @@ let get_line_content filepath line =
     close_in file;
     line_content
   else ""
-
-(*
-=============================================================================
-  Error printing
-=============================================================================
-*)
 
 let extract_location_info loc =
   match loc with
@@ -141,12 +141,6 @@ let print_error detailed_error =
   let message_header =
     CPrinter.eprint "error: ";
     CPrinter.cprintln message;
-    (* begin match location with
-    | Nowhere -> ()
-    | _ ->
-      CPrinter.cprint " at ";
-      CPrinter.cprintln ~color:Cyan (string_of_loc location)
-    end *)
   in
 
   let message_file_section =
@@ -165,7 +159,8 @@ let print_error detailed_error =
       CPrinter.cprintf " %s:%d:%d\n" filepath line (start_char + 1) ;
       CPrinter.cprintf " %s│\n" line_margin ;
       CPrinter.cprintf "%d │ %s\n" line line_content ;
-      CPrinter.cprintf " %s│ %s" line_margin marker
+      CPrinter.cprintf " %s│ %s" line_margin marker;
+      CPrinter.cprintln ""
     end in
 
   let message_hint = 

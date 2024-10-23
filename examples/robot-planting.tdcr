@@ -6,7 +6,7 @@ tmpl robot(id: String): watering, collectFruit, trim {
     (t: trim)[?: Plant]
 
     m -->* cf, w, t
-    cf --><> wp, t
+    cf --><> w, t
     w --><> cf, t
     t --><> cf, w
 } => w, cf, t
@@ -24,15 +24,15 @@ tmpl plant(id: String, position: { x: Number, y: Number }, plantType: { typename
 (ap: addPlant)[?: { id: String, typename: String, position: { x: Number, y: Number } }]
 
 ar -->> {
-    robot(id = @trigger.value.id) => w, cf, t
+    robot(id = @trigger.value.id) => watering, collectFruit, trim
 
     ap -->> {
         plant(
             id = @trigger.value.id,
             position = @trigger.value.position,
             plantType = plantType,
-            wp = w
-        ) - when plantType.typename == 'apple'
+            wp = watering
+        ) - when plantType.typename == @trigger.value.typename
     } - foreach plantType in [
         { typename: 'apple' },
         { typename: 'orange' },

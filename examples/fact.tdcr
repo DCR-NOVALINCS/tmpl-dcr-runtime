@@ -11,8 +11,8 @@ template fac_aux(acc: Number, i: Number, n: Number): NumberHolder {
 (l: L)[[0, 1, 2]]
 (n: N)[?: Number]
 
-fac(n = 5) => r
+fac(n = 5) => result
 
 n -->> {
-    fac(n = @trigger.value) => r 
+    fac(n = @trigger.value) => result
 }

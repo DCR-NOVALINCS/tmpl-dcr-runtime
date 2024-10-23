@@ -45,10 +45,6 @@ module MakeAnnotationEvaluator (T: sig type t end) = struct
           (* Evaluate the body with  *)
           eval_body body expr_env
           >>= fun body ->
-
-            (* print_endline "Foreach annotation Expr env: ";
-            print_endline (string_of_env string_of_expr expr_env); *)
-
           Ok (body :: results) )
         [] values
       >>| List.flatten
@@ -101,7 +97,6 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     Logger.info @@ Printf.sprintf "Instantiating %s" (CString.colorize ~color:Yellow @@ string_of_template_inst inst);
     (* TODO: Verify if the length of the args are the same as the params *)
     let (e_ti, q_ti, r_ti) = tmpl.graph in
-    let exports_mapping = List.combine (deannotate_list tmpl.export) inst.x in
     let (result_events, _, result_relations) = result_program in 
     (* Instantiations should be empty! *)
 
@@ -145,8 +140,8 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
 
     (* Maps the exported events *)
     (* TODO: This should also affect the events from the args! *)
-    export_map_events events exports_mapping
-    >>= fun events ->
+    (* export_map_events events exports_mapping
+    >>= fun events -> *)
     
     (* Instantations inside of the Template *)
     instantiate_tmpls q_ti tmpl_env expr_env
@@ -159,6 +154,7 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     >>= fun relations ->
 
     (* Fresh ids for the events *)
+    let exports_mapping = List.combine (deannotate_list tmpl.export) inst.x in
     fresh_event_ids events relations exports_mapping
     >>| fun (events, relations) ->
 
