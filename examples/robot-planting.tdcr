@@ -1,0 +1,41 @@
+tmpl robot(id: String): watering, collectFruit, trim {
+    (r: Robot)[{ id: id }]
+    (m: move)[?: Plant]
+    (cf: collectFruit)[?: Plant]
+    (w: watering)[?: Plant]
+    (t: trim)[?: Plant]
+
+    m -->* cf, w, t
+    cf --><> wp, t
+    w --><> cf, t
+    t --><> cf, w
+} => w, cf, t
+
+tmpl plant(id: String, position: { x: Number, y: Number }, plantType: { typename: String }, wp: watering) {
+    (p:Plant)[{ id: id, plantType: plantType, position: position }]
+    (nw: needWatering)[?]
+
+    nw -->% nw
+    nw *--> wp
+    wp -->+ nw
+}
+
+(ar: addRobot)[?: { id: String }]
+(ap: addPlant)[?: { id: String, typename: String, position: { x: Number, y: Number } }]
+
+ar -->> {
+    robot(id = @trigger.value.id) => w, cf, t
+
+    ap -->> {
+        plant(
+            id = @trigger.value.id,
+            position = @trigger.value.position,
+            plantType = plantType,
+            wp = w
+        ) - when plantType.typename == 'apple'
+    } - foreach plantType in [
+        { typename: 'apple' },
+        { typename: 'orange' },
+        { typename: 'banana' }
+    ]
+}

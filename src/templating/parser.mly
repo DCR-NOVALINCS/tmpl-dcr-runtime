@@ -200,9 +200,11 @@ plain_event_info:
 // ===== control relation declarations
 // ctrl_relation_decl:list: mark_loc_ty(plain_ctrl_relation_decl_list) {$1}
 plain_ctrl_relation_decl_list:
-  | rels=nonempty_list(plain_group_ctrl_relation_decl) { List.flatten rels }
+  | rels=nonempty_list(plain_group_ctrl_relation_decl);
+  { List.flatten rels }
 
 
+//FIXME: Repetition of the template annotations in the plain_group_ctrl_relation_decl
 // group_ctrl_relation_decl: mark_loc_ty(plain_group_ctrl_relation_decl) {$1}
 plain_group_ctrl_relation_decl:
   // ==== Unguarded relations ====
@@ -210,74 +212,86 @@ plain_group_ctrl_relation_decl:
   | left_ids=separated_nonempty_list(COMMA, id);
   INCLUDE; 
   right_ids=separated_nonempty_list(COMMA, id);
-  { mk_ctrl_relations left_ids (annotate True) right_ids Include }
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+  { mk_ctrl_relations left_ids (annotate True) right_ids ~annotations:(Option.value ~default:[] annotations) Include }
 
   // Exclude
   | left_ids=separated_nonempty_list(COMMA, id);
   EXCLUDE;
   right_ids=separated_nonempty_list(COMMA, id);
-  { mk_ctrl_relations left_ids (annotate True) right_ids Exclude }
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+  { mk_ctrl_relations left_ids (annotate True) right_ids ~annotations:(Option.value ~default:[] annotations) Exclude }
 
   // Condition
   | left_ids=separated_nonempty_list(COMMA, id);
   CONDITION;
   right_ids=separated_nonempty_list(COMMA, id);
-  { mk_ctrl_relations left_ids (annotate True) right_ids Condition }
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+  { mk_ctrl_relations left_ids (annotate True) right_ids ~annotations:(Option.value ~default:[] annotations) Condition }
 
   // Response
   | left_ids=separated_nonempty_list(COMMA, id);
   RESPONSE;
   right_ids=separated_nonempty_list(COMMA, id);
-  { mk_ctrl_relations left_ids (annotate True) right_ids Response }
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+  { mk_ctrl_relations left_ids (annotate True) right_ids ~annotations:(Option.value ~default:[] annotations) Response }
 
   // Milestone
   | left_ids=separated_nonempty_list(COMMA, id);
   MILESTONE;
   right_ids=separated_nonempty_list(COMMA, id);
-  { mk_ctrl_relations left_ids (annotate True) right_ids Milestone }
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+  { mk_ctrl_relations left_ids (annotate True) right_ids ~annotations:(Option.value ~default:[] annotations) Milestone }
 
   // Spawn 
   | left_ids=separated_nonempty_list(COMMA, id); 
   SPAWN; 
-  prog=delimited(LBRACE, plain_program_spawn, RBRACE);   
-  { mk_spawn_relations left_ids (annotate True) prog }
+  prog=delimited(LBRACE, plain_program_spawn, RBRACE);
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;   
+  { mk_spawn_relations left_ids (annotate True) ~annotations:(Option.value ~default:[] annotations) prog }
 
   // ==== Guarded relations ==== 
   // Include
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD, expr, RGUARD_INCLUDE);
   right_ids=separated_nonempty_list(COMMA, id);
-  { mk_ctrl_relations left_ids expr right_ids Include }
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+  { mk_ctrl_relations left_ids expr right_ids ~annotations:(Option.value ~default:[] annotations) Include }
 
   // Exclude
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD, expr, RGUARD_EXCLUDE);
   right_ids=separated_nonempty_list(COMMA, id);
-  { mk_ctrl_relations left_ids expr right_ids Exclude }
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+  { mk_ctrl_relations left_ids expr right_ids ~annotations:(Option.value ~default:[] annotations) Exclude }
 
   // Condition
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD, expr, RGUARD_CONDITION);
   right_ids=separated_nonempty_list(COMMA, id);
-  { mk_ctrl_relations left_ids expr right_ids Condition }
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+  { mk_ctrl_relations left_ids expr right_ids ~annotations:(Option.value ~default:[] annotations) Condition }
 
   // Response
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD_RESPONSE, expr, RGUARD_RESPONSE);
   right_ids=separated_nonempty_list(COMMA, id);
-  { mk_ctrl_relations left_ids expr right_ids Response }
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+  { mk_ctrl_relations left_ids expr right_ids ~annotations:(Option.value ~default:[] annotations) Response }
 
   // Milestone
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD, expr, RGUARD_MILESTONE);
   right_ids=separated_nonempty_list(COMMA, id);
-  { mk_ctrl_relations left_ids expr right_ids Milestone }
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+  { mk_ctrl_relations left_ids expr right_ids ~annotations:(Option.value ~default:[] annotations) Milestone }
 
   // Spawn
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD, expr, RGUARD_SPAWN);
   prog=delimited(LBRACE, plain_program_spawn, RBRACE);
-  { mk_spawn_relations left_ids expr prog }
+  annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+  { mk_spawn_relations left_ids expr ~annotations:(Option.value ~default:[] annotations) prog }
 
 
 event_io: mark_loc_ty(plain_event_io) {$1}

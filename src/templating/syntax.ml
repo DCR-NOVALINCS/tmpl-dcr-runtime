@@ -217,10 +217,10 @@ let mk_ctrl_relation
   ?(guard = annotate True) 
   ~dest t = annotate @@ ControlRelation (from, guard, dest, t, annotations)
 
-let mk_ctrl_relations left_ids expr right_ids t =
+let mk_ctrl_relations ?(annotations = []) left_ids expr right_ids t =
   List.concat_map
     (fun id1 ->
-      List.map (fun id2 -> mk_ctrl_relation ~from:id1 ~guard:expr ~dest:id2 t) right_ids)
+      List.map (fun id2 -> mk_ctrl_relation ~from:id1 ~guard:expr ~dest:id2 ~annotations t) right_ids)
     left_ids
 
 let mk_spawn_relation 
@@ -228,8 +228,8 @@ let mk_spawn_relation
   ~from 
   ?(guard = annotate True) subprogram = annotate @@ SpawnRelation (from, guard, subprogram, annotations)
 
-let mk_spawn_relations left_ids expr prog = 
-  List.map (fun id -> mk_spawn_relation ~from:id ~guard:expr prog) left_ids
+let mk_spawn_relations ?(annotations = []) left_ids expr prog = 
+  List.map (fun id -> mk_spawn_relation ~from:id ~guard:expr ~annotations prog) left_ids
 
 let mk_template_def id params types graph ~export = 
   { id = annotate id
@@ -464,8 +464,8 @@ and change_relation old_id new_id relation =
     let new_from = if from.data = old_id.data then new_id else from in
     { relation with data = SpawnRelation (new_from, guard, subprogram, annot) }
 
-and fresh_event_ids events relations exports_mapping =
-  map_result
+and fresh_event_ids events relations _exports_mapping =
+  (* map_result
     (fun event -> 
       let (id, _) = event.data.info in
       match List.assoc_opt id.data exports_mapping with
@@ -473,7 +473,7 @@ and fresh_event_ids events relations exports_mapping =
       | Some new_id -> Ok { event with data = { event.data with info = (new_id, snd event.data.info) } }
       )
     events
-  >>= fun events ->
+  >>= fun events -> *)
   map_result
     (fun event -> Ok (event, fresh_event event))
     events 
