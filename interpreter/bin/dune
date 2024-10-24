@@ -4,8 +4,8 @@
  (libraries templating))
 
 (executable
- (name gen_runtime)
- (public_name gen_runtime)
+ (name runtime)
+ (public_name js_test)
  (modes byte)
  (libraries templating js_of_ocaml)
  (preprocess
@@ -14,7 +14,7 @@
 (rule
  (alias js)
  (deps
-  (file gen_runtime.bc))
+  (file runtime.bc))
  (targets runtime.js)
  (action
-  (run js_of_ocaml -o %{targets} %{deps})))
+  (run %{bin:js_of_ocaml} -o %{targets} %{deps})))

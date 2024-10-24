@@ -4,6 +4,7 @@
 INTERPRETER_PATH := .
 OUTPUT_DOC_PATH := docs
 OUTPUT_JS_PATH := ../server/src/runtime
+# OUTPUT_JS_PATH := .
 
 # Targets
 .SILENT: pre-build build watch clean js
@@ -60,5 +61,5 @@ js:
 	make pre-build
 	dune build @js
 	rm -rf $(OUTPUT_JS_PATH)/runtime.js
-	cp -r _build/default/bin/runtime.js $(OUTPUT_JS_PATH)/runtime.js
+	cp -r $(INTERPRETER_PATH)/_build/default/bin/runtime.js $(OUTPUT_JS_PATH)/runtime.js
 	printf "\nGenerated runtime successful\n"

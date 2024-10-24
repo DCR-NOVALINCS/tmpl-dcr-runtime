@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Put, Query, Sse } from '@nestjs/common';
 import { AppService } from './app.service';
 import { RuntimeService } from './runtime/runtime.service';
-import { map, Observable, pipe } from 'rxjs';
+import { Observable } from 'rxjs';
 
 @Controller()
 export class AppController {
@@ -22,17 +22,16 @@ export class AppController {
 
       return () => subscriber.complete();
     })
-    // return inDebug ? this.runtimeService.debugView() : this.runtimeService.view();
   }
 
-  @Put("parse")
-  parse(@Body() input: string): any {
+  @Put()
+  updateProgram(@Body() input: { data: string }): any {
     console.log("Parsing: %s", input);
-    return this.runtimeService.parse(input);
+    return this.runtimeService.parse(input.data);
   }
 
-  @Post("execute/:id")
-  execute(@Param("id") eventId: string, @Body() exprString: string): any {
-    return this.runtimeService.execute(eventId, exprString);
+  @Post("event/:id")
+  execute(@Param("id") eventId: string, @Body() expr: { data: string }): any {
+    return this.runtimeService.execute(eventId, expr.data);
   }
 }
