@@ -16,6 +16,7 @@ depends: [
   "odoc"
   "menhir" {>= "3.0"}
   "js_of_ocaml"
+  "yojson"
 ]
 build: [
   ["dune" "subst"] {dev}

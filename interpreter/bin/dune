@@ -5,7 +5,7 @@
 
 (executable
  (name runtime)
- (public_name js_test)
+ (public_name runtime)
  (modes byte)
  (libraries templating js_of_ocaml)
  (preprocess

@@ -43,7 +43,7 @@ lint:
 
 format:
 	make pre-build
-	dune build @fmt --auto-promote
+	dune fmt
 
 clean:
 	make pre-build

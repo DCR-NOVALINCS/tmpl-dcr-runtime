@@ -28,7 +28,8 @@
   odoc
   (menhir
    (>= 3.0))
-  js_of_ocaml)
+  js_of_ocaml
+  yojson)
  (tags
   (topics "to describe" your project)))
 
