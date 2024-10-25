@@ -92,7 +92,9 @@ and view
   |> Result.ok
 
 and view_debug program =
-  view ~should_print_relations:true program
+    let open Unparser in
+    Ok (unparse program)
+  (* view ~should_print_relations:true program *)
 
 and view_enabled
   (* ?(event_env = empty_env)

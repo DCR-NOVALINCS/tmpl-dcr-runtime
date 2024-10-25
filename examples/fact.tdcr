@@ -16,3 +16,9 @@ fac(n = 5) => result
 n -->> {
     fac(n = @trigger.value) => result
 }
+
+###
+
+n -> EventTy (N)
+
+###

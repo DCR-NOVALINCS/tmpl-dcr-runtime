@@ -21,11 +21,11 @@ let rec typecheck program =
   let rec typecheck_aux remaining_symbols program env = 
     typecheck_template_defs program.template_decls env
     >>= fun _ -> 
-    typecheck_events program.events env 
-    >>= fun _ ->
-    typecheck_template_insts program.template_insts env
-    >>= fun _ ->
-    typecheck_relations program.relations env
+    typecheck_subprogram 
+      ~events:program.events 
+      ~insts:program.template_insts 
+      ~relations:program.relations 
+      env 
     >>= fun _ -> 
     match remaining_symbols with
     | [] -> Ok ()
@@ -33,6 +33,14 @@ let rec typecheck program =
   in typecheck_aux [] program env
 
 and typecheck_template_defs _template_defs _env = Ok ()
+
+and typecheck_subprogram ~events ~insts ~relations env = 
+  typecheck_events events env 
+  >>= fun _ ->
+  typecheck_template_insts insts env
+  >>= fun _ ->
+  typecheck_relations relations env
+  >>= fun _ -> Ok ()
 
 and typecheck_events _events _env = Ok ()
 
