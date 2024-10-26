@@ -20,3 +20,22 @@ let filter_map f l =
 let (>>?) x f = match x with Some x -> f x | None -> None
 
 let (>>|?) x f = x >>? fun x -> Some (f x)
+
+(* Modules *)
+
+module FilterMonad = struct
+  (* Type definition for the monad *)
+  type 'a t = 'a
+
+  (* Return function: wraps a value in the monad *)
+  let return (x : 'a) : 'a t = x
+
+  let get (x : 'a t) : 'a = x
+
+  (* Bind function: applies f to x if the condition is true, otherwise returns x *)
+  let bind (x : 'a t) (condition : bool) (f : 'a -> 'a t) : 'a t =
+    if condition then f x else x
+
+  (* Infix operator for bind: allows chaining operations in a monadic style *)
+  let ( >>= ) (x : 'a t) (condition, f) : 'a t = bind x condition f
+end

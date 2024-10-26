@@ -4,17 +4,18 @@
  (libraries templating))
 
 (executable
- (name runtime)
+ (name jsruntime)
  (public_name runtime)
  (modes byte)
  (libraries templating js_of_ocaml)
- (preprocess
-  (pps js_of_ocaml-ppx)))
+ ;  (preprocess
+ ;   (pps js_of_ocaml-ppx))
+ )
 
 (rule
  (alias js)
  (deps
-  (file runtime.bc))
+  (file jsruntime.bc))
  (targets runtime.js)
  (action
   (run %{bin:js_of_ocaml} -o %{targets} %{deps})))

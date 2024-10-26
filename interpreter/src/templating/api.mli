@@ -66,3 +66,10 @@ val view_enabled :
   (* ?event_env:(event env) ->
   ?expr_env:'a list list -> *)
   ?should_print_relations:bool -> program -> (string, detailed_error list) result
+
+(** [export_program program filename] exports the [program] to a file with the given [filename]
+    @param program The program to be exported
+    @param filename The filename to export the program
+    @return The result of the export.
+*)
+val export_program : program -> string -> (unit, detailed_error list) result

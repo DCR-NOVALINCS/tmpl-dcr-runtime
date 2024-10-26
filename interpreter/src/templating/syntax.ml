@@ -465,12 +465,26 @@ and string_of_program p =
 open Misc.Monads
 open Misc.Printing
 
-let rec _counter = ref 0
+let _ = Random.self_init ()
 
-and fresh name =
-  let res = name ^ "_" ^ string_of_int !_counter in
-  _counter := !_counter + 1;
+let rec count = ref 0
+
+and counter _ = 
+  let res = !count in
+  count := !count + 1;
   res
+
+and nanoid ?(length = 12) _ =
+  let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" in
+  let chars_len = String.length chars in
+  let random_char () = String.get chars (Random.int chars_len) in
+  String.init length (fun _ -> random_char ())
+
+and fresh ?(uniq = nanoid) name =
+  (* let res = name ^ "_" ^ string_of_int !_counter in
+  (* _counter := !_counter + 1; *)
+  res *)
+  name ^ "_" ^ uniq ()
 
 and fresh_event event =
   let id, label = event.data.info in

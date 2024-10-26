@@ -3,9 +3,9 @@ open Templating.Api
 open Templating.Instantiation
 open Templating.Lex_and_parse
 open Templating.Typechecking
+open Templating.Errors
 open Misc.Monads
 open Misc.Printing
-open Templating.Errors
 
 (* open Misc.Env *)
 
@@ -68,6 +68,7 @@ let read_command tokens program =
       ("view", "v", [], "View the current program")
       ; ("debug", "d", [], "View the current program with relations")
       ; ("exec", "e", ["event_id"; "[expr]"], "Execute an event with an expression")
+      ; ("export", "exp", ["filename"], "Export the current program to a file")
       ; ("exit", "q", [], "Exit the program")
       ; ("help", "h", [], "Display this message")
     ])
@@ -88,6 +89,13 @@ let read_command tokens program =
   | ["debug"] | ["d"] -> 
     view_debug program 
     >>= fun unparsed_program -> Ok (program, unparsed_program)
+
+  | "export"::filename::[] | "exp"::filename::[] -> 
+    (* FIXME: add specific function to do this *)
+    (* view_debug program  *)
+    export_program program filename 
+    >>= fun _ ->
+    Ok (program, "Program exported to " ^ CString.colorize ~color:Yellow filename)
 
   | [] -> Ok (program, "")
 

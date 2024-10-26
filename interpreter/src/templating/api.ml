@@ -1,10 +1,10 @@
 open Syntax
-open Misc.Monads
-open Misc.Env
-open Misc.Printing
 open Evaluation
 open Errors
 open Runtime
+open Misc.Monads
+open Misc.Env
+(* open Misc.Printing *)
 
 (*
 ===============================================================
@@ -64,16 +64,33 @@ and preprocess_program ?(expr_env = empty_env) program =
 
   Ok (event_env, expr_env)
 
+(* --- Unparse --- *)
+
+and export_program program filename =
+  let open Unparser in
+  Ok (PlainUnparser.unparse program)
+  >>= fun unparsed_program ->
+  let oc = open_out filename in
+  Printf.fprintf oc "%s\n" unparsed_program;
+  close_out oc;
+  Ok ()
+
 (* --- Vizualization functions --- *)
 
 and view
   ?(filter = (fun _ _ -> true))
-  (* ?(event_env = empty_env)
-  ?(expr_env = empty_env) *)
   ?(should_print_events = true)
   ?(should_print_relations = false)
   program =
   preprocess_program program
+  >>= fun (event_env, expr_env) ->
+  let open Unparser in
+  let events = List.filter (fun event -> filter (event_env, expr_env) event) program.events in
+  let program = { program with events } in
+  Ok (PlainUnparser.unparse
+    ~should_print_events ~should_print_relations ~should_print_template_decls:false
+    program)
+  (* preprocess_program program
   >>= fun (event_env, expr_env) ->
   ( if not should_print_events then ""
   else
@@ -89,11 +106,11 @@ and view
       |> String.concat "\n"
       |> Printf.sprintf "%s\n;\n%s" events_str
   )
-  |> Result.ok
+  |> Result.ok *)
 
 and view_debug program =
     let open Unparser in
-    Ok (unparse program)
+    Ok (PlainUnparser.unparse program)
   (* view ~should_print_relations:true program *)
 
 and view_enabled
@@ -104,6 +121,6 @@ and view_enabled
   view ~should_print_relations ~filter:(fun (event_env, expr_env) event ->
     is_enabled event program (event_env, expr_env)) program
 
-and _view_disabled program =
+(* and _view_disabled program =
   view ~filter:(fun (event_env, expr_env) event ->
-    not (is_enabled event program (event_env, expr_env))) program
+    not (is_enabled event program (event_env, expr_env))) program *)
