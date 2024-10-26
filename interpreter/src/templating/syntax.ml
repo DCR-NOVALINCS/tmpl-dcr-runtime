@@ -32,7 +32,7 @@ end
 
 type loc =
   | Nowhere
-  | Location of Lexing.position * Lexing.position * string option
+  | Location of Lexing.position * Lexing.position * string option (* (start_pos, end_pos, filename) *)
 [@@deriving yojson]
 
 type 'a annotated = { data : 'a; loc : loc; ty : type_expr' option ref }
