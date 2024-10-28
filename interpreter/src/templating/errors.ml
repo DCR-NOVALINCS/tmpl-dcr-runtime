@@ -1,110 +1,115 @@
 open Syntax
 open Lexing
 open Misc.Printing
+open Ppx_yojson_conv_lib.Yojson_conv
 
 type detailed_error = 
   { location : loc
   ; message : string
   ; hint : string option
-  }
+  } [@@deriving yojson]
 
 let property_not_found ?(errors = []) p e =
   Error ({
     location = e.loc
-    ; message = "Property " ^ p.data ^ " not found in " ^ string_of_expr e
-    ; hint = Some "Maybe you forgot to declare it or it is not in scope?"
+    ; message = "Property " ^ (CString.colorize ~color:Yellow p.data) ^ " not found in " ^ (CString.colorize ~color:Yellow @@ string_of_expr e)
+    ; hint = Some "Ensure the property is declared and in scope. Check for typos."
   } :: errors)
 
 and is_not_type ?(errors = []) expected expr =
   Error ({
     location = expr.loc
-    ; message = Printf.sprintf "Expected type %s, but got %s" expected (string_of_expr expr)
-    ; hint = None
+    ; message = Printf.sprintf "Expected type %s, but got %s" (CString.colorize ~color:Yellow expected) (CString.colorize ~color:Yellow @@ string_of_expr expr)
+    ; hint = Some ("Verify the type of the expression " ^ ( CString.colorize ~color:Yellow @@ string_of_expr expr) ^ ". Check for type mismatches or any typos.")
   } :: errors)
 
 and invalid_expr ?(errors = []) ?(loc = Nowhere) () =
   Error ({
     location = loc
     ; message = "Invalid expression"
-    ; hint = None
+    ; hint = Some "Check the syntax and structure of the expression. Ensure all definitions are correctly used."
   } :: errors)
 
 and id_not_found ?(errors = []) id =
   Error ({
     location = id.loc
-    ; message = "Identifier " ^ id.data ^ " not found"
-    ; hint = Some "Maybe you forgot to declare it?"
+    ; message = "Identifier " ^ (CString.colorize ~color:Yellow id.data) ^ " not found"
+    ; hint = Some "Ensure the identifier is declared and in scope. Check for typos."
   } :: errors)
 
 and tmpl_not_found ?(errors = []) id =
   Error ({
     location = id.loc
-    ; message = "Template " ^ id.data ^ " not found"
-    ; hint = Some "Maybe you forgot to declare the template on the top of the file?"
+    ; message = "Template " ^ (CString.colorize ~color:Yellow id.data) ^ " not found"
+    ; hint = Some "Ensure the template is declared at the top of the file. Check for typos."
   } :: errors)
 
 and invalid_annotation_value ?(errors = []) value ty =
   Error ({
     location = value.loc
-    ; message = Printf.sprintf "Invalid annotation value %s for type %s" (string_of_expr value) (string_of_type_expr (annotate ty))
-    ; hint = None
+    ; message = Printf.sprintf "Invalid annotation value %s for type %s" (CString.colorize ~color:Yellow @@ string_of_expr value) (CString.colorize ~color:Yellow @@ string_of_type_expr (annotate ty))
+    ; hint = Some "Verify the annotation value matches the expected type. Check for type mismatches or any typos."
   } :: errors)
 
 and lexing_error ?(errors = []) lexbuf message =
   Error ({
     location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, Some lexbuf.lex_curr_p.pos_fname)
     ; message = "Lexing error: " ^ message
-    ; hint = None
+    ; hint = Some "Check the syntax near the error location. Ensure all tokens are valid."
   } :: errors)
 
 and syntax_error ?(errors = []) lexbuf =
   Error ({
     location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, Some lexbuf.lex_curr_p.pos_fname)
     ; message = "Syntax error"
-    ; hint = None
+    ; hint = Some "Check the syntax near the error location. Ensure all constructs are correctly formed."
   } :: errors)
 
 and unexpected_eof ?(errors = []) lexbuf =
   Error ({
     location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, Some lexbuf.lex_curr_p.pos_fname)
     ; message = "Unexpected end of file"
-    ; hint = None
+    ; hint = Some "Ensure the file is complete and all constructs are properly closed."
   } :: errors)
 
 and unknown_error ?(errors = []) lexbuf =
   Error ({
     location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, Some lexbuf.lex_curr_p.pos_fname)
     ; message = "Something went wrong..."
-    ; hint = None
+    ; hint = Some "An unknown error occurred. Report this issue in the repository."
   } :: errors)
 
 and event_not_found ?(errors = []) ?(loc=Nowhere) id =
   Error ({
     location = loc
-    ; message = Printf.sprintf "Event %s not found" id
-    ; hint = Some "Maybe you forgot to declare it or it is not in scope?"
+    ; message = Printf.sprintf "Event %s not found" (CString.colorize ~color:Yellow id)
+    ; hint = Some "Ensure the event is declared and in scope. Check for typos."
   } :: errors)
 
 and event_not_enabled ?(errors = []) event =
   let (id, _) = event.data.info in
   Error ({
     location = event.loc
-    ; message = Printf.sprintf "Event %s is not enabled" id.data
-    ; hint = Some "Check any relations that might be blocking this event"
+    ; message = Printf.sprintf "Event %s is not enabled" (CString.colorize ~color:Yellow id.data)
+    ; hint = Some "Check any relations or conditions that might be blocking this event."
   } :: errors)
 
 and invalid_guard_value ?(errors = []) value =
   Error ({
     location = value.loc
-    ; message = Printf.sprintf "Invalid guard value. Expecting boolean expression, got %s" (string_of_expr value)
-    ; hint = None
+    ; message = Printf.sprintf "Invalid guard value. Expecting boolean expression, got %s" (CString.colorize ~color:Yellow @@ string_of_expr value)
+    ; hint = Some "Ensure the guard value is a boolean expression."
   } :: errors)
 
-and invalid_command ?(errors = []) cmd =
+and invalid_command ?(errors = []) ?nearest ?(distance = -1) cmd =
+  let guess = match nearest with
+  | Some n when distance > 0 -> "Did you mean " ^ (CString.colorize ~color:Green n) ^ "?"
+  | Some _ when distance = 0 -> "Did you miss some parameters?" 
+  | _ -> "" in
   Error ({
     location = Nowhere
     ; message = Printf.sprintf "Invalid command %s" (String.concat " " cmd |> CString.colorize ~color:Yellow)
-    ; hint = Some ("Maybe you mistyped the command? Try " ^ CString.colorize ~color:Green "help" ^ " to see the available commands")
+    ; hint = Some (guess ^ " Use " ^ CString.colorize ~color:Green "help" ^ " to see the available commands.")
   } :: errors)
 
 (*

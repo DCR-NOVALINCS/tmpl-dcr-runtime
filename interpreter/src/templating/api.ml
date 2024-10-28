@@ -8,6 +8,30 @@ open Misc.Env
 
 (*
 ===============================================================
+  Available main commands
+===============================================================
+*)
+
+type cmd_description = {
+  name: string
+  ; alias: string
+  ; params: string list
+  ; desc: string
+}
+
+let cmds = [
+  { name = "view"; alias = "v"; params = []; desc = "View the current program" }
+  ; { name = "debug"; alias = "d"; params = []; desc = "View the current program with relations" }
+  ; { name = "exec"; alias = "e"; params = ["event_id"; "[expr]"]; desc = "Execute an event with an expression" }
+  ; { name = "export"; alias = "exp"; params = ["filename"]; desc = "Export the current program to a file" }
+  ; { name = "exit"; alias = "q"; params = []; desc = "Exit the program" }
+  ; { name = "help"; alias = "h"; params = []; desc = "Display this message" }
+]
+
+let cmds_bbk_tree = Misc.Bktree.create @@ (List.map (fun { name; alias; _ } -> [name; alias]) cmds |> List.flatten)
+
+(*
+===============================================================
   Available functions
 ===============================================================
 *)
@@ -66,14 +90,9 @@ and preprocess_program ?(expr_env = empty_env) program =
 
 (* --- Unparse --- *)
 
-and export_program program filename =
+and unparse_program program =
   let open Unparser in
   Ok (PlainUnparser.unparse program)
-  >>= fun unparsed_program ->
-  let oc = open_out filename in
-  Printf.fprintf oc "%s\n" unparsed_program;
-  close_out oc;
-  Ok ()
 
 (* --- Vizualization functions --- *)
 

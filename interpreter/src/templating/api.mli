@@ -67,9 +67,19 @@ val view_enabled :
   ?expr_env:'a list list -> *)
   ?should_print_relations:bool -> program -> (string, detailed_error list) result
 
-(** [export_program program filename] exports the [program] to a file with the given [filename]
-    @param program The program to be exported
-    @param filename The filename to export the program
-    @return The result of the export.
+(** [unparse_program program] unparses the [program] and returns the result in string format.
+    @param program The program to be unparsed
+    @return The result of the unparse operation in string format.
 *)
-val export_program : program -> string -> (unit, detailed_error list) result
+val unparse_program : program -> (string, detailed_error list) result
+
+type cmd_description = {
+  name: string
+  ; alias: string
+  ; params: string list
+  ; desc: string
+}
+
+val cmds: cmd_description list
+
+val cmds_bbk_tree: string Misc.Bktree.bk_tree

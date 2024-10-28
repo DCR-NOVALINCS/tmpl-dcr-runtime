@@ -424,6 +424,6 @@ plain_id:
 
 mark_loc_ty(X):
   x = X
-  { annotate ~loc:(Location($startpos, $endpos, if $startpos.pos_fname = "" then (Some $startpos.pos_fname) else None)) x}
+  { annotate ~loc:(Location($startpos, $endpos, if not ($startpos.pos_fname = "") then (Some $startpos.pos_fname) else None)) x}
 ;
 %%

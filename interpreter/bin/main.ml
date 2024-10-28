@@ -40,8 +40,8 @@ let help_message cmds =
   let header = CString.colorize ~color:BrightCyan "Available Commands:" in
   let cmds_section = 
     cmds
-    |> List.map (fun (cmd, alias, params, desc) -> 
-      Printf.sprintf "- %s (%s) %s : %s" (CString.colorize ~color:Green cmd) (CString.colorize ~color:Green alias) (String.concat " " (List.map (CString.colorize ~color:Red) params)) desc)
+    |> List.map (fun { name; alias; params; desc } -> 
+      Printf.sprintf "- %s (%s) %s : %s" (CString.colorize ~color:Green name) (CString.colorize ~color:Green alias) (String.concat " " (List.map (CString.colorize ~color:Red) params)) desc)
     |> String.concat "\n" in
   String.concat "\n" [header; cmds_section]
 
@@ -64,14 +64,7 @@ let read_command tokens program =
   | ["exit"] | ["q"] -> exit 0
 
   | ["help"] | ["h"] -> 
-    Ok (program, help_message [
-      ("view", "v", [], "View the current program")
-      ; ("debug", "d", [], "View the current program with relations")
-      ; ("exec", "e", ["event_id"; "[expr]"], "Execute an event with an expression")
-      ; ("export", "exp", ["filename"], "Export the current program to a file")
-      ; ("exit", "q", [], "Exit the program")
-      ; ("help", "h", [], "Display this message")
-    ])
+    Ok (program, help_message cmds)
 
   | "exec"::event_id::expr | "e"::event_id::expr -> 
     (if expr = [] then Ok (annotate Unit) else
@@ -93,13 +86,20 @@ let read_command tokens program =
   | "export"::filename::[] | "exp"::filename::[] -> 
     (* FIXME: add specific function to do this *)
     (* view_debug program  *)
-    export_program program filename 
-    >>= fun _ ->
+    unparse_program program
+    >>= fun unparsed_program ->
+    let oc = open_out filename in
+    Printf.fprintf oc "%s\n" unparsed_program;
+    close_out oc;
     Ok (program, "Program exported to " ^ CString.colorize ~color:Yellow filename)
 
   | [] -> Ok (program, "")
 
-  | _ -> invalid_command tokens
+  | _ -> 
+    let open Misc.Bktree in
+    let line = String.concat " " tokens in
+    let nearest, distance = nearest_neighbor levenshtein_distance cmds_bbk_tree line in
+    invalid_command ~nearest ~distance tokens
 
 let rec prompt program =
   CPrinter.cprint ~color:BrightGreen "> " ;
@@ -129,7 +129,9 @@ let runtime =
   Logger.set_logger_level Debug;
   (* --- Main program --- *)
   (* Get & Parse the initial input *)
-  (let filename = Sys.argv.(1) in
+  (
+  let start_timer = Sys.time () in
+  let filename = Sys.argv.(1) in
   
   (* FIXME: Better variable name! *)
   let entry = if not @@ Sys.file_exists filename then Ok (empty_program)
@@ -152,6 +154,10 @@ let runtime =
   >>= fun (program, _) ->
     
   (* Display welcome message *)
+  let elapsed_time = (Sys.time () -. start_timer) *. 1_000. in (* in ms *)
+  CPrinter.cprint "Program loaded in ";
+  CPrinter.cprintf ~color:Yellow "%.2fms" elapsed_time;
+  CPrinter.cprintln ".";
   CPrinter.cprint "To get started, type ";
   CPrinter.cprint ~color:Green "help";
   CPrinter.cprint " or ";
