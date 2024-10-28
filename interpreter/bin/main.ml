@@ -124,8 +124,8 @@ let parse filename =
 
 let runtime = 
   (* Logger settings *)
-  (* Logger.enable () ; *)
-  Logger.disable () ;
+  Logger.enable () ;
+  (* Logger.disable () ; *)
   Logger.set_logger_level Debug;
   (* --- Main program --- *)
   (* Get & Parse the initial input *)

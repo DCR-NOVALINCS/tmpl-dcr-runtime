@@ -107,7 +107,8 @@ and view
   let events = List.filter (fun event -> filter (event_env, expr_env) event) program.events in
   let program = { program with events } in
   Ok (PlainUnparser.unparse
-    ~should_print_events ~should_print_relations ~should_print_template_decls:false
+    ~should_print_events ~should_print_value:true ~should_print_executed_marking:true
+    ~should_print_relations ~should_print_template_decls:false
     program)
   (* preprocess_program program
   >>= fun (event_env, expr_env) ->

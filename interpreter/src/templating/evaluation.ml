@@ -38,21 +38,17 @@ let rec eval_expr expr env =
       | Some v -> Ok (annotate ~loc:p.loc ~ty:!(p.ty) v) )
     | _ -> is_not_type "Record" v )
   | List es -> 
-    fold_left_result 
-      (fun result e -> 
-        eval_expr e env
-        >>= fun v -> Ok (v :: result)
-        )
-      [] es
+    map_result 
+      (fun e -> eval_expr e env)
+      es
     >>| fun es -> { expr with data = List es }
-  | Record fields -> 
-    fold_left_result 
-      (fun fields (name, e) -> 
-        eval_expr e env
-        >>| fun v -> (name, v) :: fields)
-      [] fields
-    >>| fun fields -> { expr with data = Record fields }
-  (* | _ -> Ok (IntLit 0) *)
+  | Record fields ->
+    map_result
+      (fun (name, expr) -> 
+        eval_expr expr env
+        >>= fun v -> Ok (name, v))
+      fields 
+    >>| fun fields -> { expr with data = Record fields } 
   | _ -> invalid_expr ()
 
 and eval_binop v1 v2 op = 
