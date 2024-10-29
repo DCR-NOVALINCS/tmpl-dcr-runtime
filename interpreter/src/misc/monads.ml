@@ -1,8 +1,8 @@
 (* Monads for Result *)
 
-let bind x f = match x with Ok x -> f x | Error e -> Error e
+(* let bind x f = match x with Ok x -> f x | Error e -> Error e *)
 
-let (>>=) x f = bind x f
+let (>>=) x f = Result.bind x f
 
 let (>>!) x f = match x with Ok x -> Ok x | Error e -> f e
 
@@ -19,13 +19,22 @@ let map_result f l =
 let filter_map f l = 
   List.fold_right (fun x acc -> match f x with Some x -> x::acc | None -> acc) l []
 
-(* Monads for Option *)
-
-let (>>?) x f = match x with Some x -> f x | None -> None
-
-let (>>|?) x f = x >>? fun x -> Some (f x)
+let iter_left_result f l = 
+  List.iter (fun x -> f x) l
 
 (* Modules *)
+
+module OptionMonad = struct
+  type 'a t = 'a option
+  
+  let return (x : 'a) : 'a t = Some x
+
+  let bind (x : 'a t) (f : 'a -> 'b t) : 'b t = match x with Some x -> f x | None -> None
+
+  let ( >>= ) (x : 'a t) (f : 'a -> 'b t) : 'b t = bind x f
+
+  let ( >>| ) x f = x >>= fun x -> Some (f x) 
+end
 
 module FilterMonad = struct
   (* Type definition for the monad *)
@@ -42,4 +51,6 @@ module FilterMonad = struct
 
   (* Infix operator for bind: allows chaining operations in a monadic style *)
   let ( >>= ) (x : 'a t) (condition, f) : 'a t = bind x condition f
+
+  let (>>|) x f = f x
 end

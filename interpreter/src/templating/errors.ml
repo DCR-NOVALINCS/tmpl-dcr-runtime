@@ -1,5 +1,6 @@
 open Syntax
 open Lexing
+open Unparser.PlainUnparser
 open Misc.Printing
 open Ppx_yojson_conv_lib.Yojson_conv
 
@@ -117,6 +118,27 @@ and should_not_happen ?(errors = []) ?(module_path = "?") ?(line = "?") message 
     location = Nowhere
     ; message = "This should not happen: " ^ message
     ; hint = Some (Printf.sprintf "Check module %s, line %s" module_path line)
+  } :: errors)
+
+(*
+=============================================================================
+  Typechecker errors
+=============================================================================
+*)
+
+and type_mismatch ?(errors = []) expected got_tys =
+  let string_expected = unparse_ty expected in
+  let rec string_got_tys = 
+    function
+    | [] -> (CString.colorize ~color:Yellow "?")
+    | [ty1] -> (CString.colorize ~color:Yellow (unparse_ty ty1))
+    | ty1::[last] -> (CString.colorize ~color:Yellow (unparse_ty ty1)) ^ " and " ^ (CString.colorize ~color:Yellow (unparse_ty last))
+    | ty::tys -> (CString.colorize ~color:Yellow (unparse_ty ty)) ^ ", " ^ (string_got_tys tys)
+  in 
+  Error ({
+    location = expected.loc
+    ; message = Printf.sprintf "Type mismatch. Expected %s, but got %s" (CString.colorize ~color:Yellow string_expected) (string_got_tys got_tys)
+    ; hint = Some "Verify the types of the expressions. Check for type mismatches or any typos."
   } :: errors)
 
 (*
