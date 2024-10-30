@@ -3,34 +3,51 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Observable } from 'rxjs';
 import { AppService } from '@/app.service';
 import { RuntimeService } from '@/runtime/runtime.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SubscriberManagementService } from './subscriber-management/subscriber-management.service';
+
+enum EventType {
+  Program = "program",
+}
 
 @Controller()
 export class AppController {
   constructor(
     private readonly appService: AppService,
-    private readonly runtimeService: RuntimeService
+    private readonly runtimeService: RuntimeService,
+    private subscriberSet: SubscriberManagementService
   ) { }
 
-  @Get("ping")
-  ping(): string {
-    return this.appService.pong();
+  @Sse("ping")
+  ping(): Observable<MessageEvent> {
+    return new Observable((subscriber) => {
+      console.log("Subscribed to ping");
+      setInterval(() => {
+        subscriber.next(new MessageEvent("ping", {
+          data: this.appService.pong()
+        }))
+      }, 1000);
+
+      return () => {
+        console.log("Unsubscribed from ping");
+        subscriber.complete();
+      }
+    })
   }
 
   @Sse()
   view(@Query("debug") inDebug: boolean = false): Observable<MessageEvent> {
-
+    console.log("Subscribed to view");
     let viewMessage: () => MessageEvent = () => {
-      return new MessageEvent("view", {
+      return new MessageEvent(EventType.Program, {
         data: this.runtimeService.view(inDebug)
       })
     }
 
     return new Observable((subscriber) => {
-      this.runtimeService.subscribe(subscriber);
+      this.subscriberSet.subscribe(subscriber);
       subscriber.next(viewMessage());
 
-      return () => this.runtimeService.unsubscribe(subscriber);
+      return () => this.subscriberSet.unsubscribe(subscriber);
     })
   }
 
@@ -38,7 +55,13 @@ export class AppController {
   @UseInterceptors(FileInterceptor("file"))
   updateProgram(@UploadedFile() file: Express.Multer.File): any {
     const content = file.buffer.toString();
-    return this.runtimeService.parse(content);
+    const res = this.runtimeService.parse(content);
+    this.subscriberSet.update((subscriber) => {
+      subscriber.next(new MessageEvent("update", {
+        data: res
+      }))
+    });
+    return res;
   }
 
   @Post("event/:id")
