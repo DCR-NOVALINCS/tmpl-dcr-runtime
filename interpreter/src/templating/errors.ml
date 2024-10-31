@@ -52,6 +52,14 @@ and invalid_annotation_value ?(errors = []) value ty =
     ; hint = Some "Verify the annotation value matches the expected type. Check for type mismatches or any typos."
   } :: errors)
 
+and invalid_number_of_exported_events ?(errors = []) xs exported = 
+  Error ({
+    location = Nowhere
+    ; message = Printf.sprintf "Invalid number of exported events. Expected %s, but got %s" (CString.colorize ~color:Yellow (Printf.sprintf "%d" @@ List.length exported)) (CString.colorize ~color:Yellow (Printf.sprintf "%d" @@ List.length xs))
+    ; hint = Some "Ensure the number of exported events matches the number of events in the program."
+  } :: errors)
+
+
 and lexing_error ?(errors = []) lexbuf message =
   Error ({
     location = Location (lexbuf.lex_start_p, lexbuf.lex_curr_p, Some lexbuf.lex_curr_p.pos_fname)

@@ -27,7 +27,7 @@ let print_output ?(previous_program = empty_program) =
 
 let sanatize_input input = 
   input
-  |> String.split_on_char ' ' 
+  |> String.split_on_char ' '
   |> List.filter (fun s -> s <> "")
   |> Result.ok
 
@@ -47,7 +47,7 @@ let help_message cmds =
 
 (* TODO: *)
 let parse_expression expr_string = 
-  let expr = expr_string |> String.concat "" in
+  let expr = expr_string |> String.concat " " in
   let expr_lexbuf = Lexing.from_string (expr) in
   Logger.debug @@ "Parsing expression " ^ expr;
   parse_expression expr_lexbuf
@@ -66,10 +66,22 @@ let read_command tokens program =
   | ["help"] | ["h"] -> 
     Ok (program, help_message cmds)
 
+  | "parse"::filename::[] | "p"::filename::[] -> 
+    let parse_file filename = 
+      let lexbuf = Lexing.from_channel (open_in filename) in
+      parse_program ~filename lexbuf
+      >>= fun program -> 
+      Ok (program, "File " ^ (CString.colorize ~color:Yellow filename) ^ " parsed successfully")
+    in
+    parse_file filename
+
   | "exec"::event_id::expr | "e"::event_id::expr -> 
-    (if expr = [] then Ok (annotate Unit) else
-    parse_expression expr)
+    (if expr = [] 
+      then Ok (annotate Unit) 
+    else parse_expression expr)
     >>= fun parsed_expr ->
+    typecheck_expr parsed_expr
+    >>= fun _ ->
     execute ~event_id ~expr:parsed_expr.data program
     >>= fun program -> 
     Ok (program, 
@@ -83,15 +95,18 @@ let read_command tokens program =
     view_debug program 
     >>= fun unparsed_program -> Ok (program, unparsed_program)
 
-  | "export"::filename::[] | "exp"::filename::[] -> 
+  | "export"::filenames | "exp"::filenames -> 
     (* FIXME: add specific function to do this *)
     (* view_debug program  *)
     unparse_program program
     >>= fun unparsed_program ->
-    let oc = open_out filename in
-    Printf.fprintf oc "%s\n" unparsed_program;
-    close_out oc;
-    Ok (program, "Program exported to " ^ CString.colorize ~color:Yellow filename)
+    let write_to_file filename = 
+      let oc = open_out filename in
+      Printf.fprintf oc "%s\n" unparsed_program;
+      close_out oc 
+    in
+    List.iter write_to_file filenames;
+    Ok (program, "Program exported to " ^ CString.colorize ~color:Yellow (String.concat ", " filenames))
 
   | [] -> Ok (program, "")
 
@@ -124,7 +139,6 @@ let parse filename =
 
 let runtime = 
   (* Logger settings *)
-  Logger.enable () ;
   (* Logger.disable () ; *)
   Logger.set_logger_level Debug;
   (* --- Main program --- *)
@@ -143,27 +157,32 @@ let runtime =
   (* Preprocess program *)
   Logger.info "Program parsed successfully";
   preprocess_program program
-  >>= fun (_, expr_env) ->
+  >>= fun (_, expr_env, program) ->
   
   (* Typecheck program *)
-  typecheck program 
-  >>= fun _ ->
+  (* typecheck program 
+  >>= fun _ -> *)
 
   (* Instantiate initial templates *)
   instantiate ~expr_env program
   >>= fun (program, _) ->
     
   (* Display welcome message *)
-  let elapsed_time = (Sys.time () -. start_timer) *. 1_000. in (* in ms *)
-  CPrinter.cprint "Program loaded in ";
-  CPrinter.cprintf ~color:Yellow "%.2fms" elapsed_time;
-  CPrinter.cprintln ".";
-  CPrinter.cprint "To get started, type ";
-  CPrinter.cprint ~color:Green "help";
-  CPrinter.cprint " or ";
-  CPrinter.cprint ~color:Green "h";
-  CPrinter.cprintln " to see the available commands.\n";
-
+  let loaded_header =
+    let elapsed_time = (Sys.time () -. start_timer) *. 1_000. in (* in ms *)
+    CPrinter.cprint "Program loaded in ";
+    CPrinter.cprintf ~color:Yellow "%.2fms" elapsed_time;
+    CPrinter.cprintln "."
+  in
+  let start_header = 
+    CPrinter.cprint "To get started, type ";
+    CPrinter.cprint ~color:Green "help";
+    CPrinter.cprint " or ";
+    CPrinter.cprint ~color:Green "h";
+    CPrinter.cprintln " to see the available commands.\n";
+  in
+  loaded_header;
+  start_header;
   (* Start the prompt *)
   prompt program)
   |> print_output

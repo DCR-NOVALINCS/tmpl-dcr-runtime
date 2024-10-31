@@ -23,6 +23,7 @@ let cmds = [
   { name = "view"; alias = "v"; params = []; desc = "View the current program" }
   ; { name = "debug"; alias = "d"; params = []; desc = "View the current program with relations" }
   ; { name = "exec"; alias = "e"; params = ["event_id"; "[expr]"]; desc = "Execute an event with an expression" }
+  ; { name = "parse"; alias = "p"; params = ["filename"]; desc = "Parse a file and update the current program" }
   ; { name = "export"; alias = "exp"; params = ["filename"]; desc = "Export the current program to a file" }
   ; { name = "exit"; alias = "q"; params = []; desc = "Exit the program" }
   ; { name = "help"; alias = "h"; params = []; desc = "Display this message" }
@@ -42,7 +43,7 @@ let rec execute
   (* ?(expr_env = empty_env)  *)
   program  =
   preprocess_program program
-  >>= fun (event_env, expr_env) ->
+  >>= fun (event_env, expr_env, program) ->
   match find_flat event_id event_env with
   | None -> event_not_found event_id
   | Some event ->
@@ -72,21 +73,35 @@ and execute_event event expr env =
   Ok event *)
 
 and preprocess_program ?(expr_env = empty_env) program =
+
+  (* Add all events as value into expr environment *)
   fold_left_result
     (fun env event ->
-      let (id , _) = event.data.info in
-      Ok (bind id.data event env))
+      let id, _ = event.data.info in
+      Ok (bind id.data (record_event event) env))
     expr_env program.events
+  >>= fun expr_env ->
+    let open Misc.Printing in
+    Logger.debug @@ Printf.sprintf "Preprocess program: %s" (string_of_env string_of_expr expr_env);
+
+  (* Update the value of each event *)
+  map_result
+    (fun event ->
+      let open Instantiation in
+      replace_event event expr_env
+      )
+    program.events 
+  >>= fun events ->
+
+  (* Add all events into event environment *)
+  fold_left_result
+    (fun env event ->
+      let id, _ = event.data.info in
+      Ok (bind id.data event env))
+    empty_env events
   >>= fun event_env ->
 
-  fold_left_result
-    (fun env event ->
-      let (id, _) = event.data.info in
-      Ok (bind id.data (record_event event) env))
-    empty_env program.events
-  >>= fun expr_env ->
-
-  Ok (event_env, expr_env)
+  Ok (event_env, expr_env, { program with events })
 
 (* --- Unparse --- *)
 
@@ -102,7 +117,7 @@ and view
   ?(should_print_relations = false)
   program =
   preprocess_program program
-  >>= fun (event_env, expr_env) ->
+  >>= fun (event_env, expr_env, program) ->
   let open Unparser in
   let events = List.filter (fun event -> filter (event_env, expr_env) event) program.events in
   let program = { program with events } in

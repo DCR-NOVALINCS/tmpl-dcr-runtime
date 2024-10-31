@@ -148,6 +148,11 @@ and instantiate_tmpl result_program inst tmpl_env expr_env  =
     >>= fun relations ->
 
     (* Fresh ids for the events *)
+    begin match List.length inst.x = List.length tmpl.export with
+    | true -> Ok ()
+    | false -> invalid_number_of_exported_events inst.x tmpl.export
+    end
+    >>= fun _ ->
     let exports_mapping = List.combine (deannotate_list tmpl.export) inst.x in
     fresh_event_ids events relations exports_mapping
     >>| fun (events, relations) ->

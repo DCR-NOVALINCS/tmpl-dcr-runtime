@@ -26,9 +26,9 @@ val execute :
     @return The environments for events and expressions.
 *)
 val preprocess_program :
-  ?expr_env:(event env) ->
+  ?expr_env:(expr env) ->
   program ->
-  ((event env) * (expr env), detailed_error list) result
+  ((event env) * (expr env) * program, detailed_error list) result
 
 (** [view ?filter ?event_env ?expr_env ?should_print_events ?should_print_relations program]
     views the [program] by unpacking the events and relations in the program
