@@ -28,9 +28,9 @@ watch:
 	make pre-build
 	dune build -w --terminal-persistence=clear-on-rebuild
 
-test:
+check:
 	make pre-build
-	dune runtest -w --terminal-persistence=clear-on-rebuild
+	dune runtest -w --auto-promote
 
 install:
 	make pre-build

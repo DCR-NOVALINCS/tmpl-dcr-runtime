@@ -1,0 +1,10 @@
+tmpl g(n: Number, e: A) {
+  (b: B)[n]
+  e -->* b
+}
+
+(a: A)[?: Number]
+;
+a -->> {
+  g(n = @trigger.value, e = a) -- when @trigger.value > 0
+}

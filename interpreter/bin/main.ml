@@ -132,7 +132,7 @@ let rec prompt program =
   CPrinter.cprint ~color:BrightGreen "> " ;
 
   (* Read line *)
-  sanatize_input (read_line ())
+  sanatize_input @@ read_line ()
   >>= fun tokens ->
 
   (* Process command *)

@@ -1,0 +1,7 @@
+tmpl g (n: Number, e: A) {
+    (b: B)[n]
+    e -->* b
+}
+
+(a: A)[?]
+g(n = 0, e = a)
