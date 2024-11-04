@@ -15,8 +15,20 @@ open Misc.Printing
 =============================================================================
 *)  
 
+let get_file_extension filename = 
+  let parts = String.split_on_char '.' filename in
+  List.nth parts ((List.length parts) - 1)
+
+let input_file_extension = "tdcr"
+
+let input_file filename = 
+  get_file_extension filename
+  |> function
+  | ext when ext = input_file_extension -> Ok ()
+  | result -> invalid_file_extension ~supported:input_file_extension ~got:result ()
+
 let print_output ?(previous_program = empty_program) =
-  function  
+  function
   | Ok (program, msg) -> 
     CPrinter.cprintln msg;
     Ok program
@@ -146,6 +158,8 @@ let runtime =
   (
   let start_timer = Sys.time () in
   let filename = Sys.argv.(1) in
+  input_file filename 
+  >>= fun _ ->
   
   (* FIXME: Better variable name! *)
   let entry = if not @@ Sys.file_exists filename then Ok (empty_program)

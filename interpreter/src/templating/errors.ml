@@ -128,6 +128,13 @@ and should_not_happen ?(errors = []) ?(module_path = "?") ?(line = "?") message 
     ; hint = Some (Printf.sprintf "Check module %s, line %s" module_path line)
   } :: errors)
 
+and invalid_file_extension ?(errors = []) ~supported ?(got = "") () =
+  Error ({
+    location = Nowhere
+    ; message = Printf.sprintf "Invalid file extension %s" (CString.colorize ~color:Yellow got)
+    ; hint = Some ("Supported extensions are " ^ (CString.colorize ~color:Yellow supported))
+  } :: errors)
+
 (*
 =============================================================================
   Typechecker errors

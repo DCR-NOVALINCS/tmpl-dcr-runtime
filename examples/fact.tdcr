@@ -8,17 +8,8 @@ template fac_aux(acc: Number, i: Number, n: Number): NumberHolder {
     fac_aux(acc = i * acc, i = i + 1, n = n) => r - when i <= n
 } => r
 
-(l: L)[[0, 1, 2]]
 (n: N)[?: Number]
-
-fac(n = 5) => result
 
 n -->> {
     fac(n = @trigger.value) => result
 }
-
-###
-
-n -> EventTy (N)
-
-###

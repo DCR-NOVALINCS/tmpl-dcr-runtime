@@ -30,7 +30,7 @@ watch:
 
 test:
 	make pre-build
-	dune runtest
+	dune runtest -w --terminal-persistence=clear-on-rebuild
 
 install:
 	make pre-build
