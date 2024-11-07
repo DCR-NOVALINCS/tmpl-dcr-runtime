@@ -348,7 +348,9 @@ module PlainUnparser = struct
     let unparse_binary_op ?(buffer = Buffer.create 100) op = 
       match op with 
       | Add -> Buffer.add_string buffer @@ "+"
+      | Sub -> Buffer.add_string buffer @@ "-"
       | Mult -> Buffer.add_string buffer @@ "*"
+      | Div -> Buffer.add_string buffer @@ "/"
       | Eq -> Buffer.add_string buffer @@ "=="
       | NotEq -> Buffer.add_string buffer @@ "!="
       | GreaterThan -> Buffer.add_string buffer @@ ">"

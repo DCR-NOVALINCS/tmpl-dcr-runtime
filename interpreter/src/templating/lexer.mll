@@ -56,6 +56,7 @@ rule read_token = parse
 	| '+' 				{ PLUS } 
 	| '*' 				{ MULT } 
 	| '-'				{ MINUS }
+	| '/'				{ DIV }
 	| '~'				{ NEG }
 	| "AND" 			{ AND } 
 	| "OR" 				{ OR } 

@@ -1,5 +1,5 @@
 open Misc.Env 
-open Misc.Monads 
+open Misc.Monads.ResultMonad
 open Syntax
 open Errors
 
@@ -38,12 +38,12 @@ let rec eval_expr expr env =
       | Some v -> Ok (annotate ~loc:p.loc ~ty:!(p.ty) v) )
     | _ -> is_not_type "Record" v )
   | List es -> 
-    map_result 
+    map 
       (fun e -> eval_expr e env)
       es
     >>| fun es -> { expr with data = List es }
   | Record fields ->
-    map_result
+    map
       (fun (name, expr) -> 
         eval_expr expr env
         >>= fun v -> Ok (name, v))
@@ -59,10 +59,24 @@ and eval_binop v1 v2 op =
     | IntLit _, _ -> is_not_type "Int" v2
     | _ -> is_not_type "Int" v1
     )
+  
+  | Sub -> 
+    ( match v1.data, v2.data with
+    | IntLit i1, IntLit i2 -> Ok ({v1 with data = IntLit (i1 - i2); ty = (ref (Some IntTy))})
+    | IntLit _, _ -> is_not_type "Int" v2
+    | _ -> is_not_type "Int" v1
+    )
 
   | Mult -> 
     ( match v1.data, v2.data with
     | IntLit i1, IntLit i2 -> Ok ({v1 with data = IntLit (i1 * i2); ty = (ref (Some IntTy))})
+    | IntLit _, _ -> is_not_type "Int" v2
+    | _ -> is_not_type "Int" v1
+    )
+
+  | Div -> 
+    ( match v1.data, v2.data with
+    | IntLit i1, IntLit i2 -> Ok ({v1 with data = IntLit (i1 / i2); ty = (ref (Some IntTy))})
     | IntLit _, _ -> is_not_type "Int" v2
     | _ -> is_not_type "Int" v1
     )

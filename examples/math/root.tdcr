@@ -1,0 +1,30 @@
+# Sqrt Templates
+
+tmpl sqrt(n: Number): NumberHolder {
+    sqrt_aux(x = n, n = n) => r
+} => r
+
+tmpl sqrt_aux(x: Number, n: Number): NumberHolder {
+    (r: NumberHolder)[x] - when x * x <= n
+    sqrt_aux(x = (x + n / x) / 2, n = n) => r - when x * x > n
+} => r
+
+# Factorial Templates
+
+tmpl fac(n: Number): NumberHolder {
+    fac_aux(acc = 1, i = 1, n = n) => r
+} => r
+
+tmpl fac_aux(acc: Number, i: Number, n: Number): NumberHolder {
+    (r: NumberHolder)[acc] - when i > n
+    fac_aux(acc = i * acc, i = i + 1, n = n) => r - when i <= n
+} => r
+
+
+# Entry point
+
+(c: calculate)[?: { n: Number, method: tmpl(n: Number) => NumberHolder }]
+
+c -->> {
+    @trigger.value.method(n = @trigger.value.n) => result
+}

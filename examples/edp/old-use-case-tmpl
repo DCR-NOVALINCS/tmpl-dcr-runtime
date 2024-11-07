@@ -1,0 +1,68 @@
+tmpl prosumer( pid : String ) consume, produce {
+  # Information and actions of the prosumer
+  c: consume[?: { kw: Number }]
+  p: produce[?: { kw: Number, er: EnergyRequest }]
+  pi: Prosumer[{ id: pid, cons: c, prod: p }]
+} => c, p
+
+# Plan for the accounting the generation of energy of a prosumer
+tmpl plan_generation(orch: Orchestrator, ggf: getGenerationForecast, prosumer: Prosumer) {
+  %rpf: returnProductionForecast[?] 
+  ;
+  ggf -->+ rpf -- when ggf.value.id == p.value.id
+  rpf -->* ggf -- when ggf.value.id == p.value.id
+}
+
+# Plan for the prosumer to request energy and select an offer or to provide energy
+tmpl plan_consumption( cons: consume, prod: produce ) {
+  cons -->> {
+    er: EnergyRequest[@trigger.value.kw]
+    sel: selectEnergyOffer[?: EnergyRequest] -- when @trigger.value.kw > 0
+  }
+  prod -->> {
+    eo: EnergyOffer[{ kw: @trigger.value.kw , er: @trigger.value.er }] -- when er.value > @trigger.value.kw
+  }
+}
+
+# Overall plan.
+tmpl overall_plan(
+  orch: Orchestrator,
+  ggf: getGenerationForecast,
+  prosumers: List[{ id: String, cons: consume, prod: produce }]
+  ) {
+  # For each prosumer, generate the plan
+  plan_generation(orch, ggf, p) -- foreach p in prosumers
+  plan_consumption(p.cons, p.prod) -- foreach p in prosumers
+}
+
+# Another plan, is a plan that doesn't make offers or requests (a rogue plan). Just for the concept that 
+# we can define different plans for different prosumers
+tmpl other_plan(
+  orch: Orchestrator,
+  ggf: getGenerationForecast,
+  prosumers: List[{ id: String, cons: consume, prod: produce }]
+  ) {
+  # For each prosumer, generate the plan
+  plan_generation(orch, ggf, p) -- foreach p in prosumers
+}
+
+;
+
+cc: createCommunity[?: { id: String, balance: Number }]
+
+cc -->> {
+  com: Community[@trigger.value]
+  orch: Orchestrator[{ id: "O_1", community: com }]
+  ggf: getGenerationForecast[?: { prosumer: Prosumer }]
+
+  # Prosumers
+  cp: createProsumer[?: { id: String }]
+
+  # These events exist to apply each plan to the prosumers
+  spp: selectProsumersForPlan[?: List[Prosumer]]
+  spo: selectProsumersForOtherPlan[?: List[Prosumer]]
+  ;
+  cp -->> prosumer(@trigger.value.id) => _, _, _
+  spp -->> overall_plan( orch, ggf, @trigger.value )
+  spo -->> other_plan( orch, ggf, @trigger.value )
+}

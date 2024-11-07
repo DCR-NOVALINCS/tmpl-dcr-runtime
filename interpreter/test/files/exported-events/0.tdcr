@@ -1,0 +1,9 @@
+tmpl d(e: A, n: Number): A {
+    (e2: A)[n]
+    e -->* e2
+}
+
+(a: A)[0]
+
+d(e = a, n = a.value) => a2
+d(e = a2, n = a2.value) => a3

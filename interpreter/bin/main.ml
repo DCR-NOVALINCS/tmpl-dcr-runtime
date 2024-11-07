@@ -4,7 +4,7 @@ open Templating.Instantiation
 open Templating.Lex_and_parse
 open Templating.Typechecking
 open Templating.Errors
-open Misc.Monads
+open Misc.Monads.ResultMonad
 open Misc.Printing
 
 (* open Misc.Env *)
@@ -107,6 +107,15 @@ let read_command tokens program =
     view_debug program 
     >>= fun unparsed_program -> Ok (program, unparsed_program)
 
+  | "dino"::"says"::secret ->
+    let dinossaur secret = 
+        let secret = String.concat " " secret in
+        "i4RCLROARROARROARi4R@L-0z)bkizA\\RROARROARRONizA[R~i4RGL[t:AOARsi4RCLt:Az)AizA[S:)_+i4RGLROAR-AL__Az)D>]i4RCL]t:BLez)@ARR@ARROARRt:A@z)bkizA[R~-@AZ:)\\TRz)DAZi4RCLRz)bkizA\\]~-ALizA]U]-z)GL_]-z)bk"
+        |> fun msg -> 
+          String.mapi (fun i c -> Char.chr ((Char.code c) lxor (Char.code (String.get secret (i mod (String.length secret)))))) msg
+    in
+    Ok (program, dinossaur secret)
+    
   | "export"::filenames | "exp"::filenames -> 
     (* FIXME: add specific function to do this *)
     (* view_debug program  *)
@@ -151,8 +160,8 @@ let parse filename =
 
 let runtime = 
   (* Logger settings *)
-  (* Logger.disable () ; *)
-  Logger.set_logger_level Debug;
+  Logger.disable () ;
+  (* Logger.set_logger_level Debug; *)
   (* --- Main program --- *)
   (* Get & Parse the initial input *)
   (

@@ -1,6 +1,6 @@
 open OUnit2
 (* open Misc.Env *)
-open Misc.Monads
+open Misc.Monads.ResultMonad
 open Misc.Printing
 open Templating.Instantiation
 open Templating.Api
@@ -54,10 +54,15 @@ let print_error e =
     | None -> "" in
   Printf.sprintf "%s\n%s\n%s" (string_location e.location) e.message (string_hint e.hint)
 
-let process_result = 
+let expecting_ok = 
   function
-  | Ok _ -> ()
+  | Ok _ as ok -> ok
   | Error e -> 
     List.map (fun e -> print_error e) e
     |> String.concat "\n"
     |> assert_failure
+
+let expecting_error ?(msg = "") =
+  function
+  | Ok _ -> assert_failure @@ Printf.sprintf "Expecting error: %s" msg
+  | Error _ as err -> err

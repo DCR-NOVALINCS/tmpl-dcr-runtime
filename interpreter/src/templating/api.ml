@@ -2,7 +2,7 @@ open Syntax
 open Evaluation
 open Errors
 open Runtime
-open Misc.Monads
+open Misc.Monads.ResultMonad
 open Misc.Env
 (* open Misc.Printing *)
 
@@ -75,7 +75,7 @@ and execute_event event expr env =
 and preprocess_program ?(expr_env = empty_env) program =
 
   (* Add all events as value into expr environment *)
-  fold_left_result
+  fold_left
     (fun env event ->
       let id, _ = event.data.info in
       Ok (bind id.data (record_event event) env))
@@ -85,7 +85,7 @@ and preprocess_program ?(expr_env = empty_env) program =
     Logger.debug @@ Printf.sprintf "Preprocess program: %s" (string_of_env string_of_expr expr_env);
 
   (* Update the value of each event *)
-  map_result
+  map
     (fun event ->
       let open Instantiation in
       replace_event event expr_env
@@ -94,7 +94,7 @@ and preprocess_program ?(expr_env = empty_env) program =
   >>= fun events ->
 
   (* Add all events into event environment *)
-  fold_left_result
+  fold_left
     (fun env event ->
       let id, _ = event.data.info in
       Ok (bind id.data event env))

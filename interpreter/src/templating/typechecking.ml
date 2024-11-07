@@ -1,4 +1,4 @@
-open Misc.Monads
+open Misc.Monads.ResultMonad
 open Misc.Env
 open Misc.Printing
 open Syntax
@@ -102,7 +102,7 @@ and preprocess_events ~ctxt events =
     let uid = fresh ~id_fn:(counter) id.data in
     Ok { ctxt with uid_event_env = (Misc.Env.bind id.data uid ctxt.uid_event_env) }
   in
-  fold_left_result preprocess_event ctxt events
+  fold_left preprocess_event ctxt events
 
 and preprocess_template_insts ~ctxt _template_insts = 
   Logger.debug "Preprocessing template instantiations...";
@@ -131,7 +131,7 @@ and typecheck_events ~ctxt events =
   let typecheck_event ctxt _event = 
     Ok ctxt
   in
-  fold_left_result typecheck_event ctxt events
+  fold_left typecheck_event ctxt events
 
 and typecheck_template_insts ~ctxt _template_insts = Ok ctxt
 
@@ -185,7 +185,7 @@ let rec typecheck_expr ?(ty_env= empty_env) expr  =
     typecheck_expr ~ty_env expr2
     >>= fun ty2 -> 
     begin match op with 
-    | Add | Mult -> Ok (IntTy, IntTy, IntTy)
+    | Add | Sub | Mult | Div -> Ok (IntTy, IntTy, IntTy)
     | Eq | NotEq -> Ok (ty1.data, ty1.data, BoolTy)
     | GreaterThan | GreaterOrEqual | LessThan | LessOrEqual -> Ok (IntTy, IntTy, BoolTy)
     | And | Or -> Ok (BoolTy, BoolTy, BoolTy)
@@ -221,7 +221,7 @@ let rec typecheck_expr ?(ty_env= empty_env) expr  =
     | _ -> should_not_happen ~line:"137" ~module_path:"templating/typechecking.ml" "typecheck_prop_deref"
   in
   let typecheck_list es ty_env = 
-    fold_left_result
+    fold_left
       (fun expected_ty_opt e -> 
         typecheck_expr ~ty_env e
         >>= fun ty -> 
@@ -237,7 +237,7 @@ let rec typecheck_expr ?(ty_env= empty_env) expr  =
     | None -> Ok (annotate @@ ListTy (annotate UnitTy)) (* Empty List *)
   in
   let typecheck_record fields ty_env = 
-    map_result
+    map
       (fun (prop, e) -> 
         typecheck_expr ~ty_env e
         >>| fun ty -> (annotate prop.data, ty)

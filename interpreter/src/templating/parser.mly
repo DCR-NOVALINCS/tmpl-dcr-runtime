@@ -34,7 +34,7 @@ let mk_program_from_top_level_input =
 // separators
 %token COMMA COLON SEMICOLON PIPE
 // binary ops
-%token PLUS MULT AND OR EQ NEQ LESSTHAN LESSEQTHAN GREATERTHAN GREATEREQTHAN ASSIGN
+%token PLUS MULT DIV AND OR EQ NEQ LESSTHAN LESSEQTHAN GREATERTHAN GREATEREQTHAN ASSIGN
 // unary ops
 %token NEG MINUS
 // ====== DCR
@@ -355,12 +355,14 @@ plain_compareop:
 arith: mark_loc_ty(plain_arith) { $1 }
 plain_arith: 
 | arith PLUS term                                   { BinaryOp($1,$3,Add) }
+| arith MINUS term                                  { BinaryOp($1,$3,Sub) }
 | plain_term                                        { $1          }
 ;
 
 term: mark_loc_ty(plain_term) { $1 }
 plain_term: 
 | term MULT fact                                                    { BinaryOp($1,$3,Mult) }
+| term DIV fact                                                     { BinaryOp($1,$3,Div) }
 | plain_fact                                                        { $1 }
 ;
 

@@ -1,3 +1,5 @@
 (test
  (name test_templating)
- (libraries ounit2 misc templating))
+ (libraries ounit2 misc templating)
+ (deps
+  (glob_files_rec test/files/**.{tdcr})))

@@ -65,6 +65,7 @@ and expr' =
   | False
   | IntLit of int
   | StringLit of string
+  | Reference of expr' ref
   | Parenthesized of expr
   | BinaryOp of expr * expr * binary_op_type
   | UnaryOp of expr * unary_op_type
@@ -79,7 +80,9 @@ and expr' =
 
 and binary_op_type =
   | Add
+  | Sub
   | Mult
+  | Div
   | Eq
   | NotEq
   | GreaterThan
@@ -319,7 +322,9 @@ and string_of_expr expr =
       let op_str =
         match op with
         | Add -> "+"
+        | Sub -> "-"
         | Mult -> "*"
+        | Div -> "/"
         | Eq -> "=="
         | NotEq -> "!="
         | GreaterThan -> ">"
@@ -340,7 +345,8 @@ and string_of_expr expr =
   | Record fields ->
       let string_of_field (name, e) = name.data ^ " = " ^ string_of_expr e in
       "{ " ^ String.concat "; " (List.map string_of_field fields) ^ " }"
-  | Template t -> string_of_template_inst t
+  | _ -> "?"
+  (* | Template t -> string_of_template_inst t *)
 
 and string_of_event_io io =
   match io.data with
@@ -462,7 +468,7 @@ and string_of_program p =
 ===============================================================
 *)
 
-open Misc.Monads
+open Misc.Monads.ResultMonad
 open Misc.Printing
 
 let rec r = Random.self_init ()
@@ -475,7 +481,7 @@ and counter _ =
   string_of_int res
 
 and nanoid ?(length = 12) _ =
-  let chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz" in
+  let chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" in
   let chars_len = String.length chars in
   let random_char () = String.get chars (Random.int chars_len) in
   String.init length (fun _ -> random_char ())
@@ -489,8 +495,7 @@ and fresh_event event =
 
 and change_info_event ~new_id ~new_label event =
   let id, label = event.data.info in
-  {
-    event with
+  { event with
     data =
       {
         event.data with
@@ -521,7 +526,7 @@ and change_relation old_id new_id relation =
       }
 
 and fresh_event_ids events relations exports_mapping =
-  map_result
+  map
     (fun event ->
       let id, label = event.data.info in
       let export_id =
@@ -541,9 +546,9 @@ and fresh_event_ids events relations exports_mapping =
       Ok (id, fresh_id, fresh_event))
     events
   >>= fun events_mapping ->
-  map_result
+  map
     (fun relation ->
-      fold_left_result
+      fold_left
         (fun relation (old_id, new_id, _) ->
           if get_relation_of_event old_id relation then (
             Logger.group

@@ -1,0 +1,14 @@
+tmpl sqrt(n: Number): NumberHolder {
+    sqrt_aux(x = n, n = n) => r
+} => r
+
+tmpl sqrt_aux(x: Number, n: Number): NumberHolder {
+    (r: NumberHolder)[x] - when x * x <= n
+    sqrt_aux(x = (x + n / x) / 2, n = n) => r - when x * x > n
+} => r
+
+(c: calculate)[?: Number]
+
+c -->> {
+    sqrt(n = @trigger.value) => result
+}

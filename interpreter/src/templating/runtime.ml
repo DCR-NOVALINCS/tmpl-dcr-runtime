@@ -1,7 +1,7 @@
 open Syntax
 open Evaluation
 open Errors
-open Misc.Monads
+open Misc.Monads.ResultMonad
 open Misc.Env
 open Misc.Printing
 
@@ -123,7 +123,7 @@ and check_guard guard env =
 
 and propagate_effects event (event_env, expr_env) program =
   let relations = program.relations in
-  fold_left_result
+  fold_left
     (fun program relation ->
       propagate_effect relation event (event_env, expr_env) program)
     program relations
@@ -147,11 +147,11 @@ and propagate_effect relation event (event_env, expr_env) program =
           Ok (begin_scope expr_env) >>= fun expr_env ->
           Ok (bind "@trigger" (record_event event) expr_env) >>= fun expr_env ->
           (* Update values of the event inside of the spawn *)
-          map_result
+          map
             (fun event -> update_event_value event expr_env)
             spawn_events
           >>= fun spawn_events ->
-          (* fold_left_result
+          (* fold_left
                (fun events event ->
                  let { marking; io; _ } = event.data in
                  begin match io.data with

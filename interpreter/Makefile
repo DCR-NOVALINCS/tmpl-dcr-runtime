@@ -11,7 +11,7 @@ OUTPUT_JS_PATH := ../server/src/runtime
 
 default:
 	opam update
-	opam install . --deps-only --yes
+	opam install . --deps-only
 	make build
 
 pre-build:
@@ -30,7 +30,7 @@ watch:
 
 check:
 	make pre-build
-	dune runtest -w --auto-promote
+	dune runtest -f
 
 install:
 	make pre-build

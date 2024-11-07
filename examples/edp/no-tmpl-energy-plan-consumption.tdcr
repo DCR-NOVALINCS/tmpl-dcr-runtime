@@ -1,0 +1,26 @@
+# --- Prosumer Fixed Plan Consumption Example ---------- #
+#                                                        #    
+#  This example shows how to create prosumers with a     #
+#  fixed consumption and production plan and calculate   #
+#  the monthly cost.                                     #
+#                                                        #
+# ------------------------------------------------------ #
+
+
+(ap: addProsumer)[?: { id: String, consumption: Number, production: Number, rate: Number }]
+
+ap -->> {
+    (p: ProsumerInfo)[{ id: @trigger.value.id }]
+    (fixed_plan: Plan)[{ consumption: @trigger.value.consumption, production: @trigger.value.production, rate: @trigger.value.rate }]
+    (cmc: calculateMonthlyCost)[?]
+
+    cmc -->> {
+        (c: MonthlyCost)[{ cost: (fixed_plan.value.consumption - fixed_plan.value.production) * fixed_plan.value.rate }]
+    }
+}
+
+# ------------------------------------------------------ #
+#  Issues:                                               #
+#   - The rate is fixed for all prosumers.               #
+#   - Can't change the plan for each prosumer.           #
+# ------------------------------------------------------ #
