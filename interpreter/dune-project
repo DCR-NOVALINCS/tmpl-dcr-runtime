@@ -20,8 +20,9 @@
 
 (package
  (name tmpl_dcr)
- (synopsis "A short synopsis")
- (description "A longer description")
+ (synopsis "An implementation of a interpreter for Templates in DCR Graphs")
+ (description
+  "An implementation of a interpreter and runtime execution of Templates in Dynamic Condition Response Graphs (DCR Graphs).")
  (depends
   ocaml
   dune
@@ -31,6 +32,6 @@
   js_of_ocaml
   yojson)
  (tags
-  (topics "to describe" your project)))
+  (dcr templates interpreter runtime tdcr)))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project

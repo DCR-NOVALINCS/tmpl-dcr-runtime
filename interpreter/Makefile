@@ -39,7 +39,7 @@ install:
 lint:
 	make pre-build
 	dune build @lint
-	dune build @fmt
+	dune fmt --auto-promote
 
 format:
 	make pre-build

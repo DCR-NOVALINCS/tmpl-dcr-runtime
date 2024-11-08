@@ -20,7 +20,7 @@ module type ColorType = sig
   val color_code : t -> string
 end
 
-module NoColor: ColorType = struct
+module NoColor : ColorType = struct
   type t =
     | Red
     | Green
@@ -62,38 +62,22 @@ module ASNIColor : ColorType = struct
     | BrightWhite
 
   let color_code = function
-    | Red ->
-        "\027[31m"
-    | Green ->
-        "\027[32m"
-    | Yellow ->
-        "\027[33m"
-    | Blue ->
-        "\027[34m"
-    | Magenta ->
-        "\027[35m"
-    | Cyan ->
-        "\027[36m"
-    | White ->
-        "\027[37m"
-    | Default ->
-        "\027[0m"
-    | Black ->
-        "\027[30m"
-    | BrightRed ->
-        "\027[91m"
-    | BrightGreen ->
-        "\027[92m"
-    | BrightYellow ->
-        "\027[93m"
-    | BrightBlue ->
-        "\027[94m"
-    | BrightMagenta ->
-        "\027[95m"
-    | BrightCyan ->
-        "\027[96m"
-    | BrightWhite ->
-        "\027[97m"
+    | Red -> "\027[31m"
+    | Green -> "\027[32m"
+    | Yellow -> "\027[33m"
+    | Blue -> "\027[34m"
+    | Magenta -> "\027[35m"
+    | Cyan -> "\027[36m"
+    | White -> "\027[37m"
+    | Default -> "\027[0m"
+    | Black -> "\027[30m"
+    | BrightRed -> "\027[91m"
+    | BrightGreen -> "\027[92m"
+    | BrightYellow -> "\027[93m"
+    | BrightBlue -> "\027[94m"
+    | BrightMagenta -> "\027[95m"
+    | BrightCyan -> "\027[96m"
+    | BrightWhite -> "\027[97m"
 end
 
 module ASNIString (Color : ColorType) = struct
@@ -122,17 +106,17 @@ module type Printer = sig
 end
 
 module MakePrinter (C : ColorType) : Printer = struct
-  include (Printf) 
+  include Printf
   module Color = C
 
   let cprint ?(color = Color.Default) text =
     let color_start = Color.color_code color in
     let color_end = Color.color_code Color.Default in
-    Printf.printf "%s%s%s" color_start text color_end
+    printf "%s%s%s" color_start text color_end
 
   let cprintln ?(color = Color.Default) text = cprint ~color (text ^ "\n")
 
-  let cprintf ?(color = Color.Default) fmt = Printf.ksprintf (cprint ~color) fmt
+  let cprintf ?(color = Color.Default) fmt = ksprintf (cprint ~color) fmt
 
   let eprint text =
     let red = Color.Red in
@@ -140,7 +124,7 @@ module MakePrinter (C : ColorType) : Printer = struct
 
   let eprintln text = eprint (text ^ "\n")
 
-  let eprintf fmt = Printf.ksprintf eprint fmt
+  let eprintf fmt = ksprintf eprint fmt
 end
 
 module type Logger = sig
@@ -179,7 +163,7 @@ module MakeLogger (Color : ColorType) : Logger = struct
 
   let group_stack = GroupStack.create ()
 
-  let enabled = ref true
+  let enabled = ref false
 
   let is_enabled () = !enabled
 
@@ -190,37 +174,32 @@ module MakeLogger (Color : ColorType) : Logger = struct
   let convert_log_type =
     let open P.Color in
     function
-    | Debug ->
-        ("DEBUG", 1, Blue)
-    | Info ->
-        ("INFO", 2, Cyan)
-    | Warn ->
-        ("WARN", 3, Yellow)
-    | Error ->
-        ("ERROR", 4, Red)
-    | Log ->
-        ("LOG", 99,  Default)
-    
-  let logger_level = 
-    let (_, log_level, _) = convert_log_type Debug in
+    | Debug -> ("DEBUG", 1, Blue)
+    | Info -> ("INFO", 2, Cyan)
+    | Warn -> ("WARN", 3, Yellow)
+    | Error -> ("ERROR", 4, Red)
+    | Log -> ("LOG", 99, Default)
+
+  let logger_level =
+    let _, log_level, _ = convert_log_type Debug in
     ref log_level
 
-  let set_logger_level level = 
-    let (_, log_level, _) = convert_log_type level in
+  let set_logger_level level =
+    let _, log_level, _ = convert_log_type level in
     logger_level := log_level
 
   (*"│ "*)
   let log ?(log_type = Log) ?(indent = "") text =
     if not @@ is_enabled () then ()
-    else 
-    let log_type_str, log_level, log_color = convert_log_type log_type in
-    if log_level < !logger_level then ()
     else
-    let group_size = GroupStack.length group_stack in
-    let indent = if group_size > 0 then "│ " ^ indent else indent in
-    P.cprint ~color:Cyan indent ;
-    P.cprintf "[%s]: " ~color:log_color log_type_str ;
-    P.cprintln text 
+      let log_type_str, log_level, log_color = convert_log_type log_type in
+      if log_level < !logger_level then ()
+      else
+        let group_size = GroupStack.length group_stack in
+        let indent = if group_size > 0 then "│ " ^ indent else indent in
+        P.cprint ~color:Cyan indent ;
+        P.cprintf "[%s]: " ~color:log_color log_type_str ;
+        P.cprintln text
 
   let error text = log ~log_type:Error text
 
@@ -241,11 +220,11 @@ module MakeLogger (Color : ColorType) : Logger = struct
     if is_enabled () then
       let open P.Color in
       match GroupStack.pop_opt group_stack with
-      | None ->
-          ()
+      | None -> ()
       | Some text ->
           let indent =
-            String.concat "" (List.init (String.length text + 3) (fun _ -> "─"))
+            String.concat ""
+              (List.init (String.length text + 3) (fun _ -> "─"))
           in
           P.cprintf ~color:Cyan "└" ;
           P.cprintln ~color:Cyan indent
@@ -253,8 +232,6 @@ end
 
 module CPrinter = MakePrinter (ASNIColor)
 module Printer = MakePrinter (NoColor)
-
 module CString = ASNIString (ASNIColor)
 module String = ASNIString (NoColor)
-
 module Logger = MakeLogger (ASNIColor)
