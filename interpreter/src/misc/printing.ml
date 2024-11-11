@@ -223,8 +223,7 @@ module MakeLogger (Color : ColorType) : Logger = struct
       | None -> ()
       | Some text ->
           let indent =
-            String.concat ""
-              (List.init (String.length text + 3) (fun _ -> "─"))
+            String.concat "" (List.init (String.length text + 3) (fun _ -> "─"))
           in
           P.cprintf ~color:Cyan "└" ;
           P.cprintln ~color:Cyan indent

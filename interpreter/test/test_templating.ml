@@ -6,14 +6,14 @@ open Templating.Api
 (* open Templating.Errors *)
 (* open Templating.Unparser *)
 
-(** [get_event id program]
-    returns the event with id [id] in the program [program] *)
+(** [get_event id program] returns the event with id [id] in the program
+    [program] *)
 let get_event ?(filter = fun _ -> true) program =
   let events = program.events in
   List.find_opt filter events
 
-(** [has_event id program]
-    returns true if the event with id [id] is found in the program [program] *)
+(** [has_event id program] returns true if the event with id [id] is found in
+    the program [program] *)
 let has_event ?(filter = fun _ -> true) program =
   Option.is_some @@ get_event ~filter program
 
@@ -21,8 +21,8 @@ let same_id id e =
   let id', _ = e.data.info in
   id'.data |> String.split_on_char '_' |> List.hd = id
 
-(** [get_relation id program]
-    returns the relation with id [id] in the program [program] *)
+(** [get_relation id program] returns the relation with id [id] in the program
+    [program] *)
 let get_relation ?(filter = fun _ -> true) id program =
   let relations = program.relations in
   List.find_opt
@@ -36,12 +36,10 @@ let get_relation ?(filter = fun _ -> true) id program =
 let is_spawn r = match r.data with SpawnRelation _ -> true | _ -> false
 
 let is_ctrl op r =
-  match r.data with
-  | ControlRelation (_, _, _, op', _) -> op = op'
-  | _ -> false
+  match r.data with ControlRelation (_, _, _, op', _) -> op = op' | _ -> false
 
-(** [has_relation id program]
-    returns true if the relation with id [id] is found in the program [program] *)
+(** [has_relation id program] returns true if the relation with id [id] is found
+    in the program [program] *)
 let has_relation ?(filter = fun _ -> true) id program =
   Option.is_some @@ get_relation ~filter id program
 
@@ -72,12 +70,10 @@ let test_suite =
             assert_bool "Expecting spawn relation (-->>) from a"
               (has_relation ~filter:is_spawn "a" program) ;
             assert_bool
-              "Not expecting condition relation (-->*) from 'e' to \
-               instantiated 'b'"
+              "Not expecting condition relation (-->*) from 'e' to instantiated 'b'"
               (not @@ has_relation ~filter:(is_ctrl Condition) "e" program) ;
             assert_bool
-              "Expecting condition relation (-->*) from a to instantiated \
-               'b'"
+              "Expecting condition relation (-->*) from a to instantiated 'b'"
               (has_relation ~filter:(is_ctrl Condition) "a" program) ;
             execute ~event_id:"a" ~expr:(IntLit 2) program
             >>= fun program ->
@@ -85,8 +81,7 @@ let test_suite =
             assert_bool "Expected 3 relations"
               (List.length program.relations = 3) ;
             assert_bool "Expected 2 condition relations"
-              ( List.length
-                @@ List.filter (is_ctrl Condition) program.relations
+              ( List.length @@ List.filter (is_ctrl Condition) program.relations
               = 2 ) ;
             Ok program )
       |> expecting_ok |> ignore ) ]
@@ -121,9 +116,7 @@ let test_suite =
          >::: exported_events_tests (fun file ->
                   "test/files/exported-events" ^ file )
        ; "annotations"
-         >::: annotations_tests (fun file ->
-                  "test/files/annotations" ^ file )
-       ; "error" >::: error_tests (fun file -> "test/files/error" ^ file)
-       ]
+         >::: annotations_tests (fun file -> "test/files/annotations" ^ file)
+       ; "error" >::: error_tests (fun file -> "test/files/error" ^ file) ]
 
 let _ = run_test_tt_main test_suite

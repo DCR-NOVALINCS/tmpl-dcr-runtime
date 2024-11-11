@@ -48,8 +48,7 @@ let help_message cmds =
            Printf.sprintf "- %s (%s) %s : %s"
              (CString.colorize ~color:Green name)
              (CString.colorize ~color:Green alias)
-             (String.concat " "
-                (List.map (CString.colorize ~color:Red) params) )
+             (String.concat " " (List.map (CString.colorize ~color:Red) params))
              desc )
     |> String.concat "\n"
   in
@@ -64,8 +63,7 @@ let parse_expression expr_string =
 
 let parse filename =
   if Sys.file_exists filename then (
-    Logger.debug @@ "Reading file: "
-    ^ CString.colorize ~color:Yellow filename ;
+    Logger.debug @@ "Reading file: " ^ CString.colorize ~color:Yellow filename ;
     let lexbuf = Lexing.from_channel (open_in filename) in
     let prog = parse_program ~filename lexbuf in
     prog )
@@ -104,20 +102,14 @@ let read_command tokens program =
           ^ CString.colorize ~color:Yellow
           @@ Templating.Unparser.PlainUnparser.unparse_expr parsed_expr )
   | ["view"] | ["v"] ->
-      view program
-      >>= fun unparsed_program -> Ok (program, unparsed_program)
+      view program >>= fun unparsed_program -> Ok (program, unparsed_program)
   | ["debug"] | ["d"] ->
       view_debug program
       >>= fun unparsed_program -> Ok (program, unparsed_program)
   | "dino" :: "says" :: message ->
       let dinossaur message =
         Printf.sprintf
-          "               [31m__[0m\n\
-          \              [32m/ _)  - %s[0m\n\
-          \     [33m_.----._/ /[0m\n\
-          \    [34m/         /[0m\n\
-          \ [35m__/ (  | (  |[0m\n\
-           [36m/__.-'|_|--|_|[0m\n"
+          "               [31m__[0m\n\              [32m/ _)  - %s[0m\n\     [33m_.----._/ /[0m\n\    [34m/         /[0m\n\ [35m__/ (  | (  |[0m\n[36m/__.-'|_|--|_|[0m\n"
           message
       in
       Ok (program, dinossaur @@ String.concat " " message)
@@ -135,8 +127,7 @@ let read_command tokens program =
       Ok
         ( program
         , "Program exported to "
-          ^ CString.colorize ~color:Yellow (String.concat ", " filenames)
-        )
+          ^ CString.colorize ~color:Yellow (String.concat ", " filenames) )
   | [] -> Ok (program, "")
   | _ ->
       let open Misc.Bktree in
@@ -160,7 +151,7 @@ let rec prompt program =
 
 let runtime =
   (* Logger settings *)
-  (* Logger.enable () ; *)
+  Logger.enable () ;
   (* Logger.set_logger_level Debug; *)
   (* Get & Parse the initial input *)
   (let start_timer = Sys.time () in

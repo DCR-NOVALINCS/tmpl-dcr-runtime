@@ -17,9 +17,8 @@ let property_not_found ?(errors = []) p e =
           ^ CString.colorize ~color:Yellow
           @@ unparse_expr e
       ; hint=
-          Some
-            "Ensure the property is declared and in scope. Check for \
-             typos." }
+          Some "Ensure the property is declared and in scope. Check for typos."
+      }
     :: errors )
 
 and is_not_type ?(errors = []) expected expr =
@@ -42,34 +41,30 @@ and invalid_expr ?(errors = []) ?(loc = Nowhere) () =
       ; message= "Invalid expression"
       ; hint=
           Some
-            "Check the syntax and structure of the expression. Ensure all \
-             definitions are correctly used." }
+            "Check the syntax and structure of the expression. Ensure all definitions are correctly used."
+      }
     :: errors )
 
 and id_not_found ?(errors = []) id =
   Error
     ( { location= id.loc
       ; message=
-          "Identifier "
-          ^ CString.colorize ~color:Yellow id.data
-          ^ " not found"
+          "Identifier " ^ CString.colorize ~color:Yellow id.data ^ " not found"
       ; hint=
           Some
-            "Ensure the identifier is declared and in scope. Check for \
-             typos." }
+            "Ensure the identifier is declared and in scope. Check for typos."
+      }
     :: errors )
 
 and tmpl_not_found ?(errors = []) id =
   Error
     ( { location= id.loc
       ; message=
-          "Template "
-          ^ CString.colorize ~color:Yellow id.data
-          ^ " not found"
+          "Template " ^ CString.colorize ~color:Yellow id.data ^ " not found"
       ; hint=
           Some
-            "Ensure the template is declared at the top of the file. \
-             Check for typos." }
+            "Ensure the template is declared at the top of the file. Check for typos."
+      }
     :: errors )
 
 and invalid_annotation_value ?(errors = []) value ty =
@@ -78,11 +73,11 @@ and invalid_annotation_value ?(errors = []) value ty =
       ; message=
           Printf.sprintf "Invalid annotation value %s for type %s"
             (CString.colorize ~color:Yellow @@ unparse_expr value)
-            (CString.colorize ~color:Yellow @@ unparse_ty (annotate ty))
+            (CString.colorize ~color:Yellow @@ unparse_ty ty)
       ; hint=
           Some
-            "Verify the annotation value matches the expected type. Check \
-             for type mismatches or any typos." }
+            "Verify the annotation value matches the expected type. Check for type mismatches or any typos."
+      }
     :: errors )
 
 and invalid_number_of_exported_events ?(errors = []) xs exported =
@@ -97,8 +92,8 @@ and invalid_number_of_exported_events ?(errors = []) xs exported =
                (Printf.sprintf "%d" @@ List.length xs) )
       ; hint=
           Some
-            "Ensure the number of exported events matches the number of \
-             events in the program." }
+            "Ensure the number of exported events matches the number of events in the program."
+      }
     :: errors )
 
 and lexing_error ?(errors = []) lexbuf message =
@@ -111,8 +106,8 @@ and lexing_error ?(errors = []) lexbuf message =
       ; message= "Lexing error: " ^ message
       ; hint=
           Some
-            "Check the syntax near the error location. Ensure all tokens \
-             are valid." }
+            "Check the syntax near the error location. Ensure all tokens are valid."
+      }
     :: errors )
 
 and syntax_error ?(errors = []) lexbuf =
@@ -125,8 +120,8 @@ and syntax_error ?(errors = []) lexbuf =
       ; message= "Syntax error"
       ; hint=
           Some
-            "Check the syntax near the error location. Ensure all \
-             constructs are correctly formed." }
+            "Check the syntax near the error location. Ensure all constructs are correctly formed."
+      }
     :: errors )
 
 and unexpected_eof ?(errors = []) lexbuf =
@@ -139,8 +134,8 @@ and unexpected_eof ?(errors = []) lexbuf =
       ; message= "Unexpected end of file"
       ; hint=
           Some
-            "Ensure the file is complete and all constructs are properly \
-             closed." }
+            "Ensure the file is complete and all constructs are properly closed."
+      }
     :: errors )
 
 and unknown_error ?(errors = []) lexbuf =
@@ -152,9 +147,8 @@ and unknown_error ?(errors = []) lexbuf =
             , Some lexbuf.lex_curr_p.pos_fname )
       ; message= "Something went wrong..."
       ; hint=
-          Some
-            "An unknown error occurred. Report this issue in the \
-             repository." }
+          Some "An unknown error occurred. Report this issue in the repository."
+      }
     :: errors )
 
 and event_not_found ?(errors = []) ?(loc = Nowhere) id =
@@ -163,9 +157,7 @@ and event_not_found ?(errors = []) ?(loc = Nowhere) id =
       ; message=
           Printf.sprintf "Event %s not found"
             (CString.colorize ~color:Yellow id)
-      ; hint=
-          Some
-            "Ensure the event is declared and in scope. Check for typos."
+      ; hint= Some "Ensure the event is declared and in scope. Check for typos."
       }
     :: errors )
 
@@ -178,8 +170,8 @@ and event_not_enabled ?(errors = []) event =
             (CString.colorize ~color:Yellow id.data)
       ; hint=
           Some
-            "Check any relations or conditions that might be blocking \
-             this event." }
+            "Check any relations or conditions that might be blocking this event."
+      }
     :: errors )
 
 and invalid_guard_value ?(errors = []) value =
@@ -212,13 +204,12 @@ and invalid_command ?(errors = []) ?nearest ?(distance = -1) cmd =
             ^ " to see the available commands." ) }
     :: errors )
 
-and should_not_happen ?(errors = []) ?(module_path = "?") ?(line = "?")
-    message =
+and should_not_happen ?(errors = []) ?(module_path = "?") ?(line = "?") message
+    =
   Error
     ( { location= Nowhere
       ; message= "This should not happen: " ^ message
-      ; hint=
-          Some (Printf.sprintf "Check module %s, line %s" module_path line)
+      ; hint= Some (Printf.sprintf "Check module %s, line %s" module_path line)
       }
     :: errors )
 
@@ -247,9 +238,9 @@ and file_not_exists ?(errors = []) filename =
    Typechecker errors
    ============================================================================= *)
 
-and type_mismatch ?(errors = []) expected got_tys =
-  let string_expected = unparse_ty expected in
-  let rec string_got_tys = function
+and type_mismatch ?(errors = []) ?(loc = Nowhere) expected_tys got_tys =
+  (* let string_expected = unparse_ty expected in *)
+  let rec string_tys = function
     | [] -> CString.colorize ~color:Yellow "?"
     | [ty1] -> CString.colorize ~color:Yellow (unparse_ty ty1)
     | ty1 :: [last] ->
@@ -257,19 +248,17 @@ and type_mismatch ?(errors = []) expected got_tys =
         ^ " and "
         ^ CString.colorize ~color:Yellow (unparse_ty last)
     | ty :: tys ->
-        CString.colorize ~color:Yellow (unparse_ty ty)
-        ^ ", " ^ string_got_tys tys
+        CString.colorize ~color:Yellow (unparse_ty ty) ^ ", " ^ string_tys tys
   in
   Error
-    ( { location= expected.loc
+    ( { location= loc
       ; message=
           Printf.sprintf "Type mismatch. Expected %s, but got %s"
-            (CString.colorize ~color:Yellow string_expected)
-            (string_got_tys got_tys)
+            (string_tys expected_tys) (string_tys got_tys)
       ; hint=
           Some
-            "Verify the types of the expressions. Check for type \
-             mismatches or any typos." }
+            "Verify the types of the expressions. Check for type mismatches or any typos."
+      }
     :: errors )
 
 (* =============================================================================
@@ -293,30 +282,23 @@ let extract_location_info loc =
   | Nowhere -> (None, 0, 0, 0)
   | Location (start_pos, end_pos, filename) ->
       let line = start_pos.Lexing.pos_lnum in
-      let start_char =
-        start_pos.Lexing.pos_cnum - start_pos.Lexing.pos_bol
-      in
+      let start_char = start_pos.Lexing.pos_cnum - start_pos.Lexing.pos_bol in
       let end_char = end_pos.Lexing.pos_cnum - end_pos.Lexing.pos_bol in
       (filename, line, start_char, end_char)
 
 (*┌*)
 let print_error detailed_error =
   let {location; message; hint} = detailed_error in
-  let message_header =
-    CPrinter.eprint "error: " ;
-    CPrinter.cprintln message
-  in
+  let message_header = CPrinter.eprint "error: " ; CPrinter.cprintln message in
   let message_file_section =
-    let filepath, line, start_char, end_char =
-      extract_location_info location
-    in
+    let filepath, line, start_char, end_char = extract_location_info location in
     let line_size = String.length (string_of_int line) in
     let line_margin = String.make line_size ' ' in
     let marker =
       String.concat ""
         [ String.make start_char ' '
-        ; CString.colorize ~color:Red
-            (String.make (end_char - start_char) '^') ]
+        ; CString.colorize ~color:Red (String.make (end_char - start_char) '^')
+        ]
     in
     match filepath with
     | None -> ()

@@ -9,8 +9,8 @@ val execute :
      program
   -> (program, detailed_error list) result
 (** [execute ~event_id ~expr ?event_env ?expr_env program] executes the event
-    with the given [event_id] in the [program] with the given [expr] and
-    returns the updated program.
+    with the given [event_id] in the [program] with the given [expr] and returns
+    the updated program.
     @param event_id The id of the event
     @param expr The expression to be executed
     @param event_env The environment to be used for events
@@ -46,7 +46,8 @@ val view :
     @return The result of the view. *)
 
 val view_debug : program -> (string, detailed_error list) result
-(** [view_debug program] views the [program] by unpacking all the events and relations in the program
+(** [view_debug program] views the [program] by unpacking all the events and
+    relations in the program
     @param program The program to be viewed
     @return The result of the view. *)
 
@@ -56,8 +57,8 @@ val view_enabled :
        bool
   -> program
   -> (string, detailed_error list) result
-(** [view_enabled ?event_env ?expr_env ?should_print_relations program]
-    views the [program] by unpacking the events that are enabled in the program.
+(** [view_enabled ?event_env ?expr_env ?should_print_relations program] views
+    the [program] by unpacking the events that are enabled in the program.
     @param event_env The environment to be used for events
     @param expr_env The environment to be used for expressions
     @param should_print_relations A flag to print relations
@@ -65,7 +66,8 @@ val view_enabled :
     @return The result of the view. *)
 
 val unparse_program : program -> (string, detailed_error list) result
-(** [unparse_program program] unparses the [program] and returns the result in string format.
+(** [unparse_program program] unparses the [program] and returns the result in
+    string format.
     @param program The program to be unparsed
     @return The result of the unparse operation in string format. *)
 

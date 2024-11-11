@@ -19,8 +19,7 @@ let rec find n x env =
         (Option.bind (List.assoc_opt x sc) (fun v -> Option.some (v, n)))
         (fun () -> find (n + 1) x env)
 
-let find_flat x env =
-  Option.bind (find 1 x env) (fun v -> Option.some (fst v))
+let find_flat x env = Option.bind (find 1 x env) (fun v -> Option.some (fst v))
 
 let get x env = Option.get (find 1 x env)
 

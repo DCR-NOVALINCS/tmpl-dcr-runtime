@@ -26,9 +26,7 @@ and add distance_fn tree value =
 and nearest_neighbor distance_fn tree query =
   let rec aux (best, best_dist) (Node (v, children)) =
     let d = distance_fn v query in
-    let best, best_dist =
-      if d < best_dist then (v, d) else (best, best_dist)
-    in
+    let best, best_dist = if d < best_dist then (v, d) else (best, best_dist) in
     Hashtbl.fold
       (fun dist child (best, best_dist) ->
         if dist >= d - best_dist && dist <= d + best_dist then
@@ -36,8 +34,7 @@ and nearest_neighbor distance_fn tree query =
         else (best, best_dist) )
       children (best, best_dist)
   in
-  match tree with
-  | Node (v, _children) -> aux (v, distance_fn v query) tree
+  match tree with Node (v, _children) -> aux (v, distance_fn v query) tree
 
 (* Example usage *)
 and levenshtein_distance a b =
@@ -53,7 +50,7 @@ and levenshtein_distance a b =
   in
   aux (String.length a) (String.length b)
 
-(* let () = let values = ["hello"; "hallo"; "hullo"; "hell"; "help"] in let
-   tree = create values in let (nearest, dist) = nearest_neighbor
-   levenshtein_distance tree "hell" in Printf.printf "Nearest neighbor: %s
-   with distance: %d\n" nearest dist *)
+(* let () = let values = ["hello"; "hallo"; "hullo"; "hell"; "help"] in let tree
+   = create values in let (nearest, dist) = nearest_neighbor
+   levenshtein_distance tree "hell" in Printf.printf "Nearest neighbor: %s with
+   distance: %d\n" nearest dist *)

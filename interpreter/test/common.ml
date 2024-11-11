@@ -17,15 +17,14 @@ let parse filename =
     let filepath = Printf.sprintf "%s%s" root_path filename in
     let file = open_in filepath in
     let lexbuf = Lexing.from_channel file in
-    parse_program ~filename lexbuf
-    >>| fun program -> close_in file ; program
+    parse_program ~filename lexbuf >>| fun program -> close_in file ; program
   with
   | Sys_error msg ->
       Error
         [ { location= Nowhere
           ; message=
-              Printf.sprintf "File not found: %s. Current directory %s"
-                filename (Sys.getcwd ())
+              Printf.sprintf "File not found: %s. Current directory %s" filename
+                (Sys.getcwd ())
           ; hint= Some msg } ]
   | _ -> should_not_happen "Unknown error"
 
@@ -40,8 +39,7 @@ let setup filename _test_ctxt =
 
 let teardown _state _test_ctxt = ()
 
-let build_state filename test_ctxt =
-  bracket (setup filename) teardown test_ctxt
+let build_state filename test_ctxt = bracket (setup filename) teardown test_ctxt
 
 let print_error e =
   let string_location = function

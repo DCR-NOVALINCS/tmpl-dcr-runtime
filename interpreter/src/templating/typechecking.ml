@@ -37,8 +37,7 @@ let equal_types ty1 ty2 =
     | [] -> true
     | (ty1, ty2) :: rest -> (
       match (ty1, ty2) with
-      | UnitTy, UnitTy | BoolTy, BoolTy | IntTy, IntTy | StringTy, StringTy
-        ->
+      | UnitTy, UnitTy | BoolTy, BoolTy | IntTy, IntTy | StringTy, StringTy ->
           (equal_types_aux [@tailcall]) rest
       | EventTy label1, EventTy label2 ->
           String.equal label1 label2 && (equal_types_aux [@tailcall]) rest
@@ -54,9 +53,7 @@ let equal_types ty1 ty2 =
           List.for_all (fun (f1, f2) -> compare_by_name f1 f2 = 0) combined
           &&
           let type_pairs =
-            List.map
-              (fun ((_, v1), (_, v2)) -> (v1.data, v2.data))
-              combined
+            List.map (fun ((_, v1), (_, v2)) -> (v1.data, v2.data)) combined
           in
           (equal_types_aux [@tailcall]) @@ type_pairs @ rest
       (* | ListTyEmpty, ListTyEmpty -> true *)
@@ -93,9 +90,7 @@ and preprocess_events ~ctxt events =
   let preprocess_event ctxt event =
     let id, _label = event.data.info in
     let uid = fresh ~id_fn:counter id.data in
-    Ok
-      { ctxt with
-        uid_event_env= Misc.Env.bind id.data uid ctxt.uid_event_env }
+    Ok {ctxt with uid_event_env= Misc.Env.bind id.data uid ctxt.uid_event_env}
   in
   fold_left preprocess_event ctxt events
 
@@ -132,11 +127,11 @@ and typecheck_relations ~ctxt _relations = Ok ctxt
    ============================================================================= *)
 
 let typecheck ?ctxt program =
-  (* Typecheck program: - Collect all labels and their corresponding types
-     [] - Collect event dependencies [] - Check if there is any missing
-     label [] - Typecheck each template definition [] - Typecheck each
-     event [] - Typecheck each template instantiation [] - Typecheck each
-     relation [] - Repeat until there are no more dependencies left [] *)
+  (* Typecheck program: - Collect all labels and their corresponding types [] -
+     Collect event dependencies [] - Check if there is any missing label [] -
+     Typecheck each template definition [] - Typecheck each event [] - Typecheck
+     each template instantiation [] - Typecheck each relation [] - Repeat until
+     there are no more dependencies left [] *)
   Logger.info "Typechecking program..." ;
   let ctxt =
     match ctxt with
@@ -149,8 +144,7 @@ let typecheck ?ctxt program =
   let rec typecheck_aux ~ctxt ~events ~insts ~relations =
     typecheck_subprogram ~events ~insts ~relations ~ctxt
     >>= fun ctxt ->
-    if has_dependencies ctxt then
-      typecheck_aux ~ctxt ~events ~insts ~relations
+    if has_dependencies ctxt then typecheck_aux ~ctxt ~events ~insts ~relations
     else Ok ctxt
   in
   typecheck_aux ~ctxt ~events:program.events ~insts:program.template_insts
@@ -171,9 +165,9 @@ let rec typecheck_expr ?(ty_env = empty_env) expr =
     | And | Or -> Ok (BoolTy, BoolTy, BoolTy) )
     >>= fun (expected_ty1, expected_ty2, result_ty) ->
     if not @@ equal_types ty1.data expected_ty1 then
-      type_mismatch (annotate expected_ty1) [ty1]
+      type_mismatch [expected_ty1] [ty1.data]
     else if not @@ equal_types ty2.data expected_ty2 then
-      type_mismatch (annotate expected_ty2) [ty2]
+      type_mismatch [expected_ty2] [ty2.data]
     else Ok (annotate ~loc:ty1.loc ~ty:(Some result_ty) result_ty)
   in
   let typecheck_unary_expr expr op ty_env =
@@ -184,7 +178,7 @@ let rec typecheck_expr ?(ty_env = empty_env) expr =
     | Minus -> Ok (IntTy, IntTy) )
     >>= fun (expected_ty, result_ty) ->
     if not @@ equal_types ty.data expected_ty then
-      type_mismatch (annotate expected_ty) [ty]
+      type_mismatch [expected_ty] [ty.data]
     else Ok (annotate ~loc:ty.loc ~ty:(Some result_ty) result_ty)
   in
   let typecheck_prop_deref expr prop ty_env =
@@ -196,8 +190,8 @@ let rec typecheck_expr ?(ty_env = empty_env) expr =
       | Some ty -> Ok ty
       | None -> id_not_found prop )
     | _ ->
-        should_not_happen ~line:"137"
-          ~module_path:"templating/typechecking.ml" "typecheck_prop_deref"
+        should_not_happen ~line:"137" ~module_path:"templating/typechecking.ml"
+          "typecheck_prop_deref"
   in
   let typecheck_list es ty_env =
     fold_left
@@ -207,7 +201,7 @@ let rec typecheck_expr ?(ty_env = empty_env) expr =
         match expected_ty_opt with
         | Some expected_ty ->
             if ty.data = expected_ty.data then Ok (Some expected_ty)
-            else type_mismatch expected_ty [ty]
+            else type_mismatch [expected_ty.data] [ty.data]
         | None -> Ok (Some ty) )
       None es
     >>= function

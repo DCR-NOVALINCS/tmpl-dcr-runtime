@@ -39,8 +39,7 @@ let () =
      Ok (program, "Program parsed successfully") )
     |> print_output ~parse_ok:(fun (program, _) ->
            Js.string @@ (yojson_of_program program |> Yojson.Safe.to_string) )
-    (* ~parse_error:(fun errors -> Js.string @@ String.concat "\n"
-       errors) *)
+    (* ~parse_error:(fun errors -> Js.string @@ String.concat "\n" errors) *)
   in
   let execute event_id expr =
     (let expr_lexbuf = Lexing.from_string expr in
@@ -53,8 +52,7 @@ let () =
      Ok (new_program, "Event executed successfully") )
     |> print_output ~parse_ok:(fun (program, _) ->
            Js.string @@ (yojson_of_program program |> Yojson.Safe.to_string) )
-    (* ~parse_error:(fun errors -> Js.string @@ String.concat "\n"
-       errors) *)
+    (* ~parse_error:(fun errors -> Js.string @@ String.concat "\n" errors) *)
   in
   Js.export "view" view ;
   Js.export "parse" (fun str_program -> parse @@ Js.to_string str_program) ;

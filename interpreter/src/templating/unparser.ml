@@ -26,18 +26,14 @@ module PlainUnparser = struct
   let rec unparse ?(indent = "") ?(abbreviated = true) ?(separator = "\n")
       ?((* ?(_colorize = false) *)
         should_print_template_decls = true) ?(should_print_events = true)
-      ?(should_print_value = false)
-      ?(should_print_executed_marking = false)
-      ?(should_print_template_insts = true)
-      ?(should_print_relations = true) ?(buffer = Buffer.create 100)
-      program =
+      ?(should_print_value = false) ?(should_print_executed_marking = false)
+      ?(should_print_template_insts = true) ?(should_print_relations = true)
+      ?(buffer = Buffer.create 100) program =
     let open Misc.Monads.FilterMonad in
     let print_template_decls =
       should_print_template_decls && List.length program.template_decls > 0
     in
-    let print_events =
-      should_print_events && List.length program.events > 0
-    in
+    let print_events = should_print_events && List.length program.events > 0 in
     let print_template_insts =
       should_print_template_insts && List.length program.template_insts > 0
     in
@@ -58,8 +54,7 @@ module PlainUnparser = struct
             unparse_subprogram ~indent ~abbreviated
               ~separator:(separator ^ "\n") ~print_events
               ~print_value:(print_events && should_print_value)
-              ~print_executed:
-                (print_events && should_print_executed_marking)
+              ~print_executed:(print_events && should_print_executed_marking)
               ~print_template_insts ~print_relations ~buffer
               (program.events, program.template_insts, program.relations)
             |> ignore ) ;
@@ -67,9 +62,8 @@ module PlainUnparser = struct
 
   and unparse_template_decls ?(indent = "") ?(abbreviated = true)
       ?(separator = "\n\n") ?(should_print_events = true)
-      ?(should_print_template_insts = true)
-      ?(should_print_relations = true) ?(buffer = Buffer.create 100)
-      template_decls =
+      ?(should_print_template_insts = true) ?(should_print_relations = true)
+      ?(buffer = Buffer.create 100) template_decls =
     let unparse_template_decl ?(indent = "") ?(abbreviated = true)
         ?(buffer = Buffer.create 100) template_decl =
       let {id; params; export_types; graph; export; _} = template_decl in
@@ -81,18 +75,12 @@ module PlainUnparser = struct
       unparse_list ~buffer ~separator:", "
         (fun ~buffer (param, ty, _default) ->
           Buffer.add_string buffer @@ Printf.sprintf "%s: " param.data ;
-          unparse_ty ~buffer ty |> ignore )
+          unparse_ty ~buffer ty.data |> ignore )
         params ;
       Buffer.add_string buffer @@ " )" ;
-      (* Buffer.add_string buffer @@ Printf.sprintf "(%s)" (String.concat
-         ", " params); *)
-      (* List.iter (fun ty -> unparse_ty ~buffer ty) export_types; *)
       unparse_list ~buffer ~initial:": " ~separator:", "
-        (fun ~buffer ty -> unparse_ty ~indent ~buffer ty |> ignore)
+        (fun ~buffer ty -> unparse_ty ~indent ~buffer ty.data |> ignore)
         export_types ;
-      (* Buffer.add_string buffer @@ " {\n"; *)
-      (* Buffer.add_string buffer @@ Printf.sprintf ": %s" (String.concat
-         ", " export_types); *)
       Buffer.add_string buffer @@ " {\n" ;
       Buffer.add_string buffer @@ indent ;
       let graph_indent = indent ^ "  " in
@@ -107,8 +95,8 @@ module PlainUnparser = struct
       |> ignore ;
       Buffer.add_string buffer @@ "\n" ^ indent ;
       Buffer.add_string buffer @@ indent ^ "}" ;
-      (* let export = List.map (fun ex -> ex.data) export in
-         Buffer.add_string buffer @@ String.concat ", " export *)
+      (* let export = List.map (fun ex -> ex.data) export in Buffer.add_string
+         buffer @@ String.concat ", " export *)
       unparse_list ~buffer ~initial:" => " ~separator:", "
         (fun ~buffer ex -> Buffer.add_string buffer @@ ex.data)
         export
@@ -128,8 +116,8 @@ module PlainUnparser = struct
     return ()
     >>= ( print_events
         , fun _ ->
-            unparse_events ~indent ~abbreviated ~print_value
-              ~print_executed ~buffer events
+            unparse_events ~indent ~abbreviated ~print_value ~print_executed
+              ~buffer events
             |> ignore )
     >>= ( print_template_insts
         , fun _ ->
@@ -138,18 +126,15 @@ module PlainUnparser = struct
     >>= ( print_relations
         , fun _ ->
             Buffer.add_string buffer @@ separator ;
-            unparse_relations ~indent ~abbreviated ~buffer relations
-            |> ignore ) ;
+            unparse_relations ~indent ~abbreviated ~buffer relations |> ignore
+        ) ;
     Buffer.contents buffer
 
-  and unparse_events ?(indent = "") ?(abbreviated = true)
-      ?(print_value = false) ?(print_executed = false)
-      ?(buffer = Buffer.create 100) events =
-    let unparse_info ?(indent = "") ?(buffer = Buffer.create 100)
-        (id, label) =
+  and unparse_events ?(indent = "") ?(abbreviated = true) ?(print_value = false)
+      ?(print_executed = false) ?(buffer = Buffer.create 100) events =
+    let unparse_info ?(indent = "") ?(buffer = Buffer.create 100) (id, label) =
       Buffer.add_string buffer @@ indent ;
-      Buffer.add_string buffer
-      @@ Printf.sprintf "(%s:%s)" id.data label.data ;
+      Buffer.add_string buffer @@ Printf.sprintf "(%s:%s)" id.data label.data ;
       ()
     in
     let unparse_io ?(indent = "") ?(buffer = Buffer.create 100) io =
@@ -161,7 +146,7 @@ module PlainUnparser = struct
           | UnitTy -> ()
           | _ ->
               Buffer.add_string inner_buffer @@ ": " ;
-              unparse_ty ~buffer:inner_buffer ty |> ignore ) ;
+              unparse_ty ~buffer:inner_buffer ty.data |> ignore ) ;
           Buffer.add_string buffer @@ "[?" ;
           Buffer.add_buffer buffer inner_buffer ;
           Buffer.add_string buffer @@ "]"
@@ -178,19 +163,17 @@ module PlainUnparser = struct
         Buffer.add_string buffer @@ indent ;
         if print_executed && marking.executed.data then
           Buffer.add_string buffer @@ executed_mark ;
-        if marking.pending.data then
-          Buffer.add_string buffer @@ pending_mark ;
+        if marking.pending.data then Buffer.add_string buffer @@ pending_mark ;
         if not marking.included.data then
           Buffer.add_string buffer @@ excluded_mark ;
         ()
       in
-      let unparse_marking_extended ?(indent = "")
-          ?(buffer = Buffer.create 100) marking =
+      let unparse_marking_extended ?(indent = "") ?(buffer = Buffer.create 100)
+          marking =
         Buffer.add_string buffer @@ indent ;
         Buffer.add_string buffer
-        @@ Printf.sprintf "{ ex = %b; res = %b; in = %b }"
-             marking.executed.data marking.pending.data
-             marking.included.data ;
+        @@ Printf.sprintf "{ ex = %b; res = %b; in = %b }" marking.executed.data
+             marking.pending.data marking.included.data ;
         ()
       in
       if abbreviated then
@@ -206,14 +189,13 @@ module PlainUnparser = struct
       unparse_io ~buffer io ;
       if print_value then (
         Buffer.add_string buffer @@ " -> " ;
-        unparse_expr ~buffer marking.data.value |> ignore ) ;
+        unparse_expr ~buffer !(marking.data.value) |> ignore ) ;
       (* Buffer.add_string buffer @@ " - "; *)
       unparse_annotations ~buffer annotations |> ignore ;
       ()
     in
     unparse_list ~buffer ~separator:"\n"
-      (fun ~buffer event ->
-        unparse_event ~indent ~abbreviated ~buffer event )
+      (fun ~buffer event -> unparse_event ~indent ~abbreviated ~buffer event)
       events ;
     Buffer.contents buffer
 
@@ -250,9 +232,8 @@ module PlainUnparser = struct
   and unparse_relations ?(indent = "") ?(abbreviated = true)
       ?(should_print_events = true) ?(should_print_template_insts = true)
       ?(buffer = Buffer.create 100) relations =
-    let unparse_relation_arrow ~arrow_start
-        ~guard:(guard_expr, guard_buffer) ?(buffer = Buffer.create 100)
-        ~end_symbol _ =
+    let unparse_relation_arrow ~arrow_start ~guard:(guard_expr, guard_buffer)
+        ?(buffer = Buffer.create 100) ~end_symbol _ =
       Buffer.add_string buffer @@ arrow_start ;
       ( match guard_expr.data with
       | True -> ()
@@ -277,8 +258,8 @@ module PlainUnparser = struct
         | Milestone -> "-><>"
         | _ -> "->"
       in
-      unparse_relation_arrow ~arrow_start ~guard ~end_symbol:arrow_end
-        ~buffer ()
+      unparse_relation_arrow ~arrow_start ~guard ~end_symbol:arrow_end ~buffer
+        ()
       |> ignore
     in
     let unparse_relation ?(indent = "") ?(abbreviated = true)
@@ -289,8 +270,7 @@ module PlainUnparser = struct
       | ControlRelation (from, guard, dest, t, annot) ->
           Buffer.add_string buffer @@ from.data ;
           Buffer.add_string buffer @@ " " ;
-          unparse_relation_type ~buffer ~guard:(guard, guard_buffer) t
-          |> ignore ;
+          unparse_relation_type ~buffer ~guard:(guard, guard_buffer) t |> ignore ;
           Buffer.add_string buffer @@ " " ;
           Buffer.add_string buffer @@ dest.data ;
           unparse_annotations ~buffer annot |> ignore ;
@@ -298,16 +278,15 @@ module PlainUnparser = struct
       | SpawnRelation (from, guard, subprogram, annot) ->
           Buffer.add_string buffer @@ from.data ;
           Buffer.add_string buffer @@ " " ;
-          unparse_relation_arrow ~arrow_start:"-"
-            ~guard:(guard, guard_buffer) ~end_symbol:"->>" ~buffer ()
+          unparse_relation_arrow ~arrow_start:"-" ~guard:(guard, guard_buffer)
+            ~end_symbol:"->>" ~buffer ()
           |> ignore ;
           (* Buffer.add_string buffer @@ "-"; *)
           Buffer.add_string buffer @@ " {\n" ;
           let graph_indent = indent ^ "  " in
           let spawn_events, spawn_insts, spawn_relations = subprogram in
           unparse_subprogram ~indent:graph_indent ~separator:"\n"
-            ~print_events:
-              (should_print_events && List.length spawn_events > 0)
+            ~print_events:(should_print_events && List.length spawn_events > 0)
             ~print_template_insts:
               (should_print_template_insts && List.length spawn_insts > 0)
             ~print_relations:(List.length spawn_relations > 0)
@@ -344,14 +323,13 @@ module PlainUnparser = struct
           ()
     in
     unparse_list ~buffer ~initial:" - " ~separator:" | "
-      (fun ~buffer annotation ->
-        unparse_annotation ~indent ~buffer annotation )
+      (fun ~buffer annotation -> unparse_annotation ~indent ~buffer annotation)
       annotations ;
     Buffer.contents buffer
 
   and unparse_ty ?(indent = "") ?(buffer = Buffer.create 100) ty =
-    ( match ty.data with
-    | UnitTy -> Buffer.add_string buffer @@ "()"
+    ( match ty with
+    | UnitTy -> Buffer.add_string buffer @@ "Unit"
     | IntTy -> Buffer.add_string buffer @@ "Number"
     | BoolTy -> Buffer.add_string buffer @@ "Boolean"
     | StringTy -> Buffer.add_string buffer @@ "String"
@@ -362,15 +340,15 @@ module PlainUnparser = struct
           (fun ~buffer (field, ty) ->
             Buffer.add_string buffer @@ field.data ;
             Buffer.add_string buffer @@ ": " ;
-            unparse_ty ~indent ~buffer ty |> ignore )
+            unparse_ty ~indent ~buffer ty.data |> ignore )
           fields ;
-        (* List.iter (fun (field, ty) -> Buffer.add_string buffer @@
-           field.data; Buffer.add_string buffer @@ ": "; unparse_ty ~indent
-           ~buffer ty; ) fields; *)
+        (* List.iter (fun (field, ty) -> Buffer.add_string buffer @@ field.data;
+           Buffer.add_string buffer @@ ": "; unparse_ty ~indent ~buffer ty; )
+           fields; *)
         Buffer.add_string buffer @@ " }"
     | ListTy ty ->
         Buffer.add_string buffer @@ "List[" ;
-        unparse_ty ~indent ~buffer ty |> ignore ;
+        unparse_ty ~indent ~buffer ty.data |> ignore ;
         Buffer.add_string buffer @@ "]" ) ;
     Buffer.contents buffer
 
@@ -401,6 +379,9 @@ module PlainUnparser = struct
     | False -> Buffer.add_string buffer @@ "false"
     | IntLit i -> Buffer.add_string buffer @@ string_of_int i
     | StringLit s -> Buffer.add_string buffer @@ s
+    | Reference reference ->
+        Buffer.add_string buffer @@ "ref " ;
+        unparse_expr ~indent ~buffer !reference |> ignore
     | Parenthesized e ->
         Buffer.add_string buffer @@ "(" ;
         unparse_expr ~indent ~buffer e |> ignore ;

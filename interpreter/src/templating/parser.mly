@@ -308,7 +308,7 @@ plain_input_expr:
 
 node_marking: mark_loc_ty(plain_node_marking) {$1}
 plain_node_marking:
-  | exec=bool; COMMA; pend=bool; COMMA; inc=bool        { {executed = exec; pending = pend; included = inc; value = annotate Unit} }
+  | exec=bool; COMMA; pend=bool; COMMA; inc=bool        { {executed = exec; pending = pend; included = inc; value = ref @@ annotate Unit} }
 ;
 
 
