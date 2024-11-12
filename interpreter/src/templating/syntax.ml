@@ -61,7 +61,6 @@ and expr' =
   | IntLit of int
   | StringLit of string
   | Parenthesized of expr
-  | Reference of expr ref
   | BinaryOp of expr * expr * binary_op_type
   | UnaryOp of expr * unary_op_type
   | Identifier of string annotated
@@ -260,9 +259,9 @@ let string_of_loc loc =
       let end_pos_string = string_of_pos end_pos in
       Printf.sprintf "%s:%s:%s" filename start_pos_string end_pos_string
 
-(* ==========================================================================
+(* =============================================================================
    Alpha-renaming functions
-   ========================================================================== *)
+   ============================================================================= *)
 
 open Misc.Monads.ResultMonad
 open Misc.Printing
@@ -332,7 +331,7 @@ and fresh_event_ids events relations exports_mapping =
       let fresh_event =
         change_info_event ~new_id:fresh_id.data ~new_label:label.data event
       in
-      Ok (id, fresh_id, fresh_event) )
+      return (id, fresh_id, fresh_event) )
     events
   >>= fun events_mapping ->
   map
@@ -346,15 +345,15 @@ and fresh_event_ids events relations exports_mapping =
     relations
   >>= fun fresh_relations ->
   let fresh_events = List.map (fun (_, _, e) -> e) events_mapping in
-  Ok (fresh_events, fresh_relations)
+  return (fresh_events, fresh_relations)
 
 (* =============================================================================
    Aux functions
    ============================================================================= *)
 
 and event_as_expr event =
+  (* let {marking; _} = event.data in *)
   let {marking; _} = event.data in
-  annotate ~loc:event.loc ~ty:!(event.ty)
-    (Record
-       [ ( annotate ~loc:event.loc "value"
-         , annotate @@ Reference marking.data.value ) ] )
+  annotate ~loc:event.loc
+    ~ty:!(!(marking.data.value).ty)
+    (Record [(annotate "value", !(marking.data.value))])

@@ -1,6 +1,6 @@
 tmpl g (n: Number, e: A) {
     (b: B)[n]
-    e -->* b
+    e -[n > 0]->* b
 }
 
 (a: A)[?]

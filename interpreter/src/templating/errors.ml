@@ -80,6 +80,37 @@ and invalid_annotation_value ?(errors = []) value ty =
       }
     :: errors )
 
+and invalid_number_of_args ?(errors = []) ?(loc = Nowhere)
+    ?(missing_params = []) tmpl_id expected_params got_params =
+  let expected =
+    List.length expected_params
+    |> string_of_int
+    |> CString.colorize ~color:Yellow
+  in
+  let got =
+    List.length got_params |> string_of_int |> CString.colorize ~color:Yellow
+  in
+  let string_missing =
+    missing_params
+    |> List.map (fun (param, ty) ->
+           Printf.sprintf " - %s of type %s"
+             (CString.colorize ~color:Yellow param.data)
+             (CString.colorize ~color:Yellow @@ unparse_ty ty) )
+    |> String.concat "\n"
+  in
+  Error
+    ( { location= loc
+      ; message=
+          Printf.sprintf
+            "Invalid number of arguments. Expected %s, but got %s. Cannot instantiate template %s"
+            expected got
+            (CString.colorize ~color:Yellow tmpl_id.data)
+      ; hint=
+          Some
+            (Printf.sprintf "Missing the following parameters:\n%s"
+               string_missing ) }
+    :: errors )
+
 and invalid_number_of_exported_events ?(errors = []) xs exported =
   Error
     ( { location= Nowhere

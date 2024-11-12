@@ -73,9 +73,14 @@ module PlainUnparser = struct
       Buffer.add_string buffer @@ id.data ;
       Buffer.add_string buffer @@ "( " ;
       unparse_list ~buffer ~separator:", "
-        (fun ~buffer (param, ty, _default) ->
+        (fun ~buffer (param, ty, default) ->
           Buffer.add_string buffer @@ Printf.sprintf "%s: " param.data ;
-          unparse_ty ~buffer ty.data |> ignore )
+          unparse_ty ~buffer ty.data |> ignore ;
+          match default with
+          | None -> ()
+          | Some expr ->
+              Buffer.add_string buffer @@ " = " ;
+              unparse_expr ~buffer expr |> ignore )
         params ;
       Buffer.add_string buffer @@ " )" ;
       unparse_list ~buffer ~initial:": " ~separator:", "
@@ -379,9 +384,6 @@ module PlainUnparser = struct
     | False -> Buffer.add_string buffer @@ "false"
     | IntLit i -> Buffer.add_string buffer @@ string_of_int i
     | StringLit s -> Buffer.add_string buffer @@ s
-    | Reference reference ->
-        Buffer.add_string buffer @@ "ref " ;
-        unparse_expr ~indent ~buffer !reference |> ignore
     | Parenthesized e ->
         Buffer.add_string buffer @@ "(" ;
         unparse_expr ~indent ~buffer e |> ignore ;

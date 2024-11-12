@@ -17,7 +17,59 @@ module ResultMonad = struct
   let map f l =
     List.fold_right
       (fun x acc -> acc >>= fun acc -> f x >>| fun x -> x :: acc)
-      l (Ok [])
+      l (return [])
+
+  let filter_map f l =
+    (* List.fold_right (fun x acc -> match f x with Some x -> x :: acc | None ->
+       acc) l [] *)
+    List.fold_right
+      (fun x acc ->
+        acc
+        >>= fun acc -> match f x with Some x -> Ok (x :: acc) | None -> Ok acc
+        )
+      l (return [])
+
+  let iter f l = List.iter (fun x -> f x) l
+
+  let partition f l = List.partition f l |> return
+
+  let partition_map f l = List.partition_map f l |> return
+end
+
+module DetailedResultMonad = struct
+  type ('v, 'w, 'e) detailed_result =
+    {value: 'v; warnings: 'w list; errors: 'e list}
+
+  let return ?(warnings = []) ?(errors = []) x = {value= x; warnings; errors}
+
+  let return_ok x = return x
+
+  let return_warning w x = return ~warnings:w x
+
+  let return_error e x = return ~errors:e x
+
+  let bind x f =
+    match x with
+    | {value= _; warnings= w; errors= e} as obj -> (
+      match f obj with
+      | {value= x; warnings= w'; errors= e'} ->
+          {value= x; warnings= List.append w w'; errors= List.append e e'} )
+
+  let has_errors x = List.length x.errors > 0
+
+  let ( >>= ) = bind
+
+  let ( >>| ) x f = x >>= fun x -> return (f x)
+
+  let ( >>! ) x f =
+    match x with
+    | {value= _; warnings= w; errors= e} -> (
+      match f e with
+      | {value= x; warnings= w'; errors= e'} ->
+          {value= x; warnings= w @ w'; errors= e @ e'} )
+
+  let fold_left f acc l =
+    List.fold_left (fun acc x -> acc >>= fun acc -> f acc x) (return acc) l
 
   let filter_map f l =
     List.fold_right

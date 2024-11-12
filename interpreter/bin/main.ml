@@ -2,7 +2,6 @@ open Templating.Syntax
 open Templating.Api
 open Templating.Instantiation
 open Templating.Lex_and_parse
-open Templating.Typechecking
 open Templating.Errors
 open Misc.Monads.ResultMonad
 open Misc.Printing
@@ -22,23 +21,21 @@ let input_file_extension = "tdcr"
 let input_file filename =
   get_file_extension filename
   |> function
-  | ext when ext = input_file_extension -> Ok ()
+  | ext when ext = input_file_extension -> return ()
   | result ->
       invalid_file_extension ~supported:input_file_extension ~got:result ()
 
 let print_output ?(previous_program = empty_program) = function
-  | Ok (program, msg) -> CPrinter.cprintln msg ; Ok program
+  | Ok (program, msg) -> CPrinter.cprintln msg ; return program
   | Error errors ->
       List.iter print_error errors ;
-      Ok previous_program
+      return previous_program
 
 let sanatize_input input =
-  input |> String.split_on_char ' '
-  |> List.filter (fun s -> s <> "")
-  |> Result.ok
+  input |> String.split_on_char ' ' |> List.filter (fun s -> s <> "") |> return
 
 (* let sanatize_inputs inputs = inputs |> List.map sanatize_input |>
-   Result.ok *)
+   Result.return *)
 
 let help_message cmds =
   let header = CString.colorize ~color:BrightCyan "Available Commands:" in
@@ -54,7 +51,6 @@ let help_message cmds =
   in
   String.concat "\n" [header; cmds_section]
 
-(* TODO: *)
 let parse_expression expr_string =
   let expr = expr_string |> String.concat " " in
   let expr_lexbuf = Lexing.from_string expr in
@@ -70,7 +66,7 @@ let parse filename =
   else file_not_exists filename
 
 let get_program =
-  if Array.length Sys.argv < 2 then Ok empty_program
+  if Array.length Sys.argv < 2 then return empty_program
   else
     let filename = Sys.argv.(1) in
     input_file filename >>= fun _ -> parse filename
@@ -83,36 +79,34 @@ let read_command tokens program =
   Logger.debug @@ "Command: " ^ String.concat " | " tokens ;
   match tokens with
   | ["exit"] | ["q"] -> exit 0
-  | ["help"] | ["h"] -> Ok (program, help_message cmds)
+  | ["help"] | ["h"] -> return (program, help_message cmds)
   | ["parse"; filename] | ["p"; filename] ->
       input_file filename
       >>= fun _ ->
       parse filename
-      >>= fun program -> Ok (program, "Program parsed successfully")
+      >>= fun program -> return (program, "Program parsed successfully")
   | "exec" :: event_id :: expr | "e" :: event_id :: expr ->
-      (if expr = [] then Ok (annotate Unit) else parse_expression expr)
+      (if expr = [] then return (annotate Unit) else parse_expression expr)
       >>= fun parsed_expr ->
-      typecheck_expr parsed_expr
-      >>= fun _ ->
       execute ~event_id ~expr:parsed_expr.data program
       >>= fun program ->
-      Ok
+      return
         ( program
         , "Event executed with expression "
           ^ CString.colorize ~color:Yellow
           @@ Templating.Unparser.PlainUnparser.unparse_expr parsed_expr )
   | ["view"] | ["v"] ->
-      view program >>= fun unparsed_program -> Ok (program, unparsed_program)
+      view program >>= fun unparsed_program -> return (program, unparsed_program)
   | ["debug"] | ["d"] ->
       view_debug program
-      >>= fun unparsed_program -> Ok (program, unparsed_program)
+      >>= fun unparsed_program -> return (program, unparsed_program)
   | "dino" :: "says" :: message ->
       let dinossaur message =
         Printf.sprintf
           "               [31m__[0m\n\              [32m/ _)  - %s[0m\n\     [33m_.----._/ /[0m\n\    [34m/         /[0m\n\ [35m__/ (  | (  |[0m\n[36m/__.-'|_|--|_|[0m\n"
           message
       in
-      Ok (program, dinossaur @@ String.concat " " message)
+      return (program, dinossaur @@ String.concat " " message)
   | "export" :: filenames | "exp" :: filenames ->
       (* FIXME: add specific function to do this *)
       (* view_debug program  *)
@@ -124,11 +118,11 @@ let read_command tokens program =
         close_out oc
       in
       List.iter write_to_file filenames ;
-      Ok
+      return
         ( program
         , "Program exported to "
           ^ CString.colorize ~color:Yellow (String.concat ", " filenames) )
-  | [] -> Ok (program, "")
+  | [] -> return (program, "")
   | _ ->
       let open Misc.Bktree in
       let line = String.concat " " tokens in

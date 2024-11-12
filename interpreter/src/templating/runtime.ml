@@ -1,98 +1,59 @@
 open Syntax
 open Evaluation
 open Errors
+open Program_helper
 open Misc.Monads.ResultMonad
 open Misc.Env
 open Misc.Printing
 
 (* =============================================================================
-   Updating event functions
-   ============================================================================= *)
-
-(** [update_event event program] updates the [event] in the [program] by
-    replacing the old event with the new one.
-    @param event The new event to be updated.
-    @param program The program where the event is to be updated.
-    @return The updated program. *)
-let rec update_event event program =
-  let events =
-    List.map
-      (fun e ->
-        let id, _ = e.data.info in
-        let id', _ = event.data.info in
-        if id = id' then event else e )
-      program.events
-  in
-  {program with events}
-
-and update_event_value event expr_env =
-  let {marking; io; _} = event.data in
-  ( match io.data with
-  | Input ty ->
-      eval_expr !(marking.data.value) expr_env
-      >>= fun value -> Ok (annotate ~loc:io.loc ~ty:!(io.ty) (Input ty), value)
-  | Output expr ->
-      eval_expr expr expr_env
-      >>= fun value ->
-      Ok (annotate ~loc:io.loc ~ty:!(io.ty) (Output value), value) )
-  >>= fun (io, value) ->
-  set_marking ~marking:(mk_marking ~value:value.data ()) event ()
-  >>= fun event -> Ok {event with data= {event.data with io}}
-
-and set_marking event ?(marking = event.data.marking.data) () =
-  let {marking= prev_marking; _} = event.data in
-  Ok
-    { event with
-      data= {event.data with marking= {prev_marking with data= marking}} }
-
-(* =============================================================================
    Enabledness functions
    ============================================================================= *)
 
-(** [is_enabled] checks if the [event] is enabled in the [program] by checking
-    all the relations in the program, given the current environment.
-    @param event The event to be checked.
-    @param program The program where the event is to be checked.
-    @param env The environment to be used for evaluation.
-    @return [true] if the event is enabled, [false] otherwise. *)
-and is_enabled event program (event_env, expr_env) =
-  let relations = program.relations in
+let rec is_enabled event program (event_env, expr_env) =
   let enabled = event.data.marking.data.included.data in
-  List.fold_left
+  fold_left
     (fun enabled relation ->
-      enabled && is_enabled_by relation event (event_env, expr_env) )
-    enabled relations
+      is_enabled_by relation event (event_env, expr_env)
+      >>= fun is_enabled_by_relation ->
+      return (enabled && is_enabled_by_relation) )
+    enabled program.relations
+(* List.fold_left (fun enabled relation -> enabled && is_enabled_by relation
+   event (event_env, expr_env) ) enabled program.relations *)
 
-(** [is_enabled_by] checks if the [event] is enabled by the [relation] in the
-    [program] by checking the relation's guard and the marking of the events.
-    @param relation The relation to be checked.
-    @param event The event to be checked.
-    @param env The environment to be used for evaluation.
-    @return [true] if the event is enabled by the relation, [false] otherwise. *)
-and is_enabled_by relation event (event_env, _expr_env) =
+and is_enabled_by relation event (event_env, expr_env) =
   let id, _ = event.data.info in
   match relation.data with
-  | SpawnRelation (_, _, _, _) -> true
-  | ControlRelation (from, _guard, dest, _op, _annot) -> (
-    (* TODO: Check guards!! *)
-    match find_flat dest.data event_env with
-    | None -> true
-    | Some dest_event when id = fst dest_event.data.info -> (
-      match find_flat from.data event_env with
-      | None -> true
-      | Some from_event -> (
-          let {marking= from_marking; _} = from_event.data in
-          let {marking= dest_marking; _} = dest_event.data in
-          match _op with
-          | Condition ->
-              from_marking.data.included.data && from_marking.data.executed.data
-              && dest_marking.data.included.data
-          | Milestone ->
-              (not from_marking.data.pending.data)
-              && from_marking.data.included.data
-              && dest_marking.data.included.data
-          | _ -> true ) )
-    | _ -> true )
+  | SpawnRelation _ -> return true
+  | ControlRelation (from, guard, dest, op, _annot) -> (
+      if not (id.data = dest.data) then return true
+      else
+        (* Check the value of the guard, if it evaluates to false, the event is
+           enabled regardless of the type of the relations *)
+        check_guard guard expr_env
+        >>= fun is_guard_check ->
+        if not is_guard_check then return true
+        else
+          (* Get the event that is on the left side *)
+          match find_flat from.data event_env with
+          | None -> return true
+          | Some from_event -> (
+              (* Check the enabledness of the event, according the selected
+                 events and type of relation *)
+              let {marking= from_marking; _} = from_event.data in
+              let {marking= dest_marking; _} = event.data in
+              match op with
+              | Condition ->
+                  return
+                    ( from_marking.data.included.data
+                    && from_marking.data.executed.data
+                    && dest_marking.data.included.data )
+              | Milestone ->
+                  return
+                    ( (not from_marking.data.pending.data)
+                    && from_marking.data.included.data
+                    && dest_marking.data.included.data )
+              | _ -> return true ) )
 
 (** [check_guard guard env] checks if the [guard] is true with the environment
     [env].
@@ -103,13 +64,18 @@ and check_guard guard env =
   eval_expr guard env
   >>= fun guard_value ->
   match guard_value.data with
-  | True -> Ok true
-  | False -> Ok false
-  | _ -> invalid_guard_value guard_value
+  | True -> return true
+  | False -> return false
+  | _ -> (
+    match !(guard_value.ty) with
+    | Some ty -> type_mismatch [BoolTy] [ty]
+    | _ ->
+        should_not_happen ~module_path:"runtime.ml"
+          "The type of the guard is missing" )
 
-(* =============================================================== Effect
-   propagation functions
-   =============================================================== *)
+(* =============================================================================
+   Effect propagation functions
+   ============================================================================= *)
 
 and propagate_effects event (event_env, expr_env) program =
   let relations = program.relations in
@@ -122,11 +88,11 @@ and propagate_effect relation event (event_env, expr_env) program =
   let id, _ = event.data.info in
   match relation.data with
   | SpawnRelation (from, guard, spawn_prog, _annot) ->
-      if not (from.data = id.data) then Ok program
+      if not (from.data = id.data) then return program
       else
         check_guard guard expr_env
         >>= fun is_guard_true ->
-        if not is_guard_true then Ok program
+        if not is_guard_true then return program
         else
           (* FIXME: Alpha rename correctly the events!! *)
           let spawn_events, spawn_insts, spawn_relations = spawn_prog in
@@ -134,23 +100,21 @@ and propagate_effect relation event (event_env, expr_env) program =
           fresh_event_ids spawn_events spawn_relations []
           >>= fun (spawn_events, spawn_relations) ->
           (* Begin new env scope and bind "@trigger" *)
-          Ok (begin_scope expr_env)
+          return (begin_scope expr_env)
           >>= fun expr_env ->
-          Ok (bind "@trigger" (event_as_expr event) expr_env)
+          return (bind "@trigger" (event_as_expr event) expr_env)
           >>= fun expr_env ->
           (* Update values of the event inside of the spawn *)
           map (fun event -> update_event_value event expr_env) spawn_events
           >>= fun spawn_events ->
           (* fold_left (fun events event -> let { marking; io; _ } = event.data
-             in begin match io.data with | Input _ -> Ok (io,
+             in begin match io.data with | Input _ -> return (io,
              marking.data.value) | Output expr -> eval_expr expr expr_env >>=
-             fun value -> Ok (annotate ~loc:io.loc ~ty:!(io.ty) (Output value),
-             value) end >>= fun (io, value) -> let marking = { marking with data
-             = { marking.data with value } } in Ok ({ event with data = {
-             event.data with marking; io } } :: events)) [] spawn_events >>= fun
-             spawn_events -> *)
-
-          (* Update values of the relations inside of the spawn *)
+             fun value -> return (annotate ~loc:io.loc ~ty:!(io.ty) (Output
+             value), value) end >>= fun (io, value) -> let marking = { marking
+             with data = { marking.data with value } } in return ({ event with
+             data = { event.data with marking; io } } :: events)) []
+             spawn_events >>= fun spawn_events -> *)
 
           (* Instantiate template instances present in the spawn *)
           (* FIXME: Maybe use instantiate_tmpls instead of this function *)
@@ -171,7 +135,7 @@ and propagate_effect relation event (event_env, expr_env) program =
           Logger.debug
           @@ Unparser.PlainUnparser.unparse_relations inst_spawn_relations ;
           (* Put it all together *)
-          Ok
+          return
             { program with
               events=
                 List.flatten [program.events; inst_spawn_events; spawn_events]
@@ -180,11 +144,11 @@ and propagate_effect relation event (event_env, expr_env) program =
                 List.flatten
                   [program.relations; inst_spawn_relations; spawn_relations] }
   | ControlRelation (from, guard, dest, op, _annot) ->
-      if not (from.data = id.data) then Ok program
+      if not (from.data = id.data) then return program
       else
         check_guard guard expr_env
         >>= fun is_guard_true ->
-        if not is_guard_true then Ok program
+        if not is_guard_true then return program
         else
           (* Get the event [dest] *)
           find_flat dest.data event_env
@@ -197,12 +161,12 @@ and propagate_effect relation event (event_env, expr_env) program =
              other (do nothing) *)
           ( match op with
           | Response ->
-              set_marking ~marking:(mk_marking ~pending:true ()) dest_event ()
+              set_marking ~marking:(mk_marking ~pending:true ()) dest_event
           | Exclude ->
-              set_marking ~marking:(mk_marking ~included:false ()) dest_event ()
+              set_marking ~marking:(mk_marking ~included:false ()) dest_event
           | Include ->
-              set_marking ~marking:(mk_marking ~included:true ()) dest_event ()
-          | _ -> Ok dest_event )
-          >>= fun dest_event -> Ok (update_event dest_event program)
+              set_marking ~marking:(mk_marking ~included:true ()) dest_event
+          | _ -> return dest_event )
+          >>= fun dest_event -> return (update_event dest_event program)
 
-(* | _ -> Ok program *)
+(* | _ -> return program *)

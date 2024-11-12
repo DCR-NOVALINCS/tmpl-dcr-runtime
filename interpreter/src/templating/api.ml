@@ -2,6 +2,7 @@ open Syntax
 open Evaluation
 open Errors
 open Runtime
+open Program_helper
 open Misc.Monads.ResultMonad
 open Misc.Env
 open Misc.Printing
@@ -47,18 +48,24 @@ let rec execute ~event_id ?(expr = Unit) program =
   >>= fun (event_env, expr_env, program) ->
   match find_flat event_id event_env with
   | None -> event_not_found event_id
-  | Some event -> (
+  | Some event ->
       is_enabled event program (event_env, expr_env)
-      |> function
-      | false -> event_not_enabled event
-      | true ->
-          let io = event.data.io in
-          ( match io.data with
-          | Input _ -> execute_input_event event expr expr_env
-          | Output _ -> execute_output_event event expr_env )
-          >>= fun event ->
-          propagate_effects event (event_env, expr_env)
-            (update_event event program) )
+      >>= fun is_enabled ->
+      if not is_enabled then event_not_enabled event
+      else
+        let io = event.data.io in
+        ( match io.data with
+        | Input _ -> execute_input_event event expr expr_env
+        | Output _ -> execute_output_event event expr_env )
+        >>= fun event ->
+        propagate_effects event (event_env, expr_env)
+          (update_event event program)
+
+(* is_enabled event program (event_env, expr_env) |> function | false ->
+   event_not_enabled event | true -> let io = event.data.io in ( match io.data
+   with | Input _ -> execute_input_event event expr expr_env | Output _ ->
+   execute_output_event event expr_env ) >>= fun event -> propagate_effects
+   event (event_env, expr_env) (update_event event program) ) *)
 
 (* and execute_event event expr env = let loc = match event.data.io.data with |
    Input _ -> event.data.io.loc | Output expr -> expr.loc in let expr = annotate
@@ -67,7 +74,7 @@ let rec execute ~event_id ?(expr = Unit) program =
 
 and execute_output_event event env =
   ( match event.data.io.data with
-  | Output expr -> Ok expr
+  | Output expr -> return expr
   | _ ->
       let id, _ = event.data.info in
       should_not_happen
@@ -75,8 +82,7 @@ and execute_output_event event env =
       @@ CString.colorize ~color:Yellow id.data )
   >>= fun expr ->
   eval_expr expr env
-  >>= fun value ->
-  set_marking ~marking:(mk_marking ~value:value.data ()) event ()
+  >>= fun value -> set_marking ~marking:(mk_marking ~value:value.data ()) event
 
 and execute_input_event event expr env =
   let something_went_wrong message event =
@@ -91,8 +97,8 @@ and execute_input_event event expr env =
       >>= fun value ->
       let value_ty = !(value.ty) in
       match value_ty with
-      | Some ty when ty = expected_ty.data ->
-          set_marking ~marking:(mk_marking ~value:value.data ()) event ()
+      | Some ty when equal_types ty expected_ty.data ->
+          set_marking ~marking:(mk_marking ~value:value.data ()) event
       | Some ty -> type_mismatch [expected_ty.data] [ty]
       | _ -> something_went_wrong "Type is not referenced for the event" event )
   | _ -> something_went_wrong "Is not a input event" event
@@ -102,7 +108,7 @@ and preprocess_program ?(expr_env = empty_env) program =
   fold_left
     (fun env event ->
       let id, _ = event.data.info in
-      Ok (bind id.data (event_as_expr event) env) )
+      return (bind id.data (event_as_expr event) env) )
     expr_env program.events
   >>= fun expr_env ->
   Logger.debug
@@ -127,32 +133,35 @@ and unparse_program program =
 
 (* --- Vizualization functions --- *)
 
-and view ?(filter = fun _ _ -> true) ?(should_print_events = true)
+and view ?(filter = fun _ event -> Some event) ?(should_print_events = true)
     ?(should_print_relations = false) program =
   preprocess_program program
   >>= fun (event_env, expr_env, program) ->
-  let events =
-    List.filter (fun event -> filter (event_env, expr_env) event) program.events
-  in
+  filter_map (fun event -> filter (event_env, expr_env) event) program.events
+  >>= fun events ->
+  (* let events = List.filter (fun event -> filter (event_env, expr_env) event)
+     program.events in *)
   let open Unparser.PlainUnparser in
-  Ok
+  return
     (unparse ~should_print_events ~should_print_value:true
        ~should_print_executed_marking:true ~should_print_relations
        ~should_print_template_decls:false {program with events} )
 
 and view_debug program =
   let open Unparser.PlainUnparser in
-  Ok (unparse program)
+  return @@ unparse program
 (* view ~should_print_relations:true program *)
 
 and view_enabled ?(should_print_relations = false) program =
   view ~should_print_relations
     ~filter:(fun (event_env, expr_env) event ->
-      is_enabled event program (event_env, expr_env) )
+      is_enabled event program (event_env, expr_env)
+      |> function Ok true -> Some event | _ -> None )
     program
 
 and _view_disabled ?(should_print_relations = false) program =
   view ~should_print_relations
     ~filter:(fun (event_env, expr_env) event ->
-      not (is_enabled event program (event_env, expr_env)) )
+      is_enabled event program (event_env, expr_env)
+      |> function Ok false -> Some event | _ -> None )
     program
