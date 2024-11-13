@@ -61,15 +61,6 @@ and bind_arg (name, expr) env =
 
 and check_tmpl_args tmpl_id params args expr_env =
   (* Get available expressions from params (default values) *)
-  (* filter_map (fun (param, ty, expr_opt) -> match expr_opt with | Some expr ->
-     Some (param, ty.data, expr) | None -> ( match List.find_opt (fun (arg, _)
-     -> arg.data = param.data) args with | Some (_, expr) -> Some (param,
-     ty.data, expr) | None -> None ) ) params *)
-  (* partition_map (fun (param, ty, expr_opt) -> match expr_opt with | Some expr
-     -> Either.left (param, ty.data, expr) | None -> ( match List.find_opt (fun
-     (arg, _) -> arg.data = param.data) args with | Some (param, expr) ->
-     Either.left (param, ty.data, expr) | None -> Either.right (param, ty.data)
-     ) ) params *)
   partition_map
     (fun (param, ty, expr_opt) ->
       match List.find_opt (fun (arg, _) -> arg.data = param.data) args with
@@ -80,19 +71,13 @@ and check_tmpl_args tmpl_id params args expr_env =
         | None -> Either.right (param, ty.data) ) )
     params
   >>= fun (args, missing_params) ->
-  (* Logger.debug @@ Printf.sprintf "Pending arguments: %s\n" @@ String.concat
-     ", " @@ List.map (fun (param, ty) -> Printf.sprintf "%s: %s" param.data
-     (Unparser.PlainUnparser.unparse_ty ty) (*
-     (Unparser.PlainUnparser.unparse_expr expr) *) ) missing_params ; *)
   if not (List.length args = List.length params) then
-    invalid_number_of_args tmpl_id params ~loc:tmpl_id.loc ~missing_params args
+    invalid_number_of_args tmpl_id ~loc:tmpl_id.loc ~missing_params
   else
     map
       (fun (param, ty, expr) ->
         eval_expr expr expr_env
         >>= fun value ->
-        (* Logger.debug @@ CString.colorize ~color:Yellow ( yojson_of_annotated
-           yojson_of_expr' value |> Yojson.Safe.pretty_to_string ) ; *)
         let value_ty = !(value.ty) in
         match value_ty with
         | None ->
@@ -113,22 +98,16 @@ and instantiate_tmpls tmpl_insts tmpl_env expr_env =
 and instantiate_tmpl result_program inst tmpl_env expr_env =
   let id = inst.tmpl_id in
   match find_flat id.data tmpl_env with
-  | None -> tmpl_not_found id
+  | None -> tmpl_not_found ~available:(flatten tmpl_env |> List.map fst) id
   | Some tmpl ->
-      check_tmpl_args id tmpl.params inst.args expr_env
-      >>= fun args ->
       Logger.info
       @@ Printf.sprintf "Instantiating %s"
            (CString.colorize ~color:Yellow id.data) ;
+      check_tmpl_args id tmpl.params inst.args expr_env
+      >>= fun args ->
       let e_ti, q_ti, r_ti = tmpl.graph in
       let result_events, _, result_relations = result_program in
       (* Instantiations should be empty! *)
-      (* Eval all the expression beforehand *)
-      map
-        (fun (prop, expr) ->
-          eval_expr expr expr_env >>| fun value -> (prop, value) )
-        args
-      >>= fun args ->
       (* Begin new scope *)
       return (begin_scope expr_env)
       >>= fun expr_env ->
@@ -143,7 +122,6 @@ and instantiate_tmpl result_program inst tmpl_env expr_env =
       Logger.debug "After binding the events" ;
       Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
       (* Bind all the arguments to its identifier *)
-      (* FIXME: Check if the template has default value for each parameter! *)
       (* TODO: Typecheck the arguments *)
       fold_left
         (fun env (prop, expr) -> bind_arg (prop.data, expr) env)

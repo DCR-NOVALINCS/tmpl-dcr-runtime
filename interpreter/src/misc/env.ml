@@ -46,3 +46,5 @@ let string_of_env v_fmt env =
         ^ string_of_env' (n + 1) env
   in
   string_of_env' 1 env
+
+let flatten env = List.flatten env

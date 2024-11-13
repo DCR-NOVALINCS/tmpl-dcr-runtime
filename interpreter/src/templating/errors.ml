@@ -56,15 +56,24 @@ and id_not_found ?(errors = []) id =
       }
     :: errors )
 
-and tmpl_not_found ?(errors = []) id =
+and tmpl_not_found ?(errors = []) ?(available = []) id =
+  let available_tmpls =
+    List.map
+      (fun tmpl_id ->
+        Printf.sprintf " - %s" (CString.colorize ~color:Yellow tmpl_id) )
+      available
+    |> String.concat "\n"
+  in
   Error
     ( { location= id.loc
       ; message=
           "Template " ^ CString.colorize ~color:Yellow id.data ^ " not found"
       ; hint=
-          Some
-            "Ensure the template is declared at the top of the file. Check for typos."
-      }
+          ( match available with
+          | [] -> Some "Check for typos in the template name."
+          | _ ->
+              Some (Printf.sprintf "Available templates:\n%s" available_tmpls)
+          ) }
     :: errors )
 
 and invalid_annotation_value ?(errors = []) value ty =
@@ -81,34 +90,23 @@ and invalid_annotation_value ?(errors = []) value ty =
     :: errors )
 
 and invalid_number_of_args ?(errors = []) ?(loc = Nowhere)
-    ?(missing_params = []) tmpl_id expected_params got_params =
-  let expected =
-    List.length expected_params
-    |> string_of_int
-    |> CString.colorize ~color:Yellow
-  in
-  let got =
-    List.length got_params |> string_of_int |> CString.colorize ~color:Yellow
-  in
+    ?(missing_params = []) tmpl_id =
   let string_missing =
     missing_params
     |> List.map (fun (param, ty) ->
-           Printf.sprintf " - %s of type %s"
+           Printf.sprintf "%s of type %s"
              (CString.colorize ~color:Yellow param.data)
              (CString.colorize ~color:Yellow @@ unparse_ty ty) )
-    |> String.concat "\n"
+    |> String.concat ", "
   in
   Error
     ( { location= loc
       ; message=
           Printf.sprintf
-            "Invalid number of arguments. Expected %s, but got %s. Cannot instantiate template %s"
-            expected got
+            "Invalid number of arguments. Missing parameters %s for template %s"
+            string_missing
             (CString.colorize ~color:Yellow tmpl_id.data)
-      ; hint=
-          Some
-            (Printf.sprintf "Missing the following parameters:\n%s"
-               string_missing ) }
+      ; hint= None }
     :: errors )
 
 and invalid_number_of_exported_events ?(errors = []) xs exported =

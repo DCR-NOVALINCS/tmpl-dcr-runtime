@@ -3,6 +3,8 @@ module ResultMonad = struct
 
   let return x = Ok x
 
+  let throw e = Error e
+
   let bind x f = match x with Ok x -> f x | Error e -> Error e
 
   let ( >>= ) = bind
