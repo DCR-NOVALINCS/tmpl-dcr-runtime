@@ -96,7 +96,8 @@ let read_command tokens program =
           ^ CString.colorize ~color:Yellow
           @@ Templating.Unparser.PlainUnparser.unparse_expr parsed_expr )
   | ["view"] | ["v"] ->
-      view program >>= fun unparsed_program -> return (program, unparsed_program)
+      view_enabled program
+      >>= fun unparsed_program -> return (program, unparsed_program)
   | ["debug"] | ["d"] ->
       view_debug program
       >>= fun unparsed_program -> return (program, unparsed_program)
@@ -148,38 +149,29 @@ let runtime =
   Logger.enable () ;
   (* Logger.set_logger_level Debug; *)
   (* Get & Parse the initial input *)
-  (let start_timer = Sys.time () in
-   get_program
-   >>= fun program ->
-   (* Preprocess program *)
-   Logger.info "Program parsed successfully" ;
-   preprocess_program program
-   >>= fun (_, expr_env, program) ->
-   (* Typecheck program *)
-   (* typecheck program >>= fun _ -> *)
+  get_program
+  >>= (fun program ->
+        (* Preprocess program *)
+        Logger.info "Program parsed successfully" ;
+        preprocess_program program
+        >>= fun (_, expr_env, program) ->
+        (* Typecheck program *)
+        (* typecheck program >>= fun _ -> *)
 
-   (* Instantiate initial templates *)
-   instantiate ~expr_env program
-   >>= fun (program, _) ->
-   (* Display welcome message *)
-   let loaded_header =
-     let elapsed_time = (Sys.time () -. start_timer) *. 1_000. in
-     (* in ms *)
-     CPrinter.cprint "Program loaded in " ;
-     CPrinter.cprintf ~color:Yellow "%.2fms" elapsed_time ;
-     CPrinter.cprintln "."
-   in
-   let start_header =
-     CPrinter.cprint "To get started, type " ;
-     CPrinter.cprint ~color:Green "help" ;
-     CPrinter.cprint " or " ;
-     CPrinter.cprint ~color:Green "h" ;
-     CPrinter.cprintln " to see the available commands.\n"
-   in
-   loaded_header ;
-   start_header ;
-   (* Start the prompt *)
-   prompt program )
+        (* Instantiate initial templates *)
+        instantiate ~expr_env program
+        >>= fun (program, _) ->
+        (* Display welcome message *)
+        let start_header =
+          CPrinter.cprint "To get started, type " ;
+          CPrinter.cprint ~color:Green "help" ;
+          CPrinter.cprint " or " ;
+          CPrinter.cprint ~color:Green "h" ;
+          CPrinter.cprintln " to see the available commands.\n"
+        in
+        start_header ;
+        (* Start the prompt *)
+        prompt program )
   |> print_output
 
 let _ = runtime

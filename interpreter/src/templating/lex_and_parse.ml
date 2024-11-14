@@ -1,11 +1,11 @@
 open Errors
 
-let parse_with_error_handling ?(filepath = "") lexbuf
-    (parse_fun : Lexing.lexbuf -> 'a) =
+let parse_with_error_handling ?(filepath = "") lexbuf parse_fun =
+  let open Misc.Monads.ResultMonad in
   try
     lexbuf.Lexing.lex_curr_p <-
       {lexbuf.Lexing.lex_curr_p with pos_fname= filepath} ;
-    Ok (parse_fun lexbuf)
+    return (parse_fun lexbuf)
   with
   | Lexer.Error message -> lexing_error lexbuf message
   | Parser.Error -> syntax_error lexbuf

@@ -111,9 +111,6 @@ and preprocess_program ?(expr_env = empty_env) program =
       return (bind id.data (event_as_expr event) env) )
     expr_env program.events
   >>= fun expr_env ->
-  Logger.debug
-  @@ Printf.sprintf "Preprocessing with Expr env:\n%s"
-       (string_of_env Unparser.PlainUnparser.unparse_expr expr_env) ;
   (* Update the value of each event *)
   map (fun event -> update_event_value event expr_env) program.events
   >>= fun events ->
@@ -139,8 +136,6 @@ and view ?(filter = fun _ event -> Some event) ?(should_print_events = true)
   >>= fun (event_env, expr_env, program) ->
   filter_map (fun event -> filter (event_env, expr_env) event) program.events
   >>= fun events ->
-  (* let events = List.filter (fun event -> filter (event_env, expr_env) event)
-     program.events in *)
   let open Unparser.PlainUnparser in
   return
     (unparse ~should_print_events ~should_print_value:true
@@ -149,7 +144,7 @@ and view ?(filter = fun _ event -> Some event) ?(should_print_events = true)
 
 and view_debug program =
   let open Unparser.PlainUnparser in
-  return @@ unparse program
+  return @@ unparse ~should_print_executed_marking:true program
 (* view ~should_print_relations:true program *)
 
 and view_enabled ?(should_print_relations = false) program =

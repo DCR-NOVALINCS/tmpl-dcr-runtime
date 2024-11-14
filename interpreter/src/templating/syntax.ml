@@ -34,6 +34,20 @@ type loc =
       * string option (* (start_pos, end_pos, filename) *)
 [@@deriving yojson]
 
+let append_loc loc1 loc2 =
+  match (loc1, loc2) with
+  | Nowhere, Nowhere -> Nowhere
+  | Nowhere, l | l, Nowhere -> l
+  | Location (start1, _end1, filename1), Location (_start2, end2, filename2) ->
+      Location
+        ( start1
+        , end2
+        , match (filename1, filename2) with
+          | Some f1, Some f2 when f1 = f2 -> Some f1
+          | _ -> None )
+
+let append_locs l = List.fold_left append_loc Nowhere l
+
 type 'a annotated = {data: 'a; loc: loc; ty: type_expr' option ref}
 [@@deriving yojson]
 
@@ -353,7 +367,7 @@ and fresh_event_ids events relations exports_mapping =
 
 and event_as_expr event =
   (* let {marking; _} = event.data in *)
-  let {marking; _} = event.data in
-  annotate ~loc:event.loc
-    ~ty:!(!(marking.data.value).ty)
+  let {marking; info; _} = event.data in
+  let _, label = info in
+  annotate ~loc:event.loc ~ty:(Some (EventTy label.data))
     (Record [(annotate "value", !(marking.data.value))])

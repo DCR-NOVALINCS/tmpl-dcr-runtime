@@ -2,13 +2,18 @@ open Syntax
 open Lexing
 open Unparser.PlainUnparser
 open Misc.Printing
+open Misc.Monads.ResultMonad
 open Ppx_yojson_conv_lib.Yojson_conv
 
 type detailed_error = {location: loc; message: string; hint: string option}
 [@@deriving yojson]
 
+(* =============================================================================
+   General errors
+   ============================================================================= *)
+
 let property_not_found ?(errors = []) p e =
-  Error
+  fail
     ( { location= e.loc
       ; message=
           "Property "
@@ -21,32 +26,8 @@ let property_not_found ?(errors = []) p e =
       }
     :: errors )
 
-and is_not_type ?(errors = []) expected expr =
-  Error
-    ( { location= expr.loc
-      ; message=
-          Printf.sprintf "Expected type %s, but got %s"
-            (CString.colorize ~color:Yellow expected)
-            (CString.colorize ~color:Yellow @@ unparse_expr expr)
-      ; hint=
-          Some
-            ( "Verify the type of the expression "
-            ^ (CString.colorize ~color:Yellow @@ unparse_expr expr)
-            ^ ". Check for type mismatches or any typos." ) }
-    :: errors )
-
-and invalid_expr ?(errors = []) ?(loc = Nowhere) () =
-  Error
-    ( { location= loc
-      ; message= "Invalid expression"
-      ; hint=
-          Some
-            "Check the syntax and structure of the expression. Ensure all definitions are correctly used."
-      }
-    :: errors )
-
 and id_not_found ?(errors = []) id =
-  Error
+  fail
     ( { location= id.loc
       ; message=
           "Identifier " ^ CString.colorize ~color:Yellow id.data ^ " not found"
@@ -64,7 +45,7 @@ and tmpl_not_found ?(errors = []) ?(available = []) id =
       available
     |> String.concat "\n"
   in
-  Error
+  fail
     ( { location= id.loc
       ; message=
           "Template " ^ CString.colorize ~color:Yellow id.data ^ " not found"
@@ -76,8 +57,47 @@ and tmpl_not_found ?(errors = []) ?(available = []) id =
           ) }
     :: errors )
 
+and file_not_exists ?(errors = []) filename =
+  fail
+    ( { location= Nowhere
+      ; message=
+          Printf.sprintf "File %s does not exist"
+            (CString.colorize ~color:Yellow filename)
+      ; hint= None }
+    :: errors )
+
+and invalid_file_extension ?(errors = []) ~supported ?(got = "") () =
+  fail
+    ( { location= Nowhere
+      ; message=
+          Printf.sprintf "Invalid file extension %s"
+            (CString.colorize ~color:Yellow got)
+      ; hint=
+          Some
+            ( "Supported extensions are "
+            ^ CString.colorize ~color:Yellow supported ) }
+    :: errors )
+
+(* =============================================================================
+   Type errors
+   ============================================================================= *)
+
+and is_not_type ?(errors = []) expected expr =
+  fail
+    ( { location= expr.loc
+      ; message=
+          Printf.sprintf "Expected type %s, but got %s"
+            (CString.colorize ~color:Yellow expected)
+            (CString.colorize ~color:Yellow @@ unparse_expr expr)
+      ; hint=
+          Some
+            ( "Verify the type of the expression "
+            ^ (CString.colorize ~color:Yellow @@ unparse_expr expr)
+            ^ ". Check for type mismatches or any typos." ) }
+    :: errors )
+
 and invalid_annotation_value ?(errors = []) value ty =
-  Error
+  fail
     ( { location= value.loc
       ; message=
           Printf.sprintf "Invalid annotation value %s for type %s"
@@ -86,6 +106,20 @@ and invalid_annotation_value ?(errors = []) value ty =
       ; hint=
           Some
             "Verify the annotation value matches the expected type. Check for type mismatches or any typos."
+      }
+    :: errors )
+
+(* =============================================================================
+   Expression errors
+   ============================================================================= *)
+
+and invalid_expr ?(errors = []) ?(loc = Nowhere) () =
+  fail
+    ( { location= loc
+      ; message= "Invalid expression"
+      ; hint=
+          Some
+            "Check the syntax and structure of the expression. Ensure all definitions are correctly used."
       }
     :: errors )
 
@@ -99,7 +133,7 @@ and invalid_number_of_args ?(errors = []) ?(loc = Nowhere)
              (CString.colorize ~color:Yellow @@ unparse_ty ty) )
     |> String.concat ", "
   in
-  Error
+  fail
     ( { location= loc
       ; message=
           Printf.sprintf
@@ -110,7 +144,7 @@ and invalid_number_of_args ?(errors = []) ?(loc = Nowhere)
     :: errors )
 
 and invalid_number_of_exported_events ?(errors = []) xs exported =
-  Error
+  fail
     ( { location= Nowhere
       ; message=
           Printf.sprintf
@@ -125,36 +159,101 @@ and invalid_number_of_exported_events ?(errors = []) xs exported =
       }
     :: errors )
 
+and invalid_guard_value ?(errors = []) value =
+  fail
+    ( { location= value.loc
+      ; message=
+          Printf.sprintf
+            "Invalid guard value. Expecting boolean expression, got %s"
+            (CString.colorize ~color:Yellow @@ unparse_expr value)
+      ; hint= Some "Ensure the guard value is a boolean expression." }
+    :: errors )
+
+(* =============================================================================
+   Event errors
+   ============================================================================= *)
+
+and event_not_found ?(errors = []) ?(loc = Nowhere) id =
+  fail
+    ( { location= loc
+      ; message=
+          Printf.sprintf "Event %s not found"
+            (CString.colorize ~color:Yellow id)
+      ; hint= Some "Ensure the event is declared and in scope. Check for typos."
+      }
+    :: errors )
+
+and event_not_enabled ?(errors = []) event =
+  let id, _ = event.data.info in
+  fail
+    ( { location= event.loc
+      ; message=
+          Printf.sprintf "Event %s is not enabled"
+            (CString.colorize ~color:Yellow id.data)
+      ; hint=
+          Some
+            "Check any relations or conditions that might be blocking this event."
+      }
+    :: errors )
+
+(* =============================================================================
+   Command errors
+   ============================================================================= *)
+
+and invalid_command ?(errors = []) ?nearest ?(distance = -1) cmd =
+  let guess =
+    match nearest with
+    | Some n when distance > 0 ->
+        "Did you mean " ^ CString.colorize ~color:Green n ^ "?"
+    | Some _ when distance = 0 -> "Did you miss some parameters?"
+    | _ -> ""
+  in
+  fail
+    ( { location= Nowhere
+      ; message=
+          Printf.sprintf "Invalid command %s"
+            (String.concat " " cmd |> CString.colorize ~color:Yellow)
+      ; hint=
+          Some
+            ( guess ^ " Type "
+            ^ CString.colorize ~color:Green "help"
+            ^ " to see the available commands." ) }
+    :: errors )
+
+(* =============================================================================
+   Miscellaneous errors
+   ============================================================================= *)
+
 and lexing_error ?(errors = []) lexbuf message =
-  Error
+  fail
     ( { location=
           Location
             ( lexbuf.lex_start_p
             , lexbuf.lex_curr_p
             , Some lexbuf.lex_curr_p.pos_fname )
-      ; message= "Lexing error: " ^ message
+      ; message= "Lexing fail: " ^ message
       ; hint=
           Some
-            "Check the syntax near the error location. Ensure all tokens are valid."
+            "Check the syntax near the fail location. Ensure all tokens are valid."
       }
     :: errors )
 
 and syntax_error ?(errors = []) lexbuf =
-  Error
+  fail
     ( { location=
           Location
             ( lexbuf.lex_start_p
             , lexbuf.lex_curr_p
             , Some lexbuf.lex_curr_p.pos_fname )
-      ; message= "Syntax error"
+      ; message= "Syntax fail"
       ; hint=
           Some
-            "Check the syntax near the error location. Ensure all constructs are correctly formed."
+            "Check the syntax near the fail location. Ensure all constructs are correctly formed."
       }
     :: errors )
 
 and unexpected_eof ?(errors = []) lexbuf =
-  Error
+  fail
     ( { location=
           Location
             ( lexbuf.lex_start_p
@@ -168,7 +267,7 @@ and unexpected_eof ?(errors = []) lexbuf =
     :: errors )
 
 and unknown_error ?(errors = []) lexbuf =
-  Error
+  fail
     ( { location=
           Location
             ( lexbuf.lex_start_p
@@ -176,91 +275,17 @@ and unknown_error ?(errors = []) lexbuf =
             , Some lexbuf.lex_curr_p.pos_fname )
       ; message= "Something went wrong..."
       ; hint=
-          Some "An unknown error occurred. Report this issue in the repository."
+          Some "An unknown fail occurred. Report this issue in the repository."
       }
-    :: errors )
-
-and event_not_found ?(errors = []) ?(loc = Nowhere) id =
-  Error
-    ( { location= loc
-      ; message=
-          Printf.sprintf "Event %s not found"
-            (CString.colorize ~color:Yellow id)
-      ; hint= Some "Ensure the event is declared and in scope. Check for typos."
-      }
-    :: errors )
-
-and event_not_enabled ?(errors = []) event =
-  let id, _ = event.data.info in
-  Error
-    ( { location= event.loc
-      ; message=
-          Printf.sprintf "Event %s is not enabled"
-            (CString.colorize ~color:Yellow id.data)
-      ; hint=
-          Some
-            "Check any relations or conditions that might be blocking this event."
-      }
-    :: errors )
-
-and invalid_guard_value ?(errors = []) value =
-  Error
-    ( { location= value.loc
-      ; message=
-          Printf.sprintf
-            "Invalid guard value. Expecting boolean expression, got %s"
-            (CString.colorize ~color:Yellow @@ unparse_expr value)
-      ; hint= Some "Ensure the guard value is a boolean expression." }
-    :: errors )
-
-and invalid_command ?(errors = []) ?nearest ?(distance = -1) cmd =
-  let guess =
-    match nearest with
-    | Some n when distance > 0 ->
-        "Did you mean " ^ CString.colorize ~color:Green n ^ "?"
-    | Some _ when distance = 0 -> "Did you miss some parameters?"
-    | _ -> ""
-  in
-  Error
-    ( { location= Nowhere
-      ; message=
-          Printf.sprintf "Invalid command %s"
-            (String.concat " " cmd |> CString.colorize ~color:Yellow)
-      ; hint=
-          Some
-            ( guess ^ " Type "
-            ^ CString.colorize ~color:Green "help"
-            ^ " to see the available commands." ) }
     :: errors )
 
 and should_not_happen ?(errors = []) ?(module_path = "?") ?(line = "?") message
     =
-  Error
+  fail
     ( { location= Nowhere
       ; message= "This should not happen: " ^ message
       ; hint= Some (Printf.sprintf "Check module %s, line %s" module_path line)
       }
-    :: errors )
-
-and invalid_file_extension ?(errors = []) ~supported ?(got = "") () =
-  Error
-    ( { location= Nowhere
-      ; message=
-          Printf.sprintf "Invalid file extension %s"
-            (CString.colorize ~color:Yellow got)
-      ; hint=
-          Some
-            ( "Supported extensions are "
-            ^ CString.colorize ~color:Yellow supported ) }
-    :: errors )
-
-and file_not_exists ?(errors = []) filename =
-  Error
-    ( { location= Nowhere
-      ; message=
-          Printf.sprintf "File %s does not exist"
-            (CString.colorize ~color:Yellow filename)
-      ; hint= None }
     :: errors )
 
 (* =============================================================================
@@ -279,7 +304,7 @@ and type_mismatch ?(errors = []) ?(loc = Nowhere) expected_tys got_tys =
     | ty :: tys ->
         CString.colorize ~color:Yellow (unparse_ty ty) ^ ", " ^ string_tys tys
   in
-  Error
+  fail
     ( { location= loc
       ; message=
           Printf.sprintf "Type mismatch. Expected %s, but got %s"

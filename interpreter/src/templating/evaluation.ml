@@ -35,12 +35,12 @@ let rec eval_expr expr env =
       match v.data with
       | Record fields -> (
           let fields =
-            List.map (fun (prop, expr) -> (prop.data, expr)) fields
+            List.map (fun (name, expr) -> (name.data, expr)) fields
           in
           match List.assoc_opt p.data fields with
           | None -> property_not_found p v
-          | Some v -> return (annotate ~loc:p.loc ~ty:!(v.ty) v.data) )
-      | _ -> type_mismatch [rec_ty] [RecordTy []] )
+          | Some v -> return v )
+      | _ -> type_mismatch [RecordTy [(p, annotate UnitTy)]] [rec_ty] )
   | List es ->
       map (fun e -> eval_expr e env) es >>| fun es -> {expr with data= List es}
   | Record fields ->
@@ -57,8 +57,7 @@ let rec eval_expr expr env =
                 "The type of the record field is not annotated" )
         expr_fields
       >>| fun type_fields ->
-      (* map (fun (name, expr) -> return (name, expr.ty)) fields >>| fun
-         type_fields -> *)
+      expr.ty := Some (RecordTy type_fields) ;
       {expr with data= Record expr_fields; ty= ref (Some (RecordTy type_fields))}
   | _ -> invalid_expr ()
 
@@ -122,7 +121,7 @@ and eval_binop v1 v2 op =
     | True, _ | False, _ | _, True | _, False ->
         type_mismatch [BoolTy] [ty1; ty2]
     (* Other *)
-    | _ -> is_not_type "Int, Boolean or String" v1 )
+    | _ -> type_mismatch [IntTy; StringTy; BoolTy] [ty1; ty2] )
   | NotEq -> (
     match (v1.data, v2.data) with
     (* Number *)
@@ -143,7 +142,7 @@ and eval_binop v1 v2 op =
     | True, _ | False, _ | _, True | _, False ->
         type_mismatch [BoolTy] [ty1; ty2]
     (* Other *)
-    | _ -> is_not_type "Int or String" v1 )
+    | _ -> type_mismatch [IntTy; StringTy] [ty1; ty2] )
   | GreaterThan -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
