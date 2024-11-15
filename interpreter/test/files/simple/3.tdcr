@@ -1,3 +1,14 @@
+tmpl is_positive(n: Number = 0): Output {
+    (o: Output)[n > 0]
+} => o
 
-(a: A)[0]
-(b: B)[a.value + 1]
+tmpl is_negative(n: Number = 0): Output {
+    (o: Output)[n < 0]
+} => o
+
+(c: C)[?]
+
+c -->> {
+    is_positive() => output
+    is_negative(n = output.value) => output2
+}

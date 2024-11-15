@@ -1,0 +1,10 @@
+tmpl copy(e: A): A {
+    (e1: A)[e.value]
+} => e1
+
+(a: A)[0]
+(c: Copy)[?: A]
+
+c -->> {
+    copy(e = a)
+}

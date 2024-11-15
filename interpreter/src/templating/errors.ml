@@ -57,6 +57,13 @@ and tmpl_not_found ?(errors = []) ?(available = []) id =
           ) }
     :: errors )
 
+and duplicate_tmpl ?(errors = []) id =
+  fail
+    ( { location= id.loc
+      ; message= "Duplicate template " ^ CString.colorize ~color:Yellow id.data
+      ; hint= Some "Ensure the template is not declared more than once." }
+    :: errors )
+
 and file_not_exists ?(errors = []) filename =
   fail
     ( { location= Nowhere

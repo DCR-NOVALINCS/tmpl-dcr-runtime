@@ -420,6 +420,34 @@ module PlainUnparser = struct
         Buffer.add_string buffer @@ " }"
     | _ -> Buffer.add_string buffer @@ "..." ) ;
     Buffer.contents buffer
+
+  and unparse_pos ?(indent = "") ?(separator = ":")
+      ?(buffer = Buffer.create 100) pos =
+    let line = pos.Lexing.pos_lnum in
+    let start_char = pos.Lexing.pos_cnum - pos.Lexing.pos_bol in
+    Buffer.add_string buffer indent ;
+    (* Printf.sprintf "%d:%d" line start_char |> Buffer.add_string buffer *)
+    Buffer.add_string buffer @@ string_of_int line ;
+    Buffer.add_string buffer @@ separator ;
+    Buffer.add_string buffer @@ string_of_int start_char ;
+    Buffer.contents buffer
+
+  and unparse_loc ?(indent = "") ?(separator = ":")
+      ?(buffer = Buffer.create 100) loc =
+    Buffer.add_string buffer indent ;
+    ( match loc with
+    | Nowhere -> Buffer.add_string buffer "?"
+    | Location (start_pos, end_pos, filename) ->
+        let filename = Option.value filename ~default:"" in
+        let start_pos_string = unparse_pos start_pos in
+        let end_pos_string = unparse_pos end_pos in
+        (* Printf.sprintf "%s:%s:%s" filename start_pos_string end_pos_string *)
+        Buffer.add_string buffer start_pos_string ;
+        Buffer.add_string buffer separator ;
+        Buffer.add_string buffer end_pos_string ;
+        Buffer.add_string buffer separator ;
+        Buffer.add_string buffer filename ) ;
+    Buffer.contents buffer
 end
 
 (* module JsonUnparser: UnparserCommon = struct open Yojson.Safe

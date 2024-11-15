@@ -4,7 +4,7 @@ open Errors
 open Program_helper
 open Misc.Monads.ResultMonad
 open Misc.Env
-open Misc.Printing
+(* open Misc.Printing *)
 
 (* =============================================================================
    Enabledness functions
@@ -128,12 +128,10 @@ and propagate_effect relation event (event_env, expr_env) program =
                     ; relations= inst_spawn_relations
                     ; _ }
                   , _ ) ->
-          Logger.debug "Instantiated events from spawn:" ;
-          Logger.debug
-          @@ Unparser.PlainUnparser.unparse_events inst_spawn_events ;
-          Logger.debug "Instantiated relations from spawn:" ;
-          Logger.debug
-          @@ Unparser.PlainUnparser.unparse_relations inst_spawn_relations ;
+          (* Logger.debug "Instantiated events from spawn:" ; Logger.debug @@
+             Unparser.PlainUnparser.unparse_events inst_spawn_events ;
+             Logger.debug "Instantiated relations from spawn:" ; Logger.debug @@
+             Unparser.PlainUnparser.unparse_relations inst_spawn_relations ; *)
           (* Put it all together *)
           return
             { program with

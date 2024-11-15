@@ -31,7 +31,8 @@ module ResultMonad = struct
         )
       l (return [])
 
-  let iter f l = List.iter (fun x -> f x) l
+  let iter f l =
+    List.fold_left (fun acc x -> acc >>= fun _ -> f x) (return ()) l
 
   let partition f l = List.partition f l |> return
 

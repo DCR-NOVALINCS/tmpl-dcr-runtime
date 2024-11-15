@@ -1,6 +1,7 @@
 {
 open Parser
 open Syntax
+open Unparser
 
 exception UnknownToken of string
 exception Error of string
@@ -13,7 +14,7 @@ let char_to_string (c:char) = String.make 1 c
 
 let error lexbuf fmt = 
     ksprintf (fun msg -> 
-        raise (Error ((string_of_pos lexbuf.Lexing.lex_curr_p)^" "^msg))) fmt
+        raise (Error ((PlainUnparser.unparse_pos lexbuf.Lexing.lex_curr_p)^" "^msg))) fmt
 }
 
 let digit = ['0'-'9']

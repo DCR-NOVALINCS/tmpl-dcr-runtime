@@ -44,6 +44,8 @@ let rec bind_tmpls tmpls env =
   fold_left (fun env tmpl -> bind_tmpl tmpl env) env tmpls
 
 and bind_tmpl tmpl env =
+  check_tmpl tmpl env
+  >>= fun _ ->
   let id = tmpl.id in
   Logger.info
   @@ Printf.sprintf "Binding template %s"
@@ -53,22 +55,48 @@ and bind_tmpl tmpl env =
 and bind_arg (name, expr) env =
   Logger.debug
   @@ Printf.sprintf "Binding argument %s" (CString.colorize ~color:Yellow name) ;
-  eval_expr expr env >>| fun value -> bind name value env
+  eval_expr expr env >>= fun value -> return @@ bind name value env
 
 (* =============================================================================
    Instantiation
    ============================================================================= *)
 
+and check_tmpl tmpl tmpl_env =
+  (* Check if the template is duplicated *)
+  let id = tmpl.id in
+  ( match find_flat id.data tmpl_env with
+  | None -> return true
+  | Some _ -> duplicate_tmpl id )
+  >>= fun _ ->
+  (* Check the type of the parameters *)
+  iter
+    (fun (_, ty, expr_opt) ->
+      match expr_opt with
+      | None -> return ()
+      | Some expr -> (
+          eval_expr expr empty_env
+          >>= fun value ->
+          let value_ty = !(value.ty) in
+          match value_ty with
+          | None ->
+              should_not_happen ~module_path:"instantiation.ml"
+                "Type of the value is None"
+          | Some ty' ->
+              if equal_types ty.data ty' then return ()
+              else type_mismatch ~loc:expr.loc [ty.data] [ty'] ) )
+    tmpl.params
+
 and check_tmpl_args tmpl_id params args expr_env =
   (* Get available expressions from params (default values) *)
   partition_map
     (fun (param, ty, expr_opt) ->
+      let ty' = ty.data in
       match List.find_opt (fun (arg, _) -> arg.data = param.data) args with
-      | Some (arg, expr) -> Either.left (arg, ty.data, expr)
+      | Some (arg, expr) -> Either.left (arg, ty', expr)
       | None -> (
         match expr_opt with
-        | Some expr -> Either.left (param, ty.data, expr)
-        | None -> Either.right (param, ty.data) ) )
+        | Some expr -> Either.left (param, ty', expr)
+        | None -> Either.right (param, ty') ) )
     params
   >>= fun (args, missing_params) ->
   if not (List.length args = List.length params) then
@@ -85,7 +113,7 @@ and check_tmpl_args tmpl_id params args expr_env =
               "Type of the value is None"
         | Some ty' ->
             if equal_types ty ty' then return (param, value)
-            else type_mismatch [ty] [ty'] )
+            else type_mismatch ~loc:expr.loc [ty] [ty'] )
       args
 
 and instantiate_tmpls tmpl_insts tmpl_env expr_env =
@@ -105,6 +133,11 @@ and instantiate_tmpl result_program inst tmpl_env expr_env =
            (CString.colorize ~color:Yellow id.data) ;
       check_tmpl_args id tmpl.params inst.args expr_env
       >>= fun args ->
+      (* Check the number of exported events *)
+      ( match List.length inst.x = List.length tmpl.export with
+      | true -> return ()
+      | false -> invalid_number_of_exported_events inst.x tmpl.export )
+      >>= fun _ ->
       let e_ti, q_ti, r_ti = tmpl.graph in
       let result_events, _, result_relations = result_program in
       (* Instantiations should be empty! *)
@@ -148,10 +181,6 @@ and instantiate_tmpl result_program inst tmpl_env expr_env =
       map (fun r -> instantiate_relation expr_env r) r_ti
       >>= fun relations ->
       (* Fresh ids for the events *)
-      ( match List.length inst.x = List.length tmpl.export with
-      | true -> return ()
-      | false -> invalid_number_of_exported_events inst.x tmpl.export )
-      >>= fun _ ->
       let exports_mapping = List.combine (deannotate_list tmpl.export) inst.x in
       fresh_event_ids events relations exports_mapping
       >>| fun (events, relations) ->
@@ -396,9 +425,9 @@ and evaluate_annotations ?(expr_env = empty_env) program =
   (* Put it together *)
   {program with events; template_insts; relations}
 
-(* ==========================================================================
+(* =============================================================================
    Entrypoint
-   ========================================================================== *)
+   ============================================================================= *)
 
 let instantiate ?(expr_env = empty_env) program =
   (* Bind all the available templates of the program *)
