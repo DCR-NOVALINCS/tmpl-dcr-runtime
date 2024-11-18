@@ -73,13 +73,15 @@ let rec execute ~event_id ?(expr = Unit) program =
    ~marking:(mk_marking ~executed:true ~value:expr.data ()) event () *)
 
 and execute_output_event event env =
+  let something_went_wrong message event =
+    let id, _ = event.data.info in
+    fixme
+    @@ Printf.sprintf "%s %s" message
+    @@ CString.colorize ~color:Yellow id.data
+  in
   ( match event.data.io.data with
   | Output expr -> return expr
-  | _ ->
-      let id, _ = event.data.info in
-      should_not_happen
-      @@ Printf.sprintf "Event %s is not an output event"
-      @@ CString.colorize ~color:Yellow id.data )
+  | _ -> something_went_wrong "Is not a output event" event )
   >>= fun expr ->
   eval_expr expr env
   >>= fun value -> set_marking ~marking:(mk_marking ~value:value.data ()) event
@@ -87,7 +89,7 @@ and execute_output_event event env =
 and execute_input_event event expr env =
   let something_went_wrong message event =
     let id, _ = event.data.info in
-    should_not_happen
+    fixme
     @@ Printf.sprintf "%s %s" message
     @@ CString.colorize ~color:Yellow id.data
   in
@@ -103,24 +105,19 @@ and execute_input_event event expr env =
       | _ -> something_went_wrong "Type is not referenced for the event" event )
   | _ -> something_went_wrong "Is not a input event" event
 
-and preprocess_program ?(expr_env = empty_env) program =
-  (* Add all events as value into expr environment *)
-  fold_left
-    (fun env event ->
-      let id, _ = event.data.info in
-      return (bind id.data (event_as_expr event) env) )
-    expr_env program.events
-  >>= fun expr_env ->
-  (* Update the value of each event *)
-  map (fun event -> update_event_value event expr_env) program.events
+and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
+    =
+  (* Evaluate the value inside of the events *)
+  let events = program.events in
+  map (fun event -> update_event_value event expr_env) events
   >>= fun events ->
-  (* Add all events into event environment *)
+  (* Add all events as value into event environment *)
   fold_left
-    (fun env event ->
+    (fun event_env event ->
       let id, _ = event.data.info in
-      Ok (bind id.data event env) )
-    empty_env events
-  >>= fun event_env -> Ok (event_env, expr_env, {program with events})
+      return (bind id.data event event_env) )
+    event_env events
+  >>= fun event_env -> return (event_env, expr_env, program)
 
 (* --- Unparse --- *)
 

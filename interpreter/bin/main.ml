@@ -154,12 +154,9 @@ let runtime =
         (* Preprocess program *)
         Logger.info "Program parsed successfully" ;
         preprocess_program program
-        >>= fun (_, expr_env, program) ->
-        (* Typecheck program *)
-        (* typecheck program >>= fun _ -> *)
-
+        >>= fun (event_env, expr_env, program) ->
         (* Instantiate initial templates *)
-        instantiate ~expr_env program
+        instantiate ~expr_env ~event_env program
         >>= fun (program, _) ->
         (* Display welcome message *)
         let start_header =

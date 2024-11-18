@@ -125,14 +125,15 @@ and template_param_type = template_param_type' annotated [@@deriving yojson]
 
 and template_param_type' =
   | ExprParam of type_expr * expr option
-  | EventParam of event_info'
+  | EventParam of event_label
 [@@deriving yojson]
 
-and template_param' = string annotated * template_param_type [@@deriving yojson]
+and template_param' = string annotated * template_param_type'
+[@@deriving yojson]
 
 and template_def =
   { export: event_id list
-  ; params: (string annotated * type_expr * expr option) list
+  ; params: template_param' list
   ; export_types: event_label list
   ; graph: subprogram
   ; id: string annotated }
@@ -149,7 +150,7 @@ and template_arg = string annotated * template_arg_type [@@deriving yojson]
 and template_instance = template_instance' annotated [@@deriving yojson]
 
 and template_instance' =
-  { args: (string annotated * expr) list
+  { args: template_arg list
   ; x: event_id list
   ; tmpl_id: string annotated
   ; tmpl_annotations: template_annotation' list }
@@ -218,6 +219,11 @@ let deannotate {data; _} = data
 
 let deannotate_list lst = List.map deannotate lst
 
+let mk_loc ?filename start_pos end_pos = Location (start_pos, end_pos, filename)
+
+let mk_pos ?(filename = "") line column =
+  {Lexing.dummy_pos with pos_fname= filename; pos_lnum= line; pos_cnum= column}
+
 let mk_marking ?(executed = false) ?(pending = false) ?(included = true)
     ?(value = Unit) () =
   { executed= annotate executed
@@ -283,7 +289,3 @@ let empty_subprogram = mk_subprogram ()
    ~default:"" in let start_pos_string = string_of_pos start_pos in let
    end_pos_string = string_of_pos end_pos in Printf.sprintf "%s:%s:%s" filename
    start_pos_string end_pos_string *)
-
-(* =============================================================================
-   Alpha-renaming functions
-   ============================================================================= *)

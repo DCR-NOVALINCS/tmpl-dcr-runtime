@@ -125,7 +125,8 @@ plain_template_decl:
     { { id; params; export_types = Option.value ~default:[] export_types; graph; export = Option.value ~default:[] export } }
 
 plain_template_param_pair:
-  | id=id; COLON; ty=type_expr; default_expr=preceded(ASSIGN, expr)?; { (id, ty, default_expr) }
+  | id=id; COLON; ty=type_expr; default_expr=preceded(ASSIGN, expr)?; { (id, ExprParam(ty, default_expr)) }
+  | id=id; COLON; label=id { (id, EventParam(label)) }
 
 // ===== template instantiation
 template_inst: mark_loc_ty(plain_template_inst) {$1}
@@ -144,7 +145,8 @@ plain_template_inst:
     }
 
 plain_arg_pair:
-  | id=id; ASSIGN; expr=expr { (id, expr) }
+  | id=id; ARROW; event_id=id { (id, EventArg event_id) }
+  | id=id; ASSIGN; expr=expr { (id, ExprArg expr) }
 
 // template annotations 
 plain_template_annotation:
@@ -318,7 +320,7 @@ plain_type_expr:
 | STRTY                                             { StringTy }
 | INTTY                                             { IntTy    }
 | BOOLTY                                            { BoolTy   }
-| plain_id                                          { EventTy($1) }
+// | plain_id                                          { EventTy($1) }
 | delimited(LBRACE, plain_record_type_field_list, RBRACE)    { RecordTy($1) }
 | LISTTY; item_type=delimited(LBRACKET, type_expr, RBRACKET)             { ListTy(item_type) }
 ;

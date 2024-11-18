@@ -131,7 +131,7 @@ and invalid_expr ?(errors = []) ?(loc = Nowhere) () =
     :: errors )
 
 and invalid_number_of_args ?(errors = []) ?(loc = Nowhere)
-    ?(missing_params = []) tmpl_id =
+    ?(missing_params = []) () =
   let string_missing =
     missing_params
     |> List.map (fun (param, ty) ->
@@ -143,10 +143,8 @@ and invalid_number_of_args ?(errors = []) ?(loc = Nowhere)
   fail
     ( { location= loc
       ; message=
-          Printf.sprintf
-            "Invalid number of arguments. Missing parameters %s for template %s"
+          Printf.sprintf "Invalid number of arguments. Missing parameters %s"
             string_missing
-            (CString.colorize ~color:Yellow tmpl_id.data)
       ; hint= None }
     :: errors )
 
@@ -298,17 +296,13 @@ and should_not_happen ?(errors = []) ?(module_path = "?") ?(line = "?") message
 and todo ?(loc = Nowhere) message =
   fail
     [ { location= loc
-      ; message=
-          Printf.sprintf "%s:%s" (CString.colorize ~color:Cyan "todo") message
+      ; message= CString.colorize ~color:Cyan "[todo] " ^ message
       ; hint= None } ]
 
 and fixme ?(loc = Nowhere) message =
   fail
     [ { location= loc
-      ; message=
-          Printf.sprintf "%s:%s"
-            (CString.colorize ~color:Yellow "fixme")
-            message
+      ; message= CString.colorize ~color:Yellow "[fixme] " ^ message
       ; hint= None } ]
 
 (* =============================================================================

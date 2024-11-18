@@ -64,6 +64,21 @@ module PlainUnparser = struct
       ?(separator = "\n\n") ?(should_print_events = true)
       ?(should_print_template_insts = true) ?(should_print_relations = true)
       ?(buffer = Buffer.create 100) template_decls =
+    let unparse_template_param ?(indent = "") ?(separator = ": ")
+        ?(buffer = Buffer.create 100) (id, tmpl_ty) =
+      Buffer.add_string buffer @@ indent ;
+      Buffer.add_string buffer @@ id.data ;
+      Buffer.add_string buffer @@ separator ;
+      match tmpl_ty with
+      | ExprParam (ty, expr_opt) -> (
+          unparse_ty ~buffer ty.data |> ignore ;
+          match expr_opt with
+          | None -> ()
+          | Some expr ->
+              Buffer.add_string buffer @@ " = " ;
+              unparse_expr ~buffer expr |> ignore )
+      | EventParam label -> Buffer.add_string buffer @@ label.data
+    in
     let unparse_template_decl ?(indent = "") ?(abbreviated = true)
         ?(buffer = Buffer.create 100) template_decl =
       let {id; params; export_types; graph; export; _} = template_decl in
@@ -73,14 +88,7 @@ module PlainUnparser = struct
       Buffer.add_string buffer @@ id.data ;
       Buffer.add_string buffer @@ "( " ;
       unparse_list ~buffer ~separator:", "
-        (fun ~buffer (param, ty, default) ->
-          Buffer.add_string buffer @@ Printf.sprintf "%s: " param.data ;
-          unparse_ty ~buffer ty.data |> ignore ;
-          match default with
-          | None -> ()
-          | Some expr ->
-              Buffer.add_string buffer @@ " = " ;
-              unparse_expr ~buffer expr |> ignore )
+        (fun ~buffer param -> unparse_template_param ~indent ~buffer param)
         params ;
       Buffer.add_string buffer @@ " )" ;
       unparse_list ~buffer ~initial:": " ~separator:", "
@@ -206,16 +214,22 @@ module PlainUnparser = struct
 
   and unparse_template_insts ?(indent = "") ?(buffer = Buffer.create 100)
       template_insts =
+    let unparse_arg ?(indent = "") ?(separator = " = ")
+        ?(buffer = Buffer.create 100) (arg_name, arg_ty) =
+      Buffer.add_string buffer @@ indent ;
+      Buffer.add_string buffer @@ arg_name.data ;
+      Buffer.add_string buffer @@ separator ;
+      match arg_ty with
+      | ExprArg expr -> unparse_expr ~buffer expr |> ignore
+      | EventArg label -> Buffer.add_string buffer @@ label.data
+    in
     let unparse_inst ?(indent = "") ?(buffer = Buffer.create 100) inst =
       let {tmpl_id; args; x; tmpl_annotations} = inst in
       Buffer.add_string buffer @@ indent ;
       Buffer.add_string buffer @@ tmpl_id.data ;
       Buffer.add_string buffer @@ "(" ;
       unparse_list ~buffer ~separator:", "
-        (fun ~buffer (arg_name, expr) ->
-          Buffer.add_string buffer @@ arg_name.data ;
-          Buffer.add_string buffer @@ " = " ;
-          unparse_expr ~buffer expr |> ignore )
+        (fun ~buffer arg -> unparse_arg ~indent ~buffer arg)
         args ;
       (* List.iter (fun (arg_name, expr) -> Buffer.add_string buffer @@
          Printf.sprintf "%s = " arg_name.data; unparse_expr ~buffer expr; )

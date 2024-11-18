@@ -102,8 +102,12 @@ and propagate_effect relation event (event_env, expr_env) program =
           (* Begin new env scope and bind "@trigger" *)
           return (begin_scope expr_env)
           >>= fun expr_env ->
+          return (begin_scope event_env)
+          >>= fun event_env ->
           return (bind "@trigger" (event_as_expr event) expr_env)
           >>= fun expr_env ->
+          return (bind "@trigger" event event_env)
+          >>= fun event_env ->
           (* Update values of the event inside of the spawn *)
           map (fun event -> update_event_value event expr_env) spawn_events
           >>= fun spawn_events ->
@@ -123,7 +127,7 @@ and propagate_effect relation event (event_env, expr_env) program =
           ; events= []
           ; template_insts= spawn_insts
           ; relations= [] }
-          |> instantiate ~expr_env
+          |> instantiate ~expr_env ~event_env
           >>= fun ( { events= inst_spawn_events
                     ; relations= inst_spawn_relations
                     ; _ }
