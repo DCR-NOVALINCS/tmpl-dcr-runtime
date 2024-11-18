@@ -124,19 +124,19 @@ and instantiate_tmpls tmpl_insts tmpl_env expr_env =
     empty_subprogram tmpl_insts
 
 and instantiate_tmpl result_program inst tmpl_env expr_env =
-  let id = inst.tmpl_id in
+  let {tmpl_id= id; args; x; _} = inst.data in
   match find_flat id.data tmpl_env with
   | None -> tmpl_not_found ~available:(flatten tmpl_env |> List.map fst) id
   | Some tmpl ->
       Logger.info
       @@ Printf.sprintf "Instantiating %s"
            (CString.colorize ~color:Yellow id.data) ;
-      check_tmpl_args id tmpl.params inst.args expr_env
+      check_tmpl_args id tmpl.params args expr_env
       >>= fun args ->
       (* Check the number of exported events *)
-      ( match List.length inst.x = List.length tmpl.export with
+      ( match List.length x = List.length tmpl.export with
       | true -> return ()
-      | false -> invalid_number_of_exported_events inst.x tmpl.export )
+      | false -> invalid_number_of_exported_events x tmpl.export )
       >>= fun _ ->
       let e_ti, q_ti, r_ti = tmpl.graph in
       let result_events, _, result_relations = result_program in
@@ -181,7 +181,7 @@ and instantiate_tmpl result_program inst tmpl_env expr_env =
       map (fun r -> instantiate_relation expr_env r) r_ti
       >>= fun relations ->
       (* Fresh ids for the events *)
-      let exports_mapping = List.combine (deannotate_list tmpl.export) inst.x in
+      let exports_mapping = List.combine (deannotate_list tmpl.export) x in
       fresh_event_ids events relations exports_mapping
       >>| fun (events, relations) ->
       ( List.flatten [result_events; events; other_tmpled_events]
@@ -246,7 +246,7 @@ and replace_template_inst inst expr_env =
   >>= fun args -> return {tmpl_id; args; tmpl_annotations; x}
 
 and export_map_events events export_mapping =
-  List.map (fun event -> map_event_id event export_mapping) events |> return
+  return @@ List.map (fun event -> map_event_id event export_mapping) events
 
 and map_event_id event export_mapping =
   let id, label = event.data.info in
@@ -329,17 +329,11 @@ and analize_annotation_inst instance ~none annotation expr_env =
   match annotation with
   | When expr ->
       AnnotationEvaluator.when_annotation ~body:instance ~none expr expr_env
-  | Foreach (x, expr) ->
-      AnnotationEvaluator.foreach_annotation ~body:instance
-        (fun expr_env x value instances ->
-          map
-            (fun isnt ->
-              return (begin_scope expr_env)
-              >>= fun expr_env ->
-              return (bind x.data value expr_env)
-              >>= fun expr_env -> replace_template_inst isnt expr_env )
-            instances )
-        x expr expr_env
+  | Foreach (_x, _expr) -> todo "Foreach annotation for template instances"
+(* AnnotationEvaluator.foreach_annotation ~body:instance (fun expr_env x value
+   instances -> map (fun inst -> return (begin_scope expr_env) >>= fun expr_env
+   -> return (bind x.data value expr_env) >>= fun expr_env ->
+   replace_template_inst inst expr_env ) instances ) x expr expr_env *)
 
 and deannotate_events events = map (fun event -> deannotate_event event) events
 
@@ -384,21 +378,14 @@ and evaluate_annotations ?(expr_env = empty_env) program =
      string_of_event events)); *)
 
   (* Evaluate instantiations *)
-  let insts = program.template_insts in
-  let annotation_of_inst inst = inst.tmpl_annotations in
-  fold_left
-    (fun (result, expr_env) inst ->
-      analize_annotations_of_inst [inst] ~none:[] (annotation_of_inst inst)
-        expr_env
-      >>= fun (insts, expr_env) ->
-      match insts with
-      | inst :: rest ->
-          return (List.flatten [result; inst; List.flatten rest], expr_env)
-      | [] -> return (inst :: result, expr_env)
-      (* | _ -> failwith "Unsuported annotation for instantiation" *) )
-    ([], expr_env) insts
+  (* let insts = program.template_insts in let annotation_of_inst inst =
+     inst.tmpl_annotations in fold_left (fun (result, expr_env) inst ->
+     analize_annotations_of_inst [inst] ~none:[] (annotation_of_inst inst)
+     expr_env >>= fun (insts, expr_env) -> match insts with | inst :: rest ->
+     return (List.flatten [result; inst; List.flatten rest], expr_env) | [] ->
+     return (inst :: result, expr_env) ) ([], expr_env) insts *)
   (* >>= deannotate_template_insts *)
-  >>= fun (template_insts, _) ->
+  (* >>= fun (template_insts, _) -> *)
   (* print_endline @@ Printf.sprintf "Template insts: %s" (String.concat "\n"
      (List.map string_of_template_inst template_insts)); *)
 
@@ -423,7 +410,7 @@ and evaluate_annotations ?(expr_env = empty_env) program =
   >>= deannotate_relations
   >>| fun relations ->
   (* Put it together *)
-  {program with events; template_insts; relations}
+  {program with events; relations}
 
 (* =============================================================================
    Entrypoint

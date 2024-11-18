@@ -6,5 +6,5 @@ tmpl copy(e: A): A {
 (c: Copy)[?: A]
 
 c -->> {
-    copy(e = a)
+    copy(e = a) => a1
 }

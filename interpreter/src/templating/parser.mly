@@ -109,7 +109,7 @@ plain_program_spawn:
 plain_top_input:
   // | plain_template_decl { TemplateDef($1) }
   | event_decl { Event($1) }
-  | plain_template_inst { TemplateInst($1) }
+  | template_inst { TemplateInst($1) }
   | plain_ctrl_relation_decl_list { Relations($1) }
 
 // =====
@@ -119,7 +119,7 @@ plain_template_decl:
   | TEMPLATE; id = id; 
     params = delimited(LPAR, separated_list(COMMA, plain_template_param_pair), RPAR);
     (* TODO: Add types to the exported events *)
-    export_types = preceded(COLON, separated_list(COMMA, type_expr))?;
+    export_types = preceded(COLON, separated_list(COMMA, id))?;
     graph = delimited(LBRACE, plain_program_spawn, RBRACE);
     export = preceded(BOLDARROW, separated_nonempty_list(COMMA, id))?;
     { { id; params; export_types = Option.value ~default:[] export_types; graph; export = Option.value ~default:[] export } }
@@ -128,6 +128,7 @@ plain_template_param_pair:
   | id=id; COLON; ty=type_expr; default_expr=preceded(ASSIGN, expr)?; { (id, ty, default_expr) }
 
 // ===== template instantiation
+template_inst: mark_loc_ty(plain_template_inst) {$1}
 plain_template_inst:
   | tmpl_id = id;
     args = delimited(LPAR, separated_list(COMMA, plain_arg_pair), RPAR);

@@ -295,6 +295,22 @@ and should_not_happen ?(errors = []) ?(module_path = "?") ?(line = "?") message
       }
     :: errors )
 
+and todo ?(loc = Nowhere) message =
+  fail
+    [ { location= loc
+      ; message=
+          Printf.sprintf "%s:%s" (CString.colorize ~color:Cyan "todo") message
+      ; hint= None } ]
+
+and fixme ?(loc = Nowhere) message =
+  fail
+    [ { location= loc
+      ; message=
+          Printf.sprintf "%s:%s"
+            (CString.colorize ~color:Yellow "fixme")
+            message
+      ; hint= None } ]
+
 (* =============================================================================
    Typechecker errors
    ============================================================================= *)

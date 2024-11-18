@@ -121,17 +121,19 @@ and subprogram = event list * template_instance list * relation list
 (* =============================================================================
    Program Section: template definitions
    ============================================================================= *)
-and template_param_type =
-  | Expr of type_expr * expr option
-  | Event of string annotated
+and template_param_type = template_param_type' annotated [@@deriving yojson]
+
+and template_param_type' =
+  | ExprParam of type_expr * expr option
+  | EventParam of event_info'
 [@@deriving yojson]
 
-and template_param = string annotated * template_param_type [@@deriving yojson]
+and template_param' = string annotated * template_param_type [@@deriving yojson]
 
 and template_def =
   { export: event_id list
   ; params: (string annotated * type_expr * expr option) list
-  ; export_types: type_expr list
+  ; export_types: event_label list
   ; graph: subprogram
   ; id: string annotated }
 [@@deriving yojson]
@@ -139,7 +141,14 @@ and template_def =
 (* =============================================================================
    Program Section: template instantiations
    ============================================================================= *)
-and template_instance =
+and template_arg_type = ExprArg of expr | EventArg of event_id
+[@@deriving yojson]
+
+and template_arg = string annotated * template_arg_type [@@deriving yojson]
+
+and template_instance = template_instance' annotated [@@deriving yojson]
+
+and template_instance' =
   { args: (string annotated * expr) list
   ; x: event_id list
   ; tmpl_id: string annotated

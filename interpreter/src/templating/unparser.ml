@@ -84,7 +84,7 @@ module PlainUnparser = struct
         params ;
       Buffer.add_string buffer @@ " )" ;
       unparse_list ~buffer ~initial:": " ~separator:", "
-        (fun ~buffer ty -> unparse_ty ~indent ~buffer ty.data |> ignore)
+        (fun ~buffer label -> Buffer.add_string buffer @@ label.data)
         export_types ;
       Buffer.add_string buffer @@ " {\n" ;
       Buffer.add_string buffer @@ indent ;
@@ -230,7 +230,7 @@ module PlainUnparser = struct
       ()
     in
     unparse_list ~buffer ~separator:"\n"
-      (fun ~buffer inst -> unparse_inst ~indent ~buffer inst)
+      (fun ~buffer inst -> unparse_inst ~indent ~buffer inst.data)
       template_insts ;
     Buffer.contents buffer
 
