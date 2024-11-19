@@ -9,12 +9,12 @@ module ResultMonad = struct
 
   let ( >>= ) = bind
 
-  let ( >>| ) x f = x >>= fun x -> Ok (f x)
+  let ( >>| ) x f = x >>= fun x -> return (f x)
 
-  let ( >>! ) x f = match x with Ok x -> Ok x | Error e -> f e
+  let ( >>! ) x f = match x with Ok x -> return x | Error e -> f e
 
   let fold_left f acc l =
-    List.fold_left (fun acc x -> acc >>= fun acc -> f acc x) (Ok acc) l
+    List.fold_left (fun acc x -> acc >>= fun acc -> f acc x) (return acc) l
 
   let map f l =
     List.fold_right
@@ -27,8 +27,8 @@ module ResultMonad = struct
     List.fold_right
       (fun x acc ->
         acc
-        >>= fun acc -> match f x with Some x -> Ok (x :: acc) | None -> Ok acc
-        )
+        >>= fun acc ->
+        match f x with Some x -> return (x :: acc) | None -> return acc )
       l (return [])
 
   let iter f l =

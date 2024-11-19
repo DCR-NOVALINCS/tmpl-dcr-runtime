@@ -111,10 +111,10 @@ and is_event_present_on_relation id relation =
 
 and event_as_expr event =
   (* let {marking; _} = event.data in *)
-  let {marking; info; _} = event.data in
-  let _, label = info in
-  annotate ~loc:event.loc ~ty:(Some (EventTy label.data))
-    (Record [(annotate "value", !(marking.data.value))])
+  let {marking; _} = event.data in
+  (* let _, label = info in *)
+  annotate ~loc:event.loc ~ty:!(marking.ty)
+    (Record [(annotate ~ty:!(marking.ty) "value", !(marking.data.value))])
 
 (* =============================================================================
    Alpha-renaming functions

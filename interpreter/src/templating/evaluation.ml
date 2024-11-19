@@ -8,6 +8,7 @@ open Errors
    ============================================================================= *)
 
 let rec eval_expr expr env =
+  let open Misc.Printing in
   match expr.data with
   | Unit ->
       expr.ty := Some UnitTy ;
@@ -24,7 +25,12 @@ let rec eval_expr expr env =
   | Parenthesized e -> eval_expr e env
   | BinaryOp (e1, e2, op) ->
       eval_expr e1 env
-      >>= fun v1 -> eval_expr e2 env >>= fun v2 -> eval_binop v1 v2 op
+      >>= fun v1 ->
+      eval_expr e2 env
+      >>= fun v2 ->
+      Logger.debug @@ "Expr env" ;
+      Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr env ;
+      eval_binop v1 v2 op
   | UnaryOp (e, op) -> eval_expr e env >>= fun v -> eval_unop v op
   | Identifier id -> find_id id env
   | Trigger -> find_id (annotate ~loc:expr.loc ~ty:!(expr.ty) "@trigger") env
@@ -39,7 +45,9 @@ let rec eval_expr expr env =
           in
           match List.assoc_opt p.data fields with
           | None -> property_not_found p v
-          | Some v -> return v )
+          | Some v ->
+              Logger.debug @@ (yojson_of_expr v |> Yojson.Safe.pretty_to_string) ;
+              return (annotate ~loc:v.loc ~ty:(Some rec_ty) v.data) )
       | _ -> type_mismatch [RecordTy [(p, annotate UnitTy)]] [rec_ty] )
   | List es ->
       map (fun e -> eval_expr e env) es >>| fun es -> {expr with data= List es}
@@ -62,6 +70,9 @@ let rec eval_expr expr env =
   | _ -> invalid_expr ()
 
 and eval_binop v1 v2 op =
+  let open Misc.Printing in
+  Logger.debug @@ (yojson_of_expr v1 |> Yojson.Safe.pretty_to_string) ;
+  Logger.debug @@ (yojson_of_expr v2 |> Yojson.Safe.pretty_to_string) ;
   ( match (!(v1.ty), !(v2.ty)) with
   | Some ty1, Some ty2 -> return (ty1, ty2)
   (* | Some ty1, _ -> return (ty1, UnitTy) | _, Some ty2 -> return (UnitTy,

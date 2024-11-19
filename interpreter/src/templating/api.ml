@@ -109,8 +109,8 @@ and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
     =
   (* Evaluate the value inside of the events *)
   let events = program.events in
-  map (fun event -> update_event_value event expr_env) events
-  >>= fun events ->
+  (* map (fun event -> update_event_value event expr_env) events >>= fun events
+     -> *)
   (* Add all events as value into event environment *)
   fold_left
     (fun event_env event ->

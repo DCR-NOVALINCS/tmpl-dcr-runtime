@@ -11,13 +11,14 @@ open Misc.Env
    ============================================================================= *)
 
 let rec is_enabled event program (event_env, expr_env) =
+  let relations = program.relations in
   let enabled = event.data.marking.data.included.data in
   fold_left
     (fun enabled relation ->
       is_enabled_by relation event (event_env, expr_env)
       >>= fun is_enabled_by_relation ->
       return (enabled && is_enabled_by_relation) )
-    enabled program.relations
+    enabled relations
 (* List.fold_left (fun enabled relation -> enabled && is_enabled_by relation
    event (event_env, expr_env) ) enabled program.relations *)
 
@@ -111,6 +112,12 @@ and propagate_effect relation event (event_env, expr_env) program =
           (* Update values of the event inside of the spawn *)
           map (fun event -> update_event_value event expr_env) spawn_events
           >>= fun spawn_events ->
+          (* Evaluate annotions from spawned elements *)
+          let open Instantiation in
+          evaluate_annotations_of_subprogram
+            (spawn_events, spawn_insts, spawn_relations)
+            (expr_env, event_env, empty_env)
+          >>= fun (spawn_events, spawn_insts, spawn_relations) ->
           (* fold_left (fun events event -> let { marking; io; _ } = event.data
              in begin match io.data with | Input _ -> return (io,
              marking.data.value) | Output expr -> eval_expr expr expr_env >>=
@@ -122,7 +129,6 @@ and propagate_effect relation event (event_env, expr_env) program =
 
           (* Instantiate template instances present in the spawn *)
           (* FIXME: Maybe use instantiate_tmpls instead of this function *)
-          let open Instantiation in
           { template_decls= program.template_decls
           ; events= []
           ; template_insts= spawn_insts

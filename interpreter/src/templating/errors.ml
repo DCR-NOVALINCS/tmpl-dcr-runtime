@@ -250,7 +250,7 @@ and syntax_error ?(errors = []) lexbuf =
             ( lexbuf.lex_start_p
             , lexbuf.lex_curr_p
             , Some lexbuf.lex_curr_p.pos_fname )
-      ; message= "Syntax fail"
+      ; message= "Syntax error"
       ; hint=
           Some
             "Check the syntax near the fail location. Ensure all constructs are correctly formed."
