@@ -11,8 +11,7 @@
 
 (maintainers "bfibraga")
 
-(license
- "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License")
+(license "CC-BY-4.0")
 
 (documentation https://url/to/documentation)
 

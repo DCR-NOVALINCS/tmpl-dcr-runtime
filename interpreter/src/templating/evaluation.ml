@@ -46,7 +46,8 @@ let rec eval_expr expr env =
           match List.assoc_opt p.data fields with
           | None -> property_not_found p v
           | Some v ->
-              Logger.debug @@ (yojson_of_expr v |> Yojson.Safe.pretty_to_string) ;
+              (* Logger.debug @@ (yojson_of_expr v |>
+                 Yojson.Safe.pretty_to_string) ; *)
               return (annotate ~loc:v.loc ~ty:(Some rec_ty) v.data) )
       | _ -> type_mismatch [RecordTy [(p, annotate UnitTy)]] [rec_ty] )
   | List es ->
@@ -70,9 +71,9 @@ let rec eval_expr expr env =
   | _ -> invalid_expr ()
 
 and eval_binop v1 v2 op =
-  let open Misc.Printing in
-  Logger.debug @@ (yojson_of_expr v1 |> Yojson.Safe.pretty_to_string) ;
-  Logger.debug @@ (yojson_of_expr v2 |> Yojson.Safe.pretty_to_string) ;
+  (* let open Misc.Printing in Logger.debug @@ (yojson_of_expr v1 |>
+     Yojson.Safe.pretty_to_string) ; Logger.debug @@ (yojson_of_expr v2 |>
+     Yojson.Safe.pretty_to_string) ; *)
   ( match (!(v1.ty), !(v2.ty)) with
   | Some ty1, Some ty2 -> return (ty1, ty2)
   (* | Some ty1, _ -> return (ty1, UnitTy) | _, Some ty2 -> return (UnitTy,

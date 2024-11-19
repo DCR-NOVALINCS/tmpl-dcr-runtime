@@ -86,7 +86,12 @@ let read_command tokens program =
       parse filename
       >>= fun program -> return (program, "Program parsed successfully")
   | "exec" :: event_id :: expr | "e" :: event_id :: expr ->
-      (if expr = [] then return (annotate Unit) else parse_expression expr)
+      ( if expr = [] then
+          return
+            (annotate ~ty:(Some UnitTy)
+               ~loc:(mk_loc Lexing.dummy_pos Lexing.dummy_pos)
+               Unit )
+        else parse_expression expr )
       >>= fun parsed_expr ->
       execute ~event_id ~expr:parsed_expr.data program
       >>= fun program ->
@@ -146,7 +151,7 @@ let rec prompt program =
 
 let runtime =
   (* Logger settings *)
-  Logger.enable () ;
+  (* Logger.enable () ; *)
   (* Logger.set_logger_level Debug; *)
   (* Get & Parse the initial input *)
   get_program

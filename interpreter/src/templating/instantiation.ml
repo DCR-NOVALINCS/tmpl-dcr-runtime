@@ -330,6 +330,11 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       fresh_event_ids events_ti relations_ti []
       >>= fun (events_ti, relations_ti) ->
       (* Put it all together *)
+      Logger.debug "Expr env:"; 
+      Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr expr_env;
+      Logger.debug "Event env:";
+      Logger.debug @@ string_of_env (fun event -> Unparser.PlainUnparser.unparse_events [event]) event_env;
+      (**)
       Logger.debug
       @@ Printf.sprintf "Instantiated events from template %s:" id.data ;
       Logger.debug @@ Unparser.PlainUnparser.unparse_events events_ti ;
