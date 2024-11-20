@@ -3,3 +3,19 @@
 a -->> {
     (b: B)[@trigger.value + 1]
 } - foreach i in [0, 1, 2, 3] | when i > 0
+
+# ---
+
+( (a -->> {
+    (b: B)[@trigger.value + 1]
+}) foreach i in [0, 1, 2, 3]) | when i > 0
+
+a -->* b when a.value > b.value
+
+foreach i in [0...N] <<<
+    if i > 0 <<<
+        (a -->> {
+        (b: B)[i]
+    }) 
+    >>>
+>>>

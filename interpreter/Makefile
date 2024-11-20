@@ -10,6 +10,7 @@ OUTPUT_JS_PATH := ../server/src/runtime
 .SILENT: pre-build build watch clean js
 
 default:
+	cd $(INTERPRETER_PATH)
 	opam update
 	opam install . --deps-only
 	make build

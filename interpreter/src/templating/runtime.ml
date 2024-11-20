@@ -26,7 +26,7 @@ and is_enabled_by relation event (event_env, expr_env) =
   let id, _ = event.data.info in
   match relation.data with
   | SpawnRelation _ -> return true
-  | ControlRelation (from, guard, dest, op, _annot) -> (
+  | ControlRelation (from, guard, dest, op, _) -> (
       if not (id.data = dest.data) then return true
       else
         (* Check the value of the guard, if it evaluates to false, the event is
@@ -112,7 +112,7 @@ and propagate_effect relation event (event_env, expr_env) program =
           (* Update values of the event inside of the spawn *)
           map (fun event -> update_event_value event expr_env) spawn_events
           >>= fun spawn_events ->
-          (* Evaluate annotions from spawned elements *)
+          (* Evaluate annotations from spawned elements *)
           let open Instantiation in
           evaluate_annotations_of_subprogram
             (spawn_events, spawn_insts, spawn_relations)

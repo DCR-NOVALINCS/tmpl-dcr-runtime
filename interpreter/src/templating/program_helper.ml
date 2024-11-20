@@ -137,8 +137,7 @@ and nanoid ?(length = 12) _ =
   let random_char () = String.get chars (Random.int chars_len) in
   String.init length (fun _ -> random_char ())
 
-and fresh ?(id_fn = nanoid ~length:12) name =
-  Printf.sprintf "%s_%s" name (id_fn ())
+and fresh ?(id_fn = counter) name = Printf.sprintf "%s_%s" name (id_fn ())
 
 and fresh_event event =
   let id, label = event.data.info in

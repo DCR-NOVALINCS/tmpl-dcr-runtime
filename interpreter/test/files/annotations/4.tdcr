@@ -1,5 +1,5 @@
 (a: A)[?: Number]
 
 a -->> {
-    (b: B)[@trigger.value + 1] - when @trigger.value > 0
+    (b: B)[i + 1] - when i > 0
 } - foreach i in [0, 1, 2, 3]

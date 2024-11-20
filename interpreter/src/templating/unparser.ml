@@ -88,7 +88,7 @@ module PlainUnparser = struct
       Buffer.add_string buffer @@ id.data ;
       Buffer.add_string buffer @@ "( " ;
       unparse_list ~buffer ~separator:", "
-        (fun ~buffer param -> unparse_template_param ~indent ~buffer param)
+        (fun ~buffer param -> unparse_template_param ~buffer param)
         params ;
       Buffer.add_string buffer @@ " )" ;
       unparse_list ~buffer ~initial:": " ~separator:", "
@@ -229,7 +229,7 @@ module PlainUnparser = struct
       Buffer.add_string buffer @@ tmpl_id.data ;
       Buffer.add_string buffer @@ "(" ;
       unparse_list ~buffer ~separator:", "
-        (fun ~buffer arg -> unparse_arg ~indent ~buffer arg)
+        (fun ~buffer arg -> unparse_arg ~buffer arg)
         args ;
       (* List.iter (fun (arg_name, expr) -> Buffer.add_string buffer @@
          Printf.sprintf "%s = " arg_name.data; unparse_expr ~buffer expr; )

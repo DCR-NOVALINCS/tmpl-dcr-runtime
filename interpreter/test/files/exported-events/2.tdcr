@@ -1,6 +1,6 @@
 tmpl g (n: Number, e: A) {
     (b: B)[n]
-    h(e = e) => b2
+    h(e -> e) => b2
     e -->* b, b2
 }
 
@@ -10,8 +10,8 @@ tmpl h(e: A): B {
 } => b
 
 (a: A)[?]
-h(e = a) => b2
+# g(n = 1, e -> a)
 
 a -->> {
-  h(e = a) => b3
+  h(e -> a) => b2
 }

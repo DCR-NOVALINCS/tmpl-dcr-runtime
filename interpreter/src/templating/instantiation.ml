@@ -10,7 +10,7 @@ open Program_helper
    Modules & Types
    ============================================================================= *)
 
-let replace_event event expr_env = update_event_value event expr_env
+let rec replace_event event expr_env = update_event_value event expr_env
 
 and replace_relation relation (expr_env, event_env) =
   let replace_id id =
@@ -26,6 +26,18 @@ and replace_relation relation (expr_env, event_env) =
       >>= fun from ->
       eval_expr guard expr_env
       >>= fun guard ->
+      let events, insts, relations = subprogram in
+      (* FIXME: Don't forget to add @trigger into the envs *)
+      map (fun event -> replace_event event expr_env) events
+      >>= fun events ->
+      map (fun inst -> replace_template_inst inst (expr_env, event_env)) insts
+      >>= fun insts ->
+      map
+        (fun relation -> replace_relation relation (expr_env, event_env))
+        relations
+      >>= fun relations ->
+      return (events, insts, relations)
+      >>= fun subprogram ->
       return
         { relation with
           data= SpawnRelation (from, guard, subprogram, annotations) }
@@ -358,8 +370,9 @@ and instantiate_relation target_relation (expr_env, event_env) =
 
 and export_map_events x export (events, relations) =
   if not (List.length x = List.length export) then
-    invalid_number_of_exported_events x export
-  else if List.length x > List.length events then fixme ""
+    invalid_number_of_exported_events ~loc:(append_locs (List.map (fun x -> x.loc) x)) x export
+  else if List.length x > List.length events then
+    excessive_exported_events x events
   else
     return (List.combine (deannotate_list x) (deannotate_list export))
     >>= fun export_mapping ->

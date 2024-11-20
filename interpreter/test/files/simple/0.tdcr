@@ -4,4 +4,4 @@ tmpl g (n: Number, e: A) {
 }
 
 (a: A)[?]
-g(n = 0, e = a)
+g(n = 1, e -> a)

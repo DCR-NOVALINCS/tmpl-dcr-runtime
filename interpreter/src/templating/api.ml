@@ -58,6 +58,8 @@ let rec execute ~event_id ?(expr = Unit) program =
         | Input _ -> execute_input_event event expr expr_env
         | Output _ -> execute_output_event event expr_env )
         >>= fun event ->
+        set_marking ~marking:(mk_marking ~executed:true ()) event
+        >>= fun event ->
         propagate_effects event (event_env, expr_env)
           (update_event event program)
 

@@ -85,6 +85,24 @@ and invalid_file_extension ?(errors = []) ~supported ?(got = "") () =
             ^ CString.colorize ~color:Yellow supported ) }
     :: errors )
 
+and excessive_exported_events ?(errors = []) ?(loc = Nowhere) x events =
+  let string_xs =
+    x |> List.map (fun id -> Printf.sprintf "%s" id.data) |> String.concat ", "
+  in
+  let string_event_ids =
+    events
+    |> List.map (fun event -> Printf.sprintf "%s" (fst event.data.info).data)
+    |> String.concat ", "
+  in
+  fail
+    ( { location= loc
+      ; message= Printf.sprintf "Excessive exported events %s" string_xs
+      ; hint=
+          Some
+            (Printf.sprintf "Events %s that can be exported" string_event_ids)
+      }
+    :: errors )
+
 (* =============================================================================
    Type errors
    ============================================================================= *)
@@ -148,9 +166,10 @@ and invalid_number_of_args ?(errors = []) ?(loc = Nowhere)
       ; hint= None }
     :: errors )
 
-and invalid_number_of_exported_events ?(errors = []) xs exported =
+and invalid_number_of_exported_events ?(errors = []) ?(loc = Nowhere) xs
+    exported =
   fail
-    ( { location= Nowhere
+    ( { location= loc
       ; message=
           Printf.sprintf
             "Invalid number of exported events. Expected %s, but got %s"
