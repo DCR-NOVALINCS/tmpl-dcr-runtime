@@ -1,3 +1,9 @@
+module type Monad = sig
+  type 'a t
+
+  val return : 'a -> 'a t
+end
+
 module ResultMonad = struct
   (* type ('a, 'b) result = ('a, 'b) result *)
 
@@ -39,47 +45,61 @@ module ResultMonad = struct
   let partition_map f l = List.partition_map f l |> return
 end
 
-module DetailedResultMonad = struct
-  type ('v, 'w, 'e) detailed_result =
-    {value: 'v; warnings: 'w list; errors: 'e list}
+module ProgramResultMonad = struct
+  (* open Env *)
+  type ('a, 'e, 'c) state = {value: 'a; errors: 'e list; context: 'c}
 
-  let return ?(warnings = []) ?(errors = []) x = {value= x; warnings; errors}
+  let return ?(errors = []) ~context value = {value; errors; context}
 
-  let return_ok x = return x
-
-  let return_warning w x = return ~warnings:w x
-
-  let return_error e x = return ~errors:e x
+  let fail ?(errors = []) ~context value = {value; errors; context}
 
   let bind x f =
     match x with
-    | {value= _; warnings= w; errors= e} as obj -> (
-      match f obj with
-      | {value= x; warnings= w'; errors= e'} ->
-          {value= x; warnings= List.append w w'; errors= List.append e e'} )
+    | {value; errors; context} -> (
+      match f value context with
+      | {value; errors= e; context} -> {value; errors= errors @ e; context} )
 
-  let has_errors x = List.length x.errors > 0
+  let get_errors {errors; _} = errors
 
   let ( >>= ) = bind
 
-  let ( >>| ) x f = x >>= fun x -> return (f x)
+  let ( >>| ) x f = x >>= fun value context -> return ~context (f value context)
 
   let ( >>! ) x f =
-    match x with
-    | {value= _; warnings= w; errors= e} -> (
-      match f e with
-      | {value= x; warnings= w'; errors= e'} ->
-          {value= x; warnings= w @ w'; errors= e @ e'} )
+    match x with {value; errors; context} -> {value; errors= f errors; context}
 
-  let fold_left f acc l =
-    List.fold_left (fun acc x -> acc >>= fun acc -> f acc x) (return acc) l
+  let fold_left ~context f acc l =
+    List.fold_left
+      (fun acc x -> acc >>= fun acc -> f acc x)
+      (return ~context acc) l
 
-  let filter_map f l =
+  let map ~context f l =
     List.fold_right
-      (fun x acc -> match f x with Some x -> x :: acc | None -> acc)
-      l []
+      (fun x acc ->
+        acc >>= fun acc context -> f x context >>| fun x _ -> x :: acc )
+      l (return ~context [])
 
-  let iter f l = List.iter (fun x -> f x) l
+  let filter_map ~context f l =
+    List.fold_right
+      (fun x acc ->
+        acc
+        >>= fun acc context ->
+        match f x context with
+        | Some x -> return ~context (x :: acc)
+        | None -> return ~context acc )
+      l (return ~context [])
+
+  let iter ~context f l =
+    List.fold_left
+      (fun acc x -> acc >>= fun _ context -> f x context)
+      (return ~context ()) l
+
+  let partition_map ~context f l =
+    List.partition_map (fun x -> f x context) l
+    |> fun (l, r) -> return ~context (l, r)
+
+  let partition ~context f l =
+    List.partition f l |> fun (l, r) -> return ~context (l, r)
 end
 
 module OptionMonad = struct
