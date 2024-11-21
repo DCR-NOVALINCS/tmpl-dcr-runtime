@@ -52,6 +52,23 @@ let rec eval_expr expr env =
       | _ -> type_mismatch [RecordTy [(p, annotate UnitTy)]] [rec_ty] )
   | List es ->
       map (fun e -> eval_expr e env) es >>| fun es -> {expr with data= List es}
+  | Range (s, e) ->
+      eval_expr s env
+      >>= (fun start_value ->
+            eval_expr e env
+            >>= fun end_value ->
+            match (start_value.data, end_value.data) with
+            | IntLit s, IntLit e ->
+                let rec range start_int end_int =
+                  if start_int > end_int then []
+                  else start_int :: range (start_int + 1) end_int
+                in
+                range s e
+                |> List.map (fun i ->
+                       annotate ~loc:expr.loc ~ty:(Some IntTy) (IntLit i) )
+                |> return
+            | _ -> type_mismatch [IntTy] [] )
+      >>| fun es -> annotate ~loc:expr.loc ~ty:(Some (ListTy IntTy)) (List es)
   | Record fields ->
       map
         (fun (name, expr) -> eval_expr expr env >>= fun v -> return (name, v))
@@ -221,47 +238,6 @@ and find_id id env =
   match find_flat id.data env with
   | None -> id_not_found id
   | Some expr -> return expr
-
-(* =============================================================================
-   Type Equality functions
-   ============================================================================= *)
-
-(** {i (tail recursive)} [equal_types type_1 type_2] indicates whether type
-    expressions [type_1] and [type_2] are structurally equal .
-
-    Returns {b true} if the [type_1] and [type_2] are structurally equal, and
-    {b false} otherwise. *)
-and equal_types ty1 ty2 =
-  let rec equal_types_aux = function
-    | [] -> true
-    | (ty1, ty2) :: rest -> (
-      match (ty1, ty2) with
-      | UnitTy, UnitTy | BoolTy, BoolTy | IntTy, IntTy | StringTy, StringTy ->
-          (equal_types_aux [@tailcall]) rest
-      | EventTy label1, EventTy label2 ->
-          String.equal label1 label2 && (equal_types_aux [@tailcall]) rest
-      | RecordTy fields1, RecordTy fields2 ->
-          List.compare_lengths fields1 fields2 = 0
-          &&
-          let compare_by_name (name1, _) (name2, _) =
-            String.compare name1.data name2.data
-          in
-          let sorted1 = List.sort compare_by_name fields1
-          and sorted2 = List.sort compare_by_name fields2 in
-          let combined = List.combine sorted1 sorted2 in
-          List.for_all (fun (f1, f2) -> compare_by_name f1 f2 = 0) combined
-          &&
-          let type_pairs =
-            List.map (fun ((_, v1), (_, v2)) -> (v1.data, v2.data)) combined
-          in
-          (equal_types_aux [@tailcall]) @@ type_pairs @ rest
-      (* | ListTyEmpty, ListTyEmpty -> true *)
-      | ListTy elem_type_1, ListTy elem_type_2 ->
-          (equal_types_aux [@tailcall])
-          @@ ((elem_type_1.data, elem_type_2.data) :: rest)
-      | _ -> false )
-  in
-  equal_types_aux [(ty1, ty2)]
 
 (* =============================================================================
    Expression Partial Evaluation functions

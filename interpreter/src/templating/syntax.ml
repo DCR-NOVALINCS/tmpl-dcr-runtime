@@ -63,7 +63,7 @@ and type_expr' =
   | BoolTy
   | EventTy of string
   | RecordTy of type_expr record_field list
-  | ListTy of type_expr
+  | ListTy of type_expr'
 [@@deriving yojson]
 
 and expr = expr' annotated [@@deriving yojson]
@@ -81,6 +81,7 @@ and expr' =
   | Trigger
   | PropDeref of expr * string annotated
   | List of expr list
+  | Range of expr * expr
   | Record of expr record_field list
   (* ADD Template Expr *)
   | Template of template_instance

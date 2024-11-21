@@ -26,6 +26,20 @@ let property_not_found ?(errors = []) p e =
       }
     :: errors )
 
+let property_not_found_type ?(errors = []) ?(loc = Nowhere) p ty =
+  fail
+    ( { location= loc
+      ; message=
+          "Property "
+          ^ CString.colorize ~color:Yellow p.data
+          ^ " not found in "
+          ^ CString.colorize ~color:Yellow
+          @@ unparse_ty ty
+      ; hint=
+          Some "Ensure the property is declared and in scope. Check for typos."
+      }
+    :: errors )
+
 and id_not_found ?(errors = []) id =
   fail
     ( { location= id.loc

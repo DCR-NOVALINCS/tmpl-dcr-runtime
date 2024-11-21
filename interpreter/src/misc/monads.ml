@@ -46,39 +46,85 @@ module ResultMonad = struct
 end
 
 module ProgramResultMonad = struct
-  (* open Env *)
+  (** Type definition for the monad *)
   type ('a, 'e, 'c) state = {value: 'a; errors: 'e list; context: 'c}
 
+  (** [return ?errors ~context value] wraps a {b value} in the monad
+      @param errors A list of errors
+      @param context The context of the value that is stored in the monad
+      @param value The value to be wrapped in the monad
+      @return A monad with the value *)
   let return ?(errors = []) ~context value = {value; errors; context}
 
+  (** [fail ?errors ~context value], same as [return] but with errors
+      @param errors A list of errors
+      @param context The context of the value that is stored in the monad
+      @param value The value to be wrapped in the monad
+      @return A monad with the errors *)
   let fail ?(errors = []) ~context value = {value; errors; context}
 
+  (** [bind x f] applies f to the value of [x]. If [x] is an error, it returns
+      [x] as is
+      @param x The monad to apply the function to
+      @param f The function to apply to the monad
+      @return The result of applying the function to the monad *)
   let bind x f =
     match x with
     | {value; errors; context} -> (
       match f value context with
       | {value; errors= e; context} -> {value; errors= errors @ e; context} )
 
+  (** [get_errors] returns the errors of the monad
+      @param x The monad to get the errors from
+      @return The errors of the monad *)
   let get_errors {errors; _} = errors
 
+  let get_value {value; _} = value
+
+  (** [>>=] is an infix operator for [bind] *)
   let ( >>= ) = bind
 
-  let ( >>| ) x f = x >>= fun value context -> return ~context (f value context)
+  (** [apply x f] applies the function [f] to the value of [x]
+      @param x The monad to apply the function to
+      @param f The function to apply to the monad
+      @return The result of applying the function to the monad *)
+  let apply x f = x >>= fun value context -> return ~context (f value context)
 
-  let ( >>! ) x f =
+  (** [>>|] is an infix operator for [apply] *)
+  let ( >>| ) = apply
+
+  let bind_error x f =
     match x with {value; errors; context} -> {value; errors= f errors; context}
 
+  let ( >>! ) = bind_error
+
+  (** [fold_left f acc l] applies the function [f] to the accumulator and each
+      element of the list [l]
+      @param f
+        The function to apply to the accumulator and each element of the list
+      @param acc The initial accumulator
+      @param l The list to apply the function to
+      @return The result of applying the function to the list *)
   let fold_left ~context f acc l =
     List.fold_left
       (fun acc x -> acc >>= fun acc -> f acc x)
       (return ~context acc) l
 
+  (** [map f l] applies the function [f] to each element of the list [l]
+      @param f The function to apply to each element of the list
+      @param l The list to apply the function to
+      @return The result of applying the function to the list *)
   let map ~context f l =
     List.fold_right
       (fun x acc ->
         acc >>= fun acc context -> f x context >>| fun x _ -> x :: acc )
       l (return ~context [])
 
+  (** [filter_map f l] applies the function [f] to each element of the list [l]
+      and filters out the elements that are [None]
+      @param f The function to apply to each element of the list
+      @param l The list to apply the function to
+      @return The result of applying the function to the list *)
   let filter_map ~context f l =
     List.fold_right
       (fun x acc ->
@@ -89,15 +135,29 @@ module ProgramResultMonad = struct
         | None -> return ~context acc )
       l (return ~context [])
 
+  (** [iter f l] applies the function [f] to each element of the list [l]
+      @param f The function to apply to each element of the list
+      @param l The list to apply the function to *)
   let iter ~context f l =
     List.fold_left
       (fun acc x -> acc >>= fun _ context -> f x context)
       (return ~context ()) l
 
+  (** [partition_map f l] applies the function [f] to each element of the list
+      [l] and partitions the list into two lists based on the result of the
+      function
+      @param f The function to apply to each element of the list
+      @param l The list to apply the function to
+      @return The result of applying the function to the list *)
   let partition_map ~context f l =
     List.partition_map (fun x -> f x context) l
     |> fun (l, r) -> return ~context (l, r)
 
+  (** [partition f l] partitions the list [l] into two lists based on the
+      predicate [f]
+      @param f The predicate to partition the list with
+      @param l The list to partition
+      @return The result of partitioning the list *)
   let partition ~context f l =
     List.partition f l |> fun (l, r) -> return ~context (l, r)
 end

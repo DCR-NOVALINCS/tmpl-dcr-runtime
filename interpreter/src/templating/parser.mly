@@ -322,7 +322,7 @@ plain_type_expr:
 | BOOLTY                                            { BoolTy   }
 // | plain_id                                          { EventTy($1) }
 | delimited(LBRACE, plain_record_type_field_list, RBRACE)    { RecordTy($1) }
-| LISTTY; item_type=delimited(LBRACKET, type_expr, RBRACKET)             { ListTy(item_type) }
+| LISTTY; item_type=delimited(LBRACKET, plain_type_expr, RBRACKET)             { ListTy(item_type) }
 ;
 
 // ================= expressions
@@ -383,6 +383,7 @@ plain_fact:
 | expr = fact; PROP_DEREF; prop = id;                               { PropDeref(expr, prop) }
 | expr = delimited(LPAR, plain_expr, RPAR)                                { expr }
 | list = delimited(LBRACKET, separated_list(COMMA, expr), RBRACKET)                        { List(list) }
+// | LBRACKET; start_expr= expr; PROP_DEREF;PROP_DEREF; end_expr=expr; RBRACKET; { Range(start_expr, end_expr) }
 ;
 
 bool: mark_loc_ty(plain_bool) { $1 }

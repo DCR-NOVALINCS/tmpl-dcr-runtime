@@ -367,7 +367,7 @@ module PlainUnparser = struct
         Buffer.add_string buffer @@ " }"
     | ListTy ty ->
         Buffer.add_string buffer @@ "List[" ;
-        unparse_ty ~indent ~buffer ty.data |> ignore ;
+        unparse_ty ~indent ~buffer ty |> ignore ;
         Buffer.add_string buffer @@ "]" ) ;
     Buffer.contents buffer
 
@@ -423,6 +423,10 @@ module PlainUnparser = struct
           (fun ~buffer e -> unparse_expr ~indent ~buffer e |> ignore)
           es ;
         Buffer.add_string buffer @@ " ]"
+    | Range (e1, e2) ->
+        unparse_expr ~indent ~buffer e1 |> ignore ;
+        Buffer.add_string buffer @@ "..." ;
+        unparse_expr ~indent ~buffer e2 |> ignore
     | Record fields ->
         Buffer.add_string buffer @@ "{ " ;
         unparse_list ~buffer ~separator:", "

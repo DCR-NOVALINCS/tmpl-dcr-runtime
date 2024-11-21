@@ -3,6 +3,7 @@ open Evaluation
 open Errors
 open Runtime
 open Program_helper
+open Typechecking
 open Misc.Monads.ResultMonad
 open Misc.Env
 open Misc.Printing
@@ -88,7 +89,7 @@ and execute_output_event event env =
   eval_expr expr env
   >>= fun value -> set_marking ~marking:(mk_marking ~value:value.data ()) event
 
-and execute_input_event event expr env =
+and execute_input_event event expr expr_env =
   let something_went_wrong message event =
     let id, _ = event.data.info in
     fixme
@@ -96,15 +97,15 @@ and execute_input_event event expr env =
     @@ CString.colorize ~color:Yellow id.data
   in
   match event.data.io.data with
-  | Input expected_ty -> (
-      eval_expr (annotate expr) env
+  | Input expected_ty ->
+      eval_expr (annotate expr) expr_env
       >>= fun value ->
-      let value_ty = !(value.ty) in
-      match value_ty with
-      | Some ty when equal_types ty expected_ty.data ->
-          set_marking ~marking:(mk_marking ~value:value.data ()) event
-      | Some ty -> type_mismatch [expected_ty.data] [ty]
-      | _ -> something_went_wrong "Type is not referenced for the event" event )
+      typecheck_expr value
+        empty_env (* FIXME: Accumulate an environment of types *)
+      >>= fun ty ->
+      if not (equal_types ty expected_ty.data) then
+        type_mismatch [expected_ty.data] [ty]
+      else set_marking ~marking:(mk_marking ~value:value.data ()) event
   | _ -> something_went_wrong "Is not a input event" event
 
 and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program

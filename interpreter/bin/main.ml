@@ -3,6 +3,7 @@ open Templating.Api
 open Templating.Instantiation
 open Templating.Lex_and_parse
 open Templating.Errors
+open Templating.Typechecking
 open Misc.Monads.ResultMonad
 open Misc.Printing
 
@@ -160,6 +161,9 @@ let runtime =
         Logger.info "Program parsed successfully" ;
         preprocess_program program
         >>= fun (event_env, expr_env, program) ->
+        (* Typecheck *)
+        typecheck ~expr_env ~event_env program
+        >>= fun _ ->
         (* Instantiate initial templates *)
         instantiate ~expr_env ~event_env program
         >>= fun (program, _) ->

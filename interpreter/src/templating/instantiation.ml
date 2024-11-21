@@ -126,7 +126,7 @@ module EventAnnotationEvaluator = struct
               [] body )
           lst
         >>= fun events -> return (List.flatten events)
-    | _ -> type_mismatch [ListTy (annotate UnitTy)] []
+    | _ -> type_mismatch [ListTy (UnitTy)] []
 end
 
 module InstantiationAnnotationEvaluator = struct
@@ -160,7 +160,7 @@ module InstantiationAnnotationEvaluator = struct
               [] body )
           lst
         >>= fun insts -> return (List.flatten insts)
-    | _ -> type_mismatch [ListTy (annotate UnitTy)] []
+    | _ -> type_mismatch [ListTy ( UnitTy)] []
 end
 
 module RelationAnnotationEvaluator = struct
@@ -194,7 +194,7 @@ module RelationAnnotationEvaluator = struct
               [] body )
           lst
         >>= fun relations -> return (List.flatten relations)
-    | _ -> type_mismatch [ListTy (annotate UnitTy)] []
+    | _ -> type_mismatch [ListTy ( UnitTy)] []
 end
 
 type context = expr env * event env * template_def env
