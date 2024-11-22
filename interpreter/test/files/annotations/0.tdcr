@@ -3,3 +3,14 @@
 
 a -->* b
 b -->% a
+
+# Alternative syntax
+
+# if (0 > 1) 
+#     (a: A)[?] 
+#     a -->* b 
+#     b -->% a
+# end
+# (b: B)[?]
+
+

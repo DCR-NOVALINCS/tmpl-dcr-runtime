@@ -1,0 +1,6 @@
+(b: B)[?]
+(a3: A)[a.value * a2.value]
+(a2: A)[a.value + 1]
+(a: A)[0]
+
+# a -[a.value > 0]->% b

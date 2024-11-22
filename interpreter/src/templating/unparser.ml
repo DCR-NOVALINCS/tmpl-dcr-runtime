@@ -467,8 +467,3 @@ module PlainUnparser = struct
         Buffer.add_string buffer filename ) ;
     Buffer.contents buffer
 end
-
-(* module JsonUnparser: UnparserCommon = struct open Yojson.Safe
-
-   let rec unparse ?(indent = "") ?(abbreviated = true) ?(separator = "\n")
-   ?(buffer = Buffer.create 100) program = yojson_of_program program end *)
