@@ -45,121 +45,49 @@ module ResultMonad = struct
   let partition_map f l = List.partition_map f l |> return
 end
 
-module ProgramResultMonad = struct
-  (** Type definition for the monad *)
-  type ('a, 'e, 'c) state = {value: 'a; errors: 'e list; context: 'c}
+module ProgramState = struct
+  type ('l, 'e) context = {logs: 'l list; errors: 'e list}
 
-  (** [return ?errors ~context value] wraps a {b value} in the monad
-      @param errors A list of errors
-      @param context The context of the value that is stored in the monad
-      @param value The value to be wrapped in the monad
-      @return A monad with the value *)
-  let return ?(errors = []) ~context value = {value; errors; context}
+  let empty_context = {logs= []; errors= []}
 
-  (** [fail ?errors ~context value], same as [return] but with errors
-      @param errors A list of errors
-      @param context The context of the value that is stored in the monad
-      @param value The value to be wrapped in the monad
-      @return A monad with the errors *)
-  let fail ?(errors = []) ~context value = {value; errors; context}
+  type ('a, 'l, 'e) state = ('l, 'e) context -> 'a option * ('l, 'e) context
 
-  (** [bind x f] applies f to the value of [x]. If [x] is an error, it returns
-      [x] as is
-      @param x The monad to apply the function to
-      @param f The function to apply to the monad
-      @return The result of applying the function to the monad *)
-  let bind x f =
-    match x with
-    | {value; errors; context} -> (
-      match f value context with
-      | {value; errors= e; context} -> {value; errors= errors @ e; context} )
+  let return ?(errors = []) ?(logs = []) x s =
+    (x, {errors= List.append s.errors errors; logs= List.append s.logs logs})
 
-  (** [get_errors] returns the errors of the monad
-      @param x The monad to get the errors from
-      @return The errors of the monad *)
-  let get_errors {errors; _} = errors
+  let fail e s = return ~errors:[e] None s
 
-  let get_value {value; _} = value
+  let log l s = return ~logs:[l] None s
 
-  (** [>>=] is an infix operator for [bind] *)
+  let get state = (state, state)
+
+  let put new_state _ = (None, new_state)
+
+  let bind m f s =
+    let x, s' = m s in
+    let x', s'' = f x s' in
+    (x', s'')
+
   let ( >>= ) = bind
 
-  (** [apply x f] applies the function [f] to the value of [x]
-      @param x The monad to apply the function to
-      @param f The function to apply to the monad
-      @return The result of applying the function to the monad *)
-  let apply x f = x >>= fun value context -> return ~context (f value context)
+  let ( let* ) = bind
 
-  (** [>>|] is an infix operator for [apply] *)
+  let apply m f = m >>= fun x -> return (f x)
+
   let ( >>| ) = apply
 
-  let bind_error x f =
-    match x with {value; errors; context} -> {value; errors= f errors; context}
+  let fold_left f acc l =
+    List.fold_left (fun acc x -> acc >>= fun acc -> f acc x) (return acc) l
 
-  let ( >>! ) = bind_error
+  let map f l = List.map (fun x -> x >>= fun x -> f x >>| fun x -> x) l
 
-  (** [fold_left f acc l] applies the function [f] to the accumulator and each
-      element of the list [l]
-      @param f
-        The function to apply to the accumulator and each element of the list
-      @param acc The initial accumulator
-      @param l The list to apply the function to
-      @return The result of applying the function to the list *)
-  let fold_left ~context f acc l =
-    List.fold_left
-      (fun acc x -> acc >>= fun acc -> f acc x)
-      (return ~context acc) l
+  let filter_map f l = List.filter_map f l
 
-  (** [map f l] applies the function [f] to each element of the list [l]
-      @param f The function to apply to each element of the list
-      @param l The list to apply the function to
-      @return The result of applying the function to the list *)
-  let map ~context f l =
-    List.fold_right
-      (fun x acc ->
-        acc >>= fun acc context -> f x context >>| fun x _ -> x :: acc )
-      l (return ~context [])
+  let iter f l = List.iter f l
 
-  (** [filter_map f l] applies the function [f] to each element of the list [l]
-      and filters out the elements that are [None]
-      @param f The function to apply to each element of the list
-      @param l The list to apply the function to
-      @return The result of applying the function to the list *)
-  let filter_map ~context f l =
-    List.fold_right
-      (fun x acc ->
-        acc
-        >>= fun acc context ->
-        match f x context with
-        | Some x -> return ~context (x :: acc)
-        | None -> return ~context acc )
-      l (return ~context [])
+  let partition_map f l = List.partition_map f l |> return
 
-  (** [iter f l] applies the function [f] to each element of the list [l]
-      @param f The function to apply to each element of the list
-      @param l The list to apply the function to *)
-  let iter ~context f l =
-    List.fold_left
-      (fun acc x -> acc >>= fun _ context -> f x context)
-      (return ~context ()) l
-
-  (** [partition_map f l] applies the function [f] to each element of the list
-      [l] and partitions the list into two lists based on the result of the
-      function
-      @param f The function to apply to each element of the list
-      @param l The list to apply the function to
-      @return The result of applying the function to the list *)
-  let partition_map ~context f l =
-    List.partition_map (fun x -> f x context) l
-    |> fun (l, r) -> return ~context (l, r)
-
-  (** [partition f l] partitions the list [l] into two lists based on the
-      predicate [f]
-      @param f The predicate to partition the list with
-      @param l The list to partition
-      @return The result of partitioning the list *)
-  let partition ~context f l =
-    List.partition f l |> fun (l, r) -> return ~context (l, r)
+  let partition f l = List.partition f l |> return
 end
 
 module OptionMonad = struct
