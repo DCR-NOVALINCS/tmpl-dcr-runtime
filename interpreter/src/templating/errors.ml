@@ -8,9 +8,9 @@ open Ppx_yojson_conv_lib.Yojson_conv
 type detailed_error = {location: loc; message: string; hint: string option}
 [@@deriving yojson]
 
-(* =============================================================================
-   General errors
-   ============================================================================= *)
+(* ┌──────────────────────────────────────────────────────────────────────────┐
+   │ General errors                                                           │
+   └──────────────────────────────────────────────────────────────────────────┘ *)
 
 let property_not_found ?(errors = []) p e =
   fail
@@ -26,7 +26,7 @@ let property_not_found ?(errors = []) p e =
       }
     :: errors )
 
-let property_not_found_type ?(errors = []) ?(loc = Nowhere) p ty =
+let rec property_not_found_type ?(errors = []) ?(loc = Nowhere) p ty =
   fail
     ( { location= loc
       ; message=
@@ -78,6 +78,20 @@ and duplicate_tmpl ?(errors = []) id =
       ; hint= Some "Ensure the template is not declared more than once." }
     :: errors )
 
+and duplicate_event ?(errors = []) id event =
+  let event_id, _ = event.data.info in
+  fail
+    ( { location= id.loc
+      ; message=
+          Printf.sprintf "Duplicate event %s"
+            (CString.colorize ~color:Yellow id.data)
+      ; hint=
+          Some
+            (Printf.sprintf "Event %s is already declared at %s"
+               (CString.colorize ~color:Yellow id.data)
+               (CString.colorize ~color:Yellow event_id.data) ) }
+    :: errors )
+
 and file_not_exists ?(errors = []) filename =
   fail
     ( { location= Nowhere
@@ -117,9 +131,9 @@ and excessive_exported_events ?(errors = []) ?(loc = Nowhere) x events =
       }
     :: errors )
 
-(* =============================================================================
-   Type errors
-   ============================================================================= *)
+(* ┌──────────────────────────────────────────────────────────────────────────┐
+   │ Type errors                                                              │
+   └──────────────────────────────────────────────────────────────────────────┘ *)
 
 and is_not_type ?(errors = []) expected expr =
   fail
@@ -148,9 +162,9 @@ and invalid_annotation_value ?(errors = []) value ty =
       }
     :: errors )
 
-(* =============================================================================
-   Expression errors
-   ============================================================================= *)
+(* ┌──────────────────────────────────────────────────────────────────────────┐
+   │ Expression errors                                                        │
+   └──────────────────────────────────────────────────────────────────────────┘ *)
 
 and invalid_expr ?(errors = []) ?(loc = Nowhere) () =
   fail
@@ -207,9 +221,9 @@ and invalid_guard_value ?(errors = []) value =
       ; hint= Some "Ensure the guard value is a boolean expression." }
     :: errors )
 
-(* =============================================================================
-   Event errors
-   ============================================================================= *)
+(* ┌──────────────────────────────────────────────────────────────────────────┐
+   │ Event errors                                                             │
+   └──────────────────────────────────────────────────────────────────────────┘ *)
 
 and event_not_found ?(errors = []) ?(loc = Nowhere) id =
   fail
@@ -234,9 +248,9 @@ and event_not_enabled ?(errors = []) event =
       }
     :: errors )
 
-(* =============================================================================
-   Command errors
-   ============================================================================= *)
+(* ┌──────────────────────────────────────────────────────────────────────────┐
+   │ Command errors                                                           │
+   └──────────────────────────────────────────────────────────────────────────┘ *)
 
 and invalid_command ?(errors = []) ?nearest ?(distance = -1) cmd =
   let guess =
@@ -258,9 +272,9 @@ and invalid_command ?(errors = []) ?nearest ?(distance = -1) cmd =
             ^ " to see the available commands." ) }
     :: errors )
 
-(* =============================================================================
-   Miscellaneous errors
-   ============================================================================= *)
+(* ┌──────────────────────────────────────────────────────────────────────────┐
+   │ Miscellaneous errors                                                     │
+   └──────────────────────────────────────────────────────────────────────────┘ *)
 
 and lexing_error ?(errors = []) lexbuf message =
   fail
@@ -326,6 +340,8 @@ and should_not_happen ?(errors = []) ?(module_path = "?") ?(line = "?") message
       }
     :: errors )
 
+and something_went_wrong ?(loc = Nowhere) message = fixme ~loc message
+
 and todo ?(loc = Nowhere) message =
   fail
     [ { location= loc
@@ -338,9 +354,9 @@ and fixme ?(loc = Nowhere) message =
       ; message= CString.colorize ~color:Yellow "[fixme] " ^ message
       ; hint= None } ]
 
-(* =============================================================================
-   Typechecker errors
-   ============================================================================= *)
+(* ┌──────────────────────────────────────────────────────────────────────────┐
+   │ Typechecker errors                                                       │
+   └──────────────────────────────────────────────────────────────────────────┘ *)
 
 and type_mismatch ?(errors = []) ?(loc = Nowhere) expected_tys got_tys =
   (* let string_expected = unparse_ty expected in *)
@@ -365,9 +381,9 @@ and type_mismatch ?(errors = []) ?(loc = Nowhere) expected_tys got_tys =
       }
     :: errors )
 
-(* =============================================================================
-   Error printing
-   ============================================================================= *)
+(* ┌──────────────────────────────────────────────────────────────────────────┐
+   │ Error printing                                                           │
+   └──────────────────────────────────────────────────────────────────────────┘ *)
 
 let get_line_content filepath line =
   if Sys.file_exists filepath then (
@@ -390,6 +406,8 @@ let extract_location_info loc =
       let end_char = end_pos.Lexing.pos_cnum - end_pos.Lexing.pos_bol in
       (filename, line, start_char, end_char)
 
+let error_pointer = '^'
+
 (*┌*)
 let print_error detailed_error =
   let {location; message; hint} = detailed_error in
@@ -401,8 +419,8 @@ let print_error detailed_error =
     let marker =
       String.concat ""
         [ String.make start_char ' '
-        ; CString.colorize ~color:Red (String.make (end_char - start_char) '^')
-        ]
+        ; CString.colorize ~color:Red
+            (String.make (end_char - start_char) error_pointer) ]
     in
     match filepath with
     | None -> ()
@@ -422,4 +440,3 @@ let print_error detailed_error =
         CPrinter.cprintln message
   in
   message_header ; message_file_section ; message_hint
-(* CPrinter.cprintln "" *)

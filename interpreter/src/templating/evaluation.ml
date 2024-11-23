@@ -45,10 +45,7 @@ let rec eval_expr expr env =
           in
           match List.assoc_opt p.data fields with
           | None -> property_not_found p v
-          | Some v ->
-              (* Logger.debug @@ (yojson_of_expr v |>
-                 Yojson.Safe.pretty_to_string) ; *)
-              return (annotate ~loc:v.loc ~ty:(Some rec_ty) v.data) )
+          | Some v -> return (annotate ~loc:v.loc ~ty:(Some rec_ty) v.data) )
       | _ -> type_mismatch [RecordTy [(p, annotate UnitTy)]] [rec_ty] )
   | List es ->
       map (fun e -> eval_expr e env) es >>| fun es -> {expr with data= List es}

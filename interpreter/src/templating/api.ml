@@ -44,69 +44,56 @@ let cmds_bbk_tree =
    Available functions
    ============================================================================= *)
 
-let rec execute ~event_id ?(expr = Unit) program =
-  preprocess_program program
-  >>= fun (event_env, expr_env, program) ->
+let rec execute ~event_id ?(expr = Unit) ?(ty_env = empty_env)
+    ?(expr_env = empty_env) ?(event_env = empty_env) program =
+  (* preprocess_program program >>= fun (event_env, expr_env, program) -> *)
   match find_flat event_id event_env with
   | None -> event_not_found event_id
   | Some event ->
+      (* Check if the event is enabled *)
       is_enabled event program (event_env, expr_env)
       >>= fun is_enabled ->
       if not is_enabled then event_not_enabled event
       else
+        (* Executing the event according to its kind (i.e input or output) *)
         let io = event.data.io in
         ( match io.data with
-        | Input _ -> execute_input_event event expr expr_env
+        | Input _ -> execute_input_event event expr (ty_env, expr_env)
         | Output _ -> execute_output_event event expr_env )
         >>= fun event ->
-        set_marking ~marking:(mk_marking ~executed:true ()) event
+        (* Update marking *)
+        set_marking ~executed:true event
         >>= fun event ->
+        (* Propagate relation effects that this event is apart of. *)
         propagate_effects event (event_env, expr_env)
           (update_event event program)
 
-(* is_enabled event program (event_env, expr_env) |> function | false ->
-   event_not_enabled event | true -> let io = event.data.io in ( match io.data
-   with | Input _ -> execute_input_event event expr expr_env | Output _ ->
-   execute_output_event event expr_env ) >>= fun event -> propagate_effects
-   event (event_env, expr_env) (update_event event program) ) *)
-
-(* and execute_event event expr env = let loc = match event.data.io.data with |
-   Input _ -> event.data.io.loc | Output expr -> expr.loc in let expr = annotate
-   ~loc expr in eval_expr expr env >>= fun expr -> set_marking
-   ~marking:(mk_marking ~executed:true ~value:expr.data ()) event () *)
-
-and execute_output_event event env =
-  let something_went_wrong message event =
-    let id, _ = event.data.info in
-    fixme
-    @@ Printf.sprintf "%s %s" message
-    @@ CString.colorize ~color:Yellow id.data
-  in
-  ( match event.data.io.data with
+and execute_output_event event expr_env =
+  let {info; io; _} = event.data in
+  ( match io.data with
   | Output expr -> return expr
-  | _ -> something_went_wrong "Is not a output event" event )
+  | _ ->
+      let id, _ = info in
+      something_went_wrong
+        ("Is not a output event" ^ CString.colorize ~color:Yellow id.data) )
   >>= fun expr ->
-  eval_expr expr env
-  >>= fun value -> set_marking ~marking:(mk_marking ~value:value.data ()) event
+  eval_expr expr expr_env >>= fun value -> set_marking ~value event
 
-and execute_input_event event expr expr_env =
-  let something_went_wrong message event =
-    let id, _ = event.data.info in
-    fixme
-    @@ Printf.sprintf "%s %s" message
-    @@ CString.colorize ~color:Yellow id.data
-  in
-  match event.data.io.data with
+and execute_input_event event expr (ty_env, expr_env) =
+  let {info; io; _} = event.data in
+  match io.data with
   | Input expected_ty ->
       eval_expr (annotate expr) expr_env
       >>= fun value ->
-      typecheck_expr value
-        empty_env (* FIXME: Accumulate an environment of types *)
+      typecheck_expr ~ty_env value
       >>= fun ty ->
       if not (equal_types ty expected_ty.data) then
-        type_mismatch [expected_ty.data] [ty]
-      else set_marking ~marking:(mk_marking ~value:value.data ()) event
-  | _ -> something_went_wrong "Is not a input event" event
+        type_mismatch ~loc:expected_ty.loc [expected_ty.data] [ty]
+      else set_marking ~value event
+  | _ ->
+      let id, _ = info in
+      something_went_wrong
+        ("Is not a input event" ^ CString.colorize ~color:Yellow id.data)
 
 and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
     =
@@ -131,9 +118,8 @@ and unparse_program program =
 (* --- Vizualization functions --- *)
 
 and view ?(filter = fun _ event -> Some event) ?(should_print_events = true)
-    ?(should_print_relations = false) program =
-  preprocess_program program
-  >>= fun (event_env, expr_env, program) ->
+    ?(should_print_relations = false) ?(expr_env = empty_env)
+    ?(event_env = empty_env) program =
   filter_map (fun event -> filter (event_env, expr_env) event) program.events
   >>= fun events ->
   let open Unparser.PlainUnparser in

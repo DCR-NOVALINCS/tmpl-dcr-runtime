@@ -281,12 +281,3 @@ let empty_subprogram = mk_subprogram ()
 (* =============================================================================
    Program Section: Pretty Printers
    ============================================================================= *)
-(* let string_of_pos pos = let line = pos.Lexing.pos_lnum in let start_char =
-   pos.Lexing.pos_cnum - pos.Lexing.pos_bol in Printf.sprintf "%d:%d" line
-   start_char
-
-   let string_of_loc loc = match loc with | Nowhere -> "?" | Location
-   (start_pos, end_pos, filename) -> let filename = Option.value filename
-   ~default:"" in let start_pos_string = string_of_pos start_pos in let
-   end_pos_string = string_of_pos end_pos in Printf.sprintf "%s:%s:%s" filename
-   start_pos_string end_pos_string *)

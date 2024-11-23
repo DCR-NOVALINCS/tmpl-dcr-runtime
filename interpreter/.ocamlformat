@@ -1,7 +1,7 @@
 profile = ocamlformat
 margin = 80
 parse-docstrings = true
-wrap-comments = true
+wrap-comments = false
 break-string-literals = never
 break-cases = fit
 line-endings = lf

@@ -34,14 +34,22 @@ and update_event_value event expr_env =
       >>= fun value ->
       return (annotate ~loc:io.loc ~ty:!(io.ty) (Output value), value) )
   >>= fun (io, value) ->
-  set_marking ~marking:(mk_marking ~value:value.data ()) event
+  set_marking ~value event
   >>= fun event -> return {event with data= {event.data with io}}
 
-and set_marking ?(marking = mk_marking ()) event =
-  let {marking= prev_marking; _} = event.data in
+and set_marking ?included ?pending ?executed ?value event =
+  let {marking; _} = event.data in
+  let {included= i; pending= p; executed= e; value= v} = marking.data in
+  return
+  @@ mk_marking
+       ~included:(Option.value ~default:i.data included)
+       ~pending:(Option.value ~default:p.data pending)
+       ~executed:(Option.value ~default:e.data executed)
+       ~value:(Option.value ~default:!v value).data ()
+  >>= fun new_marking ->
   return
     { event with
-      data= {event.data with marking= {prev_marking with data= marking}} }
+      data= {event.data with marking= {marking with data= new_marking}} }
 
 and change_info_event ~new_id ~new_label event =
   let id, label = event.data.info in
@@ -115,6 +123,16 @@ and event_as_expr event =
   (* let _, label = info in *)
   annotate ~loc:event.loc ~ty:!(marking.ty)
     (Record [(annotate ~ty:!(marking.ty) "value", !(marking.data.value))])
+
+and event_as_ty event =
+  let {io; _} = event.data in
+  let ty =
+    match io.data with
+    | Input ty -> ty.data
+    | Output expr -> (
+      match !(expr.ty) with None -> failwith "Type not found" | Some ty -> ty )
+  in
+  RecordTy [(annotate "value", annotate ty)]
 
 (* =============================================================================
    Alpha-renaming functions

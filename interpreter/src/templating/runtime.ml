@@ -19,8 +19,6 @@ let rec is_enabled event program (event_env, expr_env) =
       >>= fun is_enabled_by_relation ->
       return (enabled && is_enabled_by_relation) )
     enabled relations
-(* List.fold_left (fun enabled relation -> enabled && is_enabled_by relation
-   event (event_env, expr_env) ) enabled program.relations *)
 
 and is_enabled_by relation event (event_env, expr_env) =
   let id, _ = event.data.info in
@@ -56,13 +54,13 @@ and is_enabled_by relation event (event_env, expr_env) =
                     && dest_marking.data.included.data )
               | _ -> return true ) )
 
-(** [check_guard guard env] checks if the [guard] is true with the environment
-    [env].
+(** [check_guard guard expr_env] checks if the [guard] is true with the
+    environment of values [expr_env].
     @param guard The guard to be checked.
-    @param env The environment to be used for evaluation.
-    @return result with [true] if the guard is true, [false] otherwise. *)
-and check_guard guard env =
-  eval_expr guard env
+    @param expr_env The environment of values to be used for evaluation.
+    @return result with {b true} if the guard is true, {b false} otherwise. *)
+and check_guard guard expr_env =
+  eval_expr guard expr_env
   >>= fun guard_value ->
   match guard_value.data with
   | True -> return true
@@ -78,6 +76,13 @@ and check_guard guard env =
    Effect propagation functions
    ============================================================================= *)
 
+(** [propagate_effects event (event_env, expr_env) program] propagates the
+    effects of the event [event] on the program [program].
+    @param event The event to propagate the effects.
+    @param event_env The environment with the events.
+    @param expr_env The environment with the expressions.
+    @param program The program to propagate the effects.
+    @return result with the program with the effects propagated. *)
 and propagate_effects event (event_env, expr_env) program =
   let relations = program.relations in
   fold_left
@@ -168,12 +173,9 @@ and propagate_effect relation event (event_env, expr_env) program =
           (* Order of applying the relations: response -> exclude -> include ->
              other (do nothing) *)
           ( match op with
-          | Response ->
-              set_marking ~marking:(mk_marking ~pending:true ()) dest_event
-          | Exclude ->
-              set_marking ~marking:(mk_marking ~included:false ()) dest_event
-          | Include ->
-              set_marking ~marking:(mk_marking ~included:true ()) dest_event
+          | Response -> set_marking ~pending:true dest_event
+          | Exclude -> set_marking ~included:false dest_event
+          | Include -> set_marking ~included:true dest_event
           | _ -> return dest_event )
           >>= fun dest_event -> return (update_event dest_event program)
 

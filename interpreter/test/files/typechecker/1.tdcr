@@ -1,0 +1,10 @@
+(a:A)[?: Number]
+
+a -->> {
+    (e1: E)[@trigger.value]
+    (e2: E)[@trigger.value > 0]
+}
+
+a -->> {
+    (e1: E)[@trigger.value]
+}
