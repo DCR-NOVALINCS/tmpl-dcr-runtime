@@ -59,9 +59,7 @@ let print_output ?(previous_state = empty_runtime_state) = function
   | Ok runtime_state ->
       let {output; _} = runtime_state in
       CPrinter.cprintln output ; return runtime_state
-  | Error errors ->
-      List.iter print_error errors ;
-      return previous_state
+  | Error errors -> print_errors errors ; return previous_state
 
 let sanitize_input input =
   input |> String.split_on_char ' ' |> List.filter (fun s -> s <> "") |> return
@@ -197,7 +195,11 @@ let read_command tokens program (ty_env, expr_env, event_env) =
       let nearest, distance =
         nearest_neighbor levenshtein_distance cmds_bbk_tree line
       in
-      invalid_command ~nearest ~distance tokens
+      todo "read_line"
+      >>= fun _ ->
+      todo "read_line"
+      >>= fun _ ->
+      todo "read_line" >>= fun _ -> invalid_command ~nearest ~distance tokens
 
 let rec prompt program (ty_env, expr_env, event_env) =
   CPrinter.cprint ~color:BrightGreen "> " ;

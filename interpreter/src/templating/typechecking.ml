@@ -6,6 +6,27 @@ open Errors
 open Program_helper
 
 (* ┌──────────────────────────────────────────────────────────────────────────┐
+   │ Aux functions, types and modules                                         │
+   └──────────────────────────────────────────────────────────────────────────┘ *)
+
+type event_kind = Input of type_expr' | Output of type_expr'
+
+type label_type = string * event_kind
+
+module LabelTypeValue : Hashtbl.HashedType = struct
+  type t = label_type
+
+  let equal lt1 lt2 =
+    let label1, kind1 = lt1 in
+    let label2, kind2 = lt2 in
+    String.equal label1 label2 && kind1 = kind2
+
+  let hash lt = Hashtbl.hash lt
+end
+
+module LabelTypeHashtbl = Hashtbl.Make (LabelTypeValue)
+
+(* ┌──────────────────────────────────────────────────────────────────────────┐
    │ Entry point                                                              │
    └──────────────────────────────────────────────────────────────────────────┘ *)
 
@@ -28,6 +49,7 @@ let rec typecheck ?(event_env = empty_env) program =
   let insts = program.template_insts in
   let relations = program.relations in
   let ty_env = empty_env in
+  let _label_type_hashtbl = LabelTypeHashtbl.create 13 in
   typecheck_subprogram (events, insts, relations) (ty_env, event_env)
 
 (* =============================================================================

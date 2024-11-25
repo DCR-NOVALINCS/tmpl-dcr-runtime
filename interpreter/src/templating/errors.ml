@@ -5,6 +5,10 @@ open Misc.Printing
 open Misc.Monads.ResultMonad
 open Ppx_yojson_conv_lib.Yojson_conv
 
+(* ┌──────────────────────────────────────────────────────────────────────────┐
+   │ Aux functions / type                                                     │
+   └──────────────────────────────────────────────────────────────────────────┘ *)
+
 type detailed_error = {location: loc; message: string; hint: string option}
 [@@deriving yojson]
 
@@ -283,10 +287,10 @@ and lexing_error ?(errors = []) lexbuf message =
             ( lexbuf.lex_start_p
             , lexbuf.lex_curr_p
             , Some lexbuf.lex_curr_p.pos_fname )
-      ; message= "Lexing fail: " ^ message
+      ; message= "Lexing fail : " ^ message
       ; hint=
           Some
-            "Check the syntax near the fail location. Ensure all tokens are valid."
+            "Check the syntax near the location. Ensure all tokens are valid."
       }
     :: errors )
 
@@ -300,7 +304,7 @@ and syntax_error ?(errors = []) lexbuf =
       ; message= "Syntax error"
       ; hint=
           Some
-            "Check the syntax near the fail location. Ensure all constructs are correctly formed."
+            "Check the syntax near the location. Ensure all constructs are correctly formed."
       }
     :: errors )
 
@@ -327,7 +331,7 @@ and unknown_error ?(errors = []) lexbuf =
             , Some lexbuf.lex_curr_p.pos_fname )
       ; message= "Something went wrong..."
       ; hint=
-          Some "An unknown fail occurred. Report this issue in the repository."
+          Some "An unknown error occurred. Report this issue in the repository."
       }
     :: errors )
 
@@ -440,3 +444,5 @@ let print_error detailed_error =
         CPrinter.cprintln message
   in
   message_header ; message_file_section ; message_hint
+
+let print_errors errors = List.iter print_error errors
