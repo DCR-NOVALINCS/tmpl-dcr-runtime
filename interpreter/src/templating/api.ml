@@ -74,7 +74,7 @@ and execute_output_event event expr_env =
   | Output expr -> return expr
   | _ ->
       let id, _ = info in
-      something_went_wrong
+      something_went_wrong ~loc:id.loc
         ("Is not a output event" ^ CString.colorize ~color:Yellow id.data) )
   >>= fun expr ->
   eval_expr expr expr_env >>= fun value -> set_marking ~value event
@@ -92,22 +92,8 @@ and execute_input_event event expr (ty_env, expr_env) =
       else set_marking ~value event
   | _ ->
       let id, _ = info in
-      something_went_wrong
+      something_went_wrong ~loc:id.loc
         ("Is not a input event" ^ CString.colorize ~color:Yellow id.data)
-
-and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
-    =
-  (* Evaluate the value inside of the events *)
-  let events = program.events in
-  (* map (fun event -> update_event_value event expr_env) events >>= fun events
-     -> *)
-  (* Add all events as value into event environment *)
-  fold_left
-    (fun event_env event ->
-      let id, _ = event.data.info in
-      return (bind id.data event event_env) )
-    event_env events
-  >>= fun event_env -> return (event_env, expr_env, program)
 
 (* --- Unparse --- *)
 

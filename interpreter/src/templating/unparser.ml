@@ -397,7 +397,10 @@ module PlainUnparser = struct
     | True -> Buffer.add_string buffer @@ "true"
     | False -> Buffer.add_string buffer @@ "false"
     | IntLit i -> Buffer.add_string buffer @@ string_of_int i
-    | StringLit s -> Buffer.add_string buffer @@ s
+    | StringLit s ->
+        Buffer.add_string buffer @@ "\'" ;
+        Buffer.add_string buffer @@ s ;
+        Buffer.add_string buffer @@ "\'"
     | Parenthesized e ->
         Buffer.add_string buffer @@ "(" ;
         unparse_expr ~indent ~buffer e |> ignore ;

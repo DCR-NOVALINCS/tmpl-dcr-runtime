@@ -1,6 +1,8 @@
 open Syntax
 open Evaluation
-open Misc.Monads.ResultMonad
+open Misc
+open Monads.ResultMonad
+open Env
 
 (* =============================================================================
    Updating event functions
@@ -73,6 +75,26 @@ and change_relation old_id new_id relation =
       {relation with data= SpawnRelation (new_from, guard, subprogram, annot)}
 
 (* =============================================================================
+   Updating relation functions
+   ============================================================================= *)
+
+and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
+    =
+  (* Evaluate the value inside of the events *)
+  let events = program.events in
+  (* map (fun event -> update_event_value event expr_env) events >>= fun events
+     -> *)
+  (* Add all events as value into event environment *)
+  fold_left
+    (fun (event_env, expr_env) event ->
+      let id, _ = event.data.info in
+      return
+        ( bind id.data event event_env
+        , bind id.data (event_as_expr event) expr_env ) )
+    (event_env, expr_env) events
+  >>= fun (event_env, expr_env) -> return (event_env, expr_env, program)
+
+(* =============================================================================
    Getters
    ============================================================================= *)
 
@@ -119,10 +141,16 @@ and is_event_present_on_relation id relation =
 
 and event_as_expr event =
   (* let {marking; _} = event.data in *)
-  let {marking; _} = event.data in
+  let {marking; io; _} = event.data in
+  let value =
+    let open Syntax in
+    match (marking.data, io.data) with
+    | _, Output expr -> expr
+    | {value; _}, Input _ -> !value
+  in
   (* let _, label = info in *)
   annotate ~loc:event.loc ~ty:!(marking.ty)
-    (Record [(annotate ~ty:!(marking.ty) "value", !(marking.data.value))])
+    (Record [(annotate ~ty:!(marking.ty) "value", value)])
 
 and event_as_ty event =
   let {io; _} = event.data in

@@ -3,3 +3,7 @@
  (libraries ounit2 misc templating)
  (deps
   (glob_files_rec test/files/**.{tdcr})))
+
+(test
+ (name test_typechecking)
+ (libraries ounit2 misc templating))

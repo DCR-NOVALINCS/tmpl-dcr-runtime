@@ -6,6 +6,7 @@ open Lex_and_parse
 open Errors
 open Typechecking
 open Unparser
+open Program_helper
 open Misc
 open Env
 open Monads.ResultMonad
@@ -127,9 +128,11 @@ let read_command tokens program (ty_env, expr_env, event_env) =
                Unit )
         else parse_expression expr )
       >>= fun parsed_expr ->
-      typecheck_expr ~ty_env parsed_expr
-      >>= fun _ ->
-      Logger.info "Expression typechecked successfully" ;
+      Logger.debug "Event env: \n" ;
+      Logger.debug
+      @@ string_of_env
+           (fun e -> Unparser.PlainUnparser.unparse_events [e])
+           event_env ;
       execute ~event_id ~expr:parsed_expr.data ~ty_env ~expr_env ~event_env
         program
       >>= fun program ->
@@ -237,6 +240,6 @@ let runtime =
         start_header ;
         (* Start the prompt *)
         prompt program (ty_env, expr_env, event_env) )
-  |> print_output
+  |> print_output ~previous_state:empty_runtime_state
 
 let _ = runtime

@@ -67,7 +67,7 @@ and check_guard guard expr_env =
   | False -> return false
   | _ -> (
     match !(guard_value.ty) with
-    | Some ty -> type_mismatch [BoolTy] [ty]
+    | Some ty -> type_mismatch ~loc:guard_value.loc [BoolTy] [ty]
     | _ ->
         should_not_happen ~module_path:"runtime.ml"
           "The type of the guard is missing" )

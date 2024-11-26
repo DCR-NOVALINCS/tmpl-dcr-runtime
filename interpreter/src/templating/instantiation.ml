@@ -102,7 +102,7 @@ module EventAnnotationEvaluator = struct
     match value.data with
     | True -> return body
     | False -> return none
-    | _ -> type_mismatch [BoolTy] []
+    | _ -> type_mismatch ~loc:value.loc [BoolTy] []
 
   let foreach_annotation ~body id expr (expr_env, _, _) =
     eval_expr expr expr_env
@@ -126,7 +126,7 @@ module EventAnnotationEvaluator = struct
               [] body )
           lst
         >>= fun events -> return (List.flatten events)
-    | _ -> type_mismatch [ListTy (UnitTy)] []
+    | _ -> type_mismatch ~loc:value.loc [ListTy (UnitTy)] []
 end
 
 module InstantiationAnnotationEvaluator = struct
@@ -138,7 +138,7 @@ module InstantiationAnnotationEvaluator = struct
     match value.data with
     | True -> return body
     | False -> return none
-    | _ -> type_mismatch [BoolTy] []
+    | _ -> type_mismatch ~loc:value.loc [BoolTy] []
 
   let foreach_annotation ~body id expr (expr_env, event_env, _) =
     eval_expr expr expr_env
@@ -160,7 +160,7 @@ module InstantiationAnnotationEvaluator = struct
               [] body )
           lst
         >>= fun insts -> return (List.flatten insts)
-    | _ -> type_mismatch [ListTy ( UnitTy)] []
+    | _ -> type_mismatch ~loc:value.loc [ListTy ( UnitTy)] []
 end
 
 module RelationAnnotationEvaluator = struct
@@ -172,7 +172,7 @@ module RelationAnnotationEvaluator = struct
     match value.data with
     | True -> return body
     | False -> return none
-    | _ -> type_mismatch [BoolTy] []
+    | _ -> type_mismatch ~loc:value.loc [BoolTy] []
 
   let foreach_annotation ~body id expr (expr_env, event_env, _) =
     eval_expr expr expr_env
@@ -194,7 +194,7 @@ module RelationAnnotationEvaluator = struct
               [] body )
           lst
         >>= fun relations -> return (List.flatten relations)
-    | _ -> type_mismatch [ListTy ( UnitTy)] []
+    | _ -> type_mismatch ~loc:value.loc [ListTy ( UnitTy)] []
 end
 
 type context = expr env * event env * template_def env

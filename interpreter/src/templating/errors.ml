@@ -239,6 +239,20 @@ and event_not_found ?(errors = []) ?(loc = Nowhere) id =
       }
     :: errors )
 
+and events_not_found ?(errors = []) ?(loc = Nowhere) ids =
+  let string_ids =
+    ids
+    |> List.map (fun id -> CString.colorize ~color:Yellow id.data)
+    |> String.concat ", "
+  in
+  fail
+    ( { location= loc
+      ; message= Printf.sprintf "Events %s not found" string_ids
+      ; hint=
+          Some "Ensure the events are declared and in scope. Check for typos."
+      }
+    :: errors )
+
 and event_not_enabled ?(errors = []) event =
   let id, _ = event.data.info in
   fail
@@ -412,10 +426,9 @@ let extract_location_info loc =
 
 let error_pointer = '^'
 
-(*┌*)
-let print_error detailed_error =
+let pretty_string_error detailed_error =
   let {location; message; hint} = detailed_error in
-  let message_header = CPrinter.eprint "error: " ; CPrinter.cprintln message in
+  let message_header = CString.colorize ~color:Red "error: " ^ message ^ "\n" in
   let message_file_section =
     let filepath, line, start_char, end_char = extract_location_info location in
     let line_size = String.length (string_of_int line) in
@@ -427,22 +440,55 @@ let print_error detailed_error =
             (String.make (end_char - start_char) error_pointer) ]
     in
     match filepath with
-    | None -> ()
+    | None -> ""
     | Some filepath ->
         let line_content = get_line_content filepath line in
-        CPrinter.cprintf " %s:%d:%d\n" filepath line (start_char + 1) ;
-        CPrinter.cprintf " %s│\n" line_margin ;
-        CPrinter.cprintf "%d │ %s\n" line line_content ;
-        CPrinter.cprintf " %s│ %s" line_margin marker ;
-        CPrinter.cprintln ""
+        Printf.sprintf " %s:%d:%d\n%s │\n%d │ %s\n%s │ %s\n" filepath line
+          (start_char + 1) line_margin line line_content line_margin marker
   in
   let message_hint =
     match hint with
-    | None -> ()
-    | Some message ->
-        CPrinter.cprint ~color:Cyan "hint: " ;
-        CPrinter.cprintln message
+    | None -> ""
+    | Some message -> CString.colorize ~color:Cyan "hint: " ^ message ^ "\n"
   in
-  message_header ; message_file_section ; message_hint
+  message_header ^ message_file_section ^ message_hint
+
+let pretty_string_errors errors =
+  List.map pretty_string_error errors |> String.concat "\n"
+
+(*┌*)
+let print_error detailed_error =
+  let result = pretty_string_error detailed_error in
+  print_endline result
+(* let {location; message; hint} = detailed_error in
+   let message_header = CPrinter.eprint "error: " ; CPrinter.cprintln message in
+   let message_file_section =
+     let filepath, line, start_char, end_char = extract_location_info location in
+     let line_size = String.length (string_of_int line) in
+     let line_margin = String.make line_size ' ' in
+     let marker =
+       String.concat ""
+         [ String.make start_char ' '
+         ; CString.colorize ~color:Red
+             (String.make (end_char - start_char) error_pointer) ]
+     in
+     match filepath with
+     | None -> ()
+     | Some filepath ->
+         let line_content = get_line_content filepath line in
+         CPrinter.cprintf " %s:%d:%d\n" filepath line (start_char + 1) ;
+         CPrinter.cprintf " %s│\n" line_margin ;
+         CPrinter.cprintf "%d │ %s\n" line line_content ;
+         CPrinter.cprintf " %s│ %s" line_margin marker ;
+         CPrinter.cprintln ""
+   in
+   let message_hint =
+     match hint with
+     | None -> ()
+     | Some message ->
+         CPrinter.cprint ~color:Cyan "hint: " ;
+         CPrinter.cprintln message
+   in
+   message_header ; message_file_section ; message_hint *)
 
 let print_errors errors = List.iter print_error errors

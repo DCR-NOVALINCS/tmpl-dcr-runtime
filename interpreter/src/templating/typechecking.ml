@@ -9,7 +9,7 @@ open Program_helper
    │ Aux functions, types and modules                                         │
    └──────────────────────────────────────────────────────────────────────────┘ *)
 
-type event_kind = Input of type_expr' | Output of type_expr'
+type event_kind = InputKind of type_expr' | OutputKind of type_expr'
 
 type label_type = string * event_kind
 
@@ -25,6 +25,11 @@ module LabelTypeValue : Hashtbl.HashedType = struct
 end
 
 module LabelTypeHashtbl = Hashtbl.Make (LabelTypeValue)
+
+type template_ty =
+  { expr_param_tys: (string * type_expr') list
+  ; event_param_tys: (string * label_type) list
+  ; export_tys: label_type list }
 
 (* ┌──────────────────────────────────────────────────────────────────────────┐
    │ Entry point                                                              │
@@ -45,23 +50,119 @@ module LabelTypeHashtbl = Hashtbl.Make (LabelTypeValue)
 (* - [] *)
 let rec typecheck ?(event_env = empty_env) program =
   (* todo "typecheck template defs" >>= fun _ -> *)
+  let template_decls = program.template_decls in
   let events = program.events in
   let insts = program.template_insts in
   let relations = program.relations in
   let ty_env = empty_env in
   let _label_type_hashtbl = LabelTypeHashtbl.create 13 in
-  typecheck_subprogram (events, insts, relations) (ty_env, event_env)
+  typecheck_template_decls template_decls (ty_env, event_env)
+  >>= fun (ty_env, event_env, tmpl_ty_env) ->
+  typecheck_subprogram (events, insts, relations)
+    (ty_env, event_env, tmpl_ty_env)
+
+(* =============================================================================
+   Typechecking of template definitions
+   ============================================================================= *)
+
+and typecheck_template_decls template_decls ?(tmpl_ty_env = empty_env)
+    (ty_env, event_env) =
+  fold_left
+    (fun (ty_env, event_env, tmpl_ty_env) template_decl ->
+      typecheck_template_decl template_decl (ty_env, event_env, tmpl_ty_env) )
+    (ty_env, event_env, tmpl_ty_env)
+    template_decls
+
+and typecheck_template_decl template_decl (ty_env, event_env, _tmpl_ty_env) =
+  let {graph= events, insts, relations; export; export_types; params; _} =
+    template_decl
+  and typecheck_params params (ty_env, event_env) =
+    fold_left
+      (fun (ty_env, event_env) (id, param_type) ->
+        match param_type with
+        | ExprParam (ty, _default) ->
+            Logger.debug "Binding expr: " ;
+            Logger.debug @@ Unparser.PlainUnparser.unparse_ty ty.data ;
+            return (bind id.data ty.data ty_env)
+            >>= fun ty_env -> return (ty_env, event_env)
+        | EventParam label ->
+            Logger.debug "Binding event: " ;
+            Logger.debug label.data ;
+            (* FIXME: need to change the value of the event passed as param. *)
+            (* TODO: Get the kind of the label, e.g
+                - (a: A)[?: Number]
+                - (b: B)[{x: Number}]
+                Labels:
+                - A -> Input(Number)
+                - B -> Output(RecordTy[{x: Number}])
+            *)
+            let event =
+              mk_event (id, label) (annotate (Input (annotate UnitTy)))
+            in
+            return (bind id.data event event_env)
+            >>= fun event_env -> return (ty_env, event_env) )
+      (ty_env, event_env) params
+  in
+  (* Begin new scope *)
+  return @@ (begin_scope ty_env, begin_scope event_env)
+  >>= fun (tmpl_ty_env, tmpl_event_env) ->
+  (* Typecheck the parameters *)
+  typecheck_params params (tmpl_ty_env, tmpl_event_env)
+  >>= fun (tmpl_ty_env, tmpl_event_env) ->
+  (* Typecheck the graph of the template *)
+  typecheck_subprogram (events, insts, relations)
+    (tmpl_ty_env, tmpl_event_env, tmpl_ty_env)
+  >>= fun (_tmpl_ty_env, tmpl_event_env) ->
+  (* Check the exported events and their typings *)
+  partition_map
+    (fun export_id ->
+      match find_flat export_id.data tmpl_event_env with
+      | None -> Right export_id
+      | Some event -> Left event )
+    export
+  >>= fun (exported_events, event_ids_not_found) ->
+  if not (List.is_empty event_ids_not_found) then
+    (* Error when some exported events are not found *)
+    let event_id = List.hd event_ids_not_found in
+    if List.length event_ids_not_found = 1 then
+      event_not_found ~loc:event_id.loc event_id.data
+    else
+      (* FIXME: make the location of all elements of the list *)
+      events_not_found ~loc:event_id.loc event_ids_not_found
+  else if not (List.length exported_events = List.length export) then
+    (* Error when the number of exported events does not match the number of export types *)
+    todo "error message for excess or less of exported events"
+  else if not (List.length exported_events = List.length export_types) then
+    todo "error message for excess or less of exported events"
+  else
+    return @@ List.combine exported_events export_types
+    >>= fun exported_type_mapping ->
+    iter
+      (fun (event, label_ty) ->
+        let {info= _, label; _} = event.data in
+        if label.data = label_ty.data then return ()
+        else
+          type_mismatch ~loc:label_ty.loc [EventTy label_ty.data]
+            [EventTy label.data] )
+      exported_type_mapping
+    >>= fun _ -> return (ty_env, event_env, tmpl_ty_env)
 
 (* =============================================================================
    Typechecking of subprograms
    ============================================================================= *)
 
-and typecheck_subprogram (events, insts, relations) (ty_env, event_env) =
+and typecheck_subprogram (events, insts, relations)
+    (ty_env, event_env, tmpl_ty_env) =
   typecheck_events events (ty_env, event_env)
   >>= fun (ty_env, event_env) ->
-  typecheck_insts insts (ty_env, event_env)
+  Logger.debug @@ "Event env: " ;
+  Logger.debug
+  @@ string_of_env
+       (fun e -> Unparser.PlainUnparser.unparse_events [e])
+       event_env ;
+  typecheck_insts insts (ty_env, event_env, tmpl_ty_env)
   >>= fun (ty_env, event_env) ->
-  typecheck_relations relations (ty_env, event_env)
+  typecheck_relations relations (ty_env, event_env, tmpl_ty_env)
 
 (* =============================================================================
    Typechecking of events
@@ -82,31 +183,58 @@ and typecheck_event event (ty_env, event_env) =
   return (RecordTy [(annotate "value", annotate ty)])
   (* return (event_as_ty event) *)
   >>= fun event_ty ->
-  return (bind id.data event_ty ty_env)
-  >>= fun ty_env -> return (ty_env, event_env)
+  io.ty := Some event_ty ;
+  return (bind id.data event_ty ty_env, bind id.data event event_env)
 
 (* =============================================================================
    Typechecking of template instances
    ============================================================================= *)
 
-and typecheck_insts insts (ty_env, event_env) =
+and typecheck_insts insts (ty_env, event_env, tmpl_ty_env) =
   fold_left
-    (fun (ty_env, event_env) inst -> typecheck_inst inst (ty_env, event_env))
+    (fun (ty_env, event_env) inst ->
+      typecheck_inst inst (ty_env, event_env, tmpl_ty_env) )
     (ty_env, event_env) insts
 
-and typecheck_inst _inst (_ty_env, _event_env) = todo "typecheck inst"
+and typecheck_inst inst (ty_env, event_env, _tmpl_ty_env) =
+  let {args; x; _} = inst.data in
+  let rec typecheck_args args (ty_env, event_env) =
+    fold_left
+      (fun (ty_env, event_env) (_id, arg_type) ->
+        typecheck_arg arg_type (ty_env, event_env) )
+      (ty_env, event_env) args
+  and typecheck_arg arg (ty_env, event_env) =
+    match arg with
+    | ExprArg expr ->
+        typecheck_expr ~ty_env expr >>= fun _ -> return (ty_env, event_env)
+    | EventArg event_id -> (
+      match find_flat event_id.data event_env with
+      | None -> id_not_found event_id
+      | Some _event -> return (ty_env, event_env) )
+  and make_x_events xs (ty_env, event_env) =
+    (* Binds exported events to be used in the latter *)
+    fold_left
+      (fun (ty_env, event_env) x ->
+        return @@ mk_event (x, annotate "X") (annotate (Input (annotate IntTy)))
+        >>= fun x_event -> typecheck_event x_event (ty_env, event_env) )
+      (ty_env, event_env) xs
+  in
+  typecheck_args args (ty_env, event_env)
+  >>= fun (ty_env, event_env) ->
+  make_x_events x (ty_env, event_env)
+  >>= fun (ty_env, event_env) -> return (ty_env, event_env)
 
 (* =============================================================================
    Typechecking of relations
    ============================================================================= *)
 
-and typecheck_relations relations (ty_env, event_env) =
+and typecheck_relations relations (ty_env, event_env, tmpl_ty_env) =
   fold_left
     (fun (ty_env, event_env) relation ->
-      typecheck_relation relation (ty_env, event_env) )
+      typecheck_relation relation (ty_env, event_env, tmpl_ty_env) )
     (ty_env, event_env) relations
 
-and typecheck_relation relation (ty_env, event_env) =
+and typecheck_relation relation (ty_env, event_env, tmpl_ty_env) =
   let check_event_id id =
     match find_flat id.data event_env with
     | None ->
@@ -120,7 +248,7 @@ and typecheck_relation relation (ty_env, event_env) =
     typecheck_expr ~ty_env guard
     >>= fun guard_ty ->
     if equal_types guard_ty BoolTy then return BoolTy
-    else type_mismatch [BoolTy] [guard_ty]
+    else type_mismatch ~loc:guard.loc [BoolTy] [guard_ty]
   in
   match relation.data with
   | ControlRelation (from_id, guard, dest, _op, _annot) ->
@@ -139,7 +267,7 @@ and typecheck_relation relation (ty_env, event_env) =
         ( bind "@trigger" from_event event_env
         , bind "@trigger" (event_as_ty from_event) ty_env )
       >>= fun (event_env, ty_env) ->
-      typecheck_subprogram subprogram (ty_env, event_env)
+      typecheck_subprogram subprogram (ty_env, event_env, tmpl_ty_env)
 
 (* =============================================================================
    Typechecking of expressions
@@ -153,13 +281,13 @@ and typecheck_expr ?(ty_env = empty_env) expr =
     | And | Or -> return (BoolTy, BoolTy, BoolTy)
     | Eq | NotEq ->
         if equal_types l_ty r_ty then return (l_ty, r_ty, BoolTy)
-        else type_mismatch [l_ty; r_ty; BoolTy] [l_ty; r_ty]
+        else type_mismatch ~loc:expr.loc [l_ty; r_ty; BoolTy] [l_ty; r_ty]
     | GreaterThan | GreaterOrEqual | LessThan | LessOrEqual ->
         return (IntTy, IntTy, BoolTy) )
     >>= fun (expected_l_ty, expected_r_ty, expected_result_ty) ->
     if equal_types expected_l_ty l_ty && equal_types expected_r_ty r_ty then
       return expected_result_ty
-    else type_mismatch [expected_l_ty; expected_r_ty] [l_ty; r_ty]
+    else type_mismatch ~loc:expr.loc [expected_l_ty; expected_r_ty] [l_ty; r_ty]
   (* Typechecking a unary operation, e.g -, ~, etc. *)
   and typecheck_unop e_ty op =
     ( match op with
@@ -167,13 +295,13 @@ and typecheck_expr ?(ty_env = empty_env) expr =
     | Negation -> return (IntTy, IntTy) )
     >>= fun (expected_e_ty, expected_result_ty) ->
     if e_ty = expected_e_ty then return expected_result_ty
-    else type_mismatch [expected_e_ty; expected_result_ty] [e_ty]
+    else type_mismatch ~loc:expr.loc [expected_e_ty; expected_result_ty] [e_ty]
   (* Typechecking a identifier *)
   and typecheck_identifier id ty_env =
     match find_flat id.data ty_env with
     | None ->
-        Logger.debug @@ "Type env:\n"
-        ^ string_of_env Unparser.PlainUnparser.unparse_ty ty_env ;
+        (* Logger.debug @@ "Type env:\n"
+           ^ string_of_env Unparser.PlainUnparser.unparse_ty ty_env ; *)
         id_not_found id
     | Some ty -> return ty
   (* Typechecking a record' property *)
@@ -184,7 +312,7 @@ and typecheck_expr ?(ty_env = empty_env) expr =
         match List.assoc_opt p.data fields with
         | Some ty -> return ty.data
         | None -> property_not_found_type p r_ty )
-    | _ -> type_mismatch [RecordTy []] [r_ty]
+    | _ -> type_mismatch ~loc:expr.loc [RecordTy []] [r_ty]
   (* Typechecking a list *)
   and typecheck_list lst ty_env =
     (* Typechecking each element of the list [lst] *)
@@ -193,12 +321,12 @@ and typecheck_expr ?(ty_env = empty_env) expr =
     let expected_ty = List.hd elem_tys in
     partition_map
       (fun elem_ty ->
-        if equal_types elem_ty expected_ty then Either.left elem_ty
-        else Either.right elem_ty )
+        if equal_types elem_ty expected_ty then Left elem_ty else Right elem_ty
+        )
       elem_tys
     >>= fun (_, wrong_tys) ->
     if List.is_empty wrong_tys then return (ListTy expected_ty)
-    else type_mismatch [expected_ty] wrong_tys
+    else type_mismatch ~loc:expr.loc [expected_ty] wrong_tys
   (* Typechecking a record *)
   and typecheck_record fields ty_env =
     map
@@ -233,7 +361,7 @@ and typecheck_expr ?(ty_env = empty_env) expr =
       >>= fun e_ty ->
       if equal_types s_ty IntTy && equal_types e_ty IntTy then
         return (ListTy IntTy)
-      else type_mismatch [IntTy; IntTy] [s_ty; e_ty]
+      else type_mismatch ~loc:expr.loc [IntTy; IntTy] [s_ty; e_ty]
   | Record fields -> typecheck_record fields ty_env
   | _ ->
       fixme

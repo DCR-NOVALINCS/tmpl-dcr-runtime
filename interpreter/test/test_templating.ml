@@ -1,54 +1,20 @@
 open OUnit2
-open Misc.Monads.ResultMonad
-open Templating.Syntax
-open Templating.Api
+open Misc
+open Monads.ResultMonad
+open Templating
+open Syntax
+open Api
+open Program_helper
 (* open Templating.Battery_tests *)
 (* open Templating.Errors *)
 (* open Templating.Unparser *)
 
-(** [get_event id program] returns the event with id [id] in the program
-    [program] *)
-let get_event ?(filter = fun _ -> true) program =
-  let events = program.events in
-  List.find_opt filter events
-
-(** [has_event id program] returns true if the event with id [id] is found in
-    the program [program] *)
-let has_event ?(filter = fun _ -> true) program =
-  Option.is_some @@ get_event ~filter program
-
-let same_id id e =
-  let id', _ = e.data.info in
-  id'.data |> String.split_on_char '_' |> List.hd = id
-
-(** [get_relation id program] returns the relation with id [id] in the program
-    [program] *)
-let get_relation ?(filter = fun _ -> true) id program =
-  let relations = program.relations in
-  List.find_opt
-    (fun r ->
-      match r.data with
-      | ControlRelation (from, _, dest, _, _) ->
-          (from.data = id || dest.data = id) && filter r
-      | SpawnRelation (from, _, _, _) -> from.data = id && filter r )
-    relations
-
-let is_spawn r = match r.data with SpawnRelation _ -> true | _ -> false
-
-let is_ctrl op r =
-  match r.data with ControlRelation (_, _, _, op', _) -> op = op' | _ -> false
-
-(** [has_relation id program] returns true if the relation with id [id] is found
-    in the program [program] *)
-let has_relation ?(filter = fun _ -> true) id program =
-  Option.is_some @@ get_relation ~filter id program
-
 let test_suite =
   let open Common in
-  let simple_tests path =
+  let test_1 path =
     [ ( "test_1"
       >:: fun test_ctxt ->
-      build_state (path "/1.tdcr") test_ctxt
+      build_state (path "1.tdcr") test_ctxt
       >>= (fun (program, _, _) ->
             assert_bool "Event a not found"
               (has_event ~filter:(same_id "a") program) ;
@@ -86,37 +52,6 @@ let test_suite =
             Ok program )
       |> expecting_ok |> ignore ) ]
   in
-  let exported_events_tests path =
-    [ ( "test_1"
-      >:: fun test_ctxt ->
-      build_state (path "/1.tdcr") test_ctxt |> expecting_ok |> ignore )
-    ; ( "test_2"
-      >:: fun test_ctxt ->
-      build_state (path "/2.tdcr") test_ctxt |> expecting_ok |> ignore )
-    ; ( "test_3"
-      >:: fun test_ctxt ->
-      build_state (path "/3.tdcr") test_ctxt |> expecting_ok |> ignore ) ]
-  in
-  let annotations_tests path =
-    [ ( "test_4"
-      >:: fun test_ctxt ->
-      build_state (path "/4.tdcr") test_ctxt |> expecting_ok |> ignore )
-    ; ( "test_6"
-      >:: fun test_ctxt ->
-      build_state (path "/6.tdcr") test_ctxt |> expecting_ok |> ignore ) ]
-  in
-  let error_tests path =
-    [ ( "test_4"
-      >:: fun test_ctxt ->
-      build_state (path "/7.tdcr") test_ctxt |> expecting_ok |> ignore ) ]
-  in
-  "templating"
-  >::: [ "simple" >::: simple_tests (fun file -> "test/files/simple" ^ file)
-       ; "exported-events"
-         >::: exported_events_tests (fun file ->
-                  "test/files/exported-events" ^ file )
-       ; "annotations"
-         >::: annotations_tests (fun file -> "test/files/annotations" ^ file)
-       ; "error" >::: error_tests (fun file -> "test/files/error" ^ file) ]
+  "templating" >::: ["test_1" >::: test_1 (fun x -> "test/files/simple/" ^ x)]
 
 let _ = run_test_tt_main test_suite

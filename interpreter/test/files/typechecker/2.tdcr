@@ -1,0 +1,10 @@
+tmpl f(n: Number, e: A): B {
+    (b: B)[n]
+    e -[n == b.value]->* b
+} => b
+
+(a: A)[?]
+
+f(n = 1, e -> a) => b
+
+b -[b.value > 0]->% a

@@ -46,7 +46,8 @@ let rec eval_expr expr env =
           match List.assoc_opt p.data fields with
           | None -> property_not_found p v
           | Some v -> return (annotate ~loc:v.loc ~ty:(Some rec_ty) v.data) )
-      | _ -> type_mismatch [RecordTy [(p, annotate UnitTy)]] [rec_ty] )
+      | _ -> type_mismatch ~loc:e.loc [RecordTy [(p, annotate UnitTy)]] [rec_ty]
+      )
   | List es ->
       map (fun e -> eval_expr e env) es >>| fun es -> {expr with data= List es}
   | Range (s, e) ->
@@ -64,7 +65,7 @@ let rec eval_expr expr env =
                 |> List.map (fun i ->
                        annotate ~loc:expr.loc ~ty:(Some IntTy) (IntLit i) )
                 |> return
-            | _ -> type_mismatch [IntTy] [] )
+            | _ -> type_mismatch ~loc:s.loc [IntTy] [] )
       >>| fun es -> annotate ~loc:expr.loc ~ty:(Some (ListTy IntTy)) (List es)
   | Record fields ->
       map
@@ -111,104 +112,106 @@ and eval_binop v1 v2 op =
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 + i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch [IntTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
   | Sub -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 - i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch [IntTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
   | Mult -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 * i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch [IntTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
   | Div -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 / i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch [IntTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
   | Eq -> (
     match (v1.data, v2.data) with
     (* Number *)
     | IntLit i1, IntLit i2 ->
         if i1 = i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch [IntTy] [ty1; ty2]
+    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
     (* String *)
     | StringLit s1, StringLit s2 ->
         if s1 = s2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | StringLit _, _ | _, StringLit _ -> type_mismatch [StringTy] [ty1; ty2]
+    | StringLit _, _ | _, StringLit _ ->
+        type_mismatch ~loc:v1.loc [StringTy] [ty1; ty2]
     (* Boolean *)
     | True, True | False, False ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
     | True, False | False, True ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
     | True, _ | False, _ | _, True | _, False ->
-        type_mismatch [BoolTy] [ty1; ty2]
+        type_mismatch ~loc:v1.loc [BoolTy] [ty1; ty2]
     (* Other *)
-    | _ -> type_mismatch [IntTy; StringTy; BoolTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; StringTy; BoolTy] [ty1; ty2] )
   | NotEq -> (
     match (v1.data, v2.data) with
     (* Number *)
     | IntLit i1, IntLit i2 ->
         if i1 <> i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch [IntTy] [ty1; ty2]
+    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
     (* String *)
     | StringLit s1, StringLit s2 ->
         if s1 <> s2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | StringLit _, _ | _, StringLit _ -> type_mismatch [StringTy] [ty1; ty2]
+    | StringLit _, _ | _, StringLit _ ->
+        type_mismatch ~loc:v1.loc [StringTy] [ty1; ty2]
     (* Boolean *)
     | True, False | False, True ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
     | True, True | False, False ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
     | True, _ | False, _ | _, True | _, False ->
-        type_mismatch [BoolTy] [ty1; ty2]
+        type_mismatch ~loc:v1.loc [BoolTy] [ty1; ty2]
     (* Other *)
-    | _ -> type_mismatch [IntTy; StringTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; StringTy] [ty1; ty2] )
   | GreaterThan -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 > i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch [IntTy] [ty1; ty2]
-    | _ -> type_mismatch [IntTy] [ty1; ty2] )
+    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
+    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
   | GreaterOrEqual -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 >= i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch [IntTy] [ty1; ty2]
-    | _ -> type_mismatch [IntTy] [ty1; ty2] )
+    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
+    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
   | LessThan -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 < i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch [IntTy] [ty1; ty2]
-    | _ -> type_mismatch [IntTy] [ty1; ty2] )
+    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
+    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
   | LessOrEqual -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 <= i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch [IntTy] [ty1; ty2]
-    | _ -> type_mismatch [IntTy] [ty1; ty2] )
+    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
+    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
   | And -> (
     match (v1.data, v2.data) with
     | True, True -> return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
     | True, False | False, True | False, False ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | _ -> type_mismatch [BoolTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [BoolTy] [ty1; ty2] )
   | Or -> (
     match (v1.data, v2.data) with
     | False, False -> return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
     | True, False | False, True | True, True ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
-    | _ -> type_mismatch [BoolTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [BoolTy] [ty1; ty2] )
 
 and eval_unop v op =
   (* let ty = Option.value ~default:UnitTy !(v.ty) in *)
@@ -223,12 +226,12 @@ and eval_unop v op =
   | Minus -> (
     match v.data with
     | IntLit i -> return {v with data= IntLit (-i); ty= ref (Some IntTy)}
-    | _ -> type_mismatch [IntTy] [ty] )
+    | _ -> type_mismatch ~loc:v.loc [IntTy] [ty] )
   | Negation -> (
     match v.data with
     | True -> return (annotate ~loc:v.loc ~ty:(Some BoolTy) False)
     | False -> return (annotate ~loc:v.loc ~ty:(Some BoolTy) True)
-    | _ -> type_mismatch [BoolTy] [ty] )
+    | _ -> type_mismatch ~loc:v.loc [BoolTy] [ty] )
 (* | _ -> failwith "Invalid unary operator" *)
 
 and find_id id env =
