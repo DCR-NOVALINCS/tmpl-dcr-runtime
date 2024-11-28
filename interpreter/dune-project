@@ -30,8 +30,8 @@
   odoc
   (menhir
    (>= 3.0))
-  js_of_ocaml
-  yojson)
+  yojson
+  cmdliner)
  (tags
   (dcr templates interpreter runtime tdcr)))
 

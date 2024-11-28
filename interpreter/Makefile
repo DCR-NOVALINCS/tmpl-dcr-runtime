@@ -60,9 +60,3 @@ doc:
 	mkdir -p $(OUTPUT_DOC_PATH) 
 	cp -r _build/default/_doc/_html/* $(OUTPUT_DOC_PATH)
 
-js:
-	make pre-build
-	dune build @js
-	rm -rf $(OUTPUT_JS_PATH)/runtime.js
-	cp -r $(INTERPRETER_PATH)/_build/default/bin/runtime.js $(OUTPUT_JS_PATH)/runtime.js
-	printf "\nGenerated runtime successful\n"

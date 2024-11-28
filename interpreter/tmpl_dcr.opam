@@ -16,8 +16,8 @@ depends: [
   "dune" {>= "3.14"}
   "odoc"
   "menhir" {>= "3.0"}
-  "js_of_ocaml"
   "yojson"
+  "cmdliner"
 ]
 build: [
   ["dune" "subst"] {dev}

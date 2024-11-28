@@ -1,44 +1,15 @@
 open Syntax
+open Lex_and_parse
 open Evaluation
 open Errors
 open Runtime
 open Program_helper
 open Typechecking
-open Misc.Monads.ResultMonad
-open Misc.Env
-open Misc.Printing
-
-(* =============================================================================
-   Available main commands
-   ============================================================================= *)
-
-type cmd_description =
-  {name: string; alias: string; params: string list; desc: string}
-
-let cmds =
-  [ {name= "view"; alias= "v"; params= []; desc= "View the current program"}
-  ; { name= "debug"
-    ; alias= "d"
-    ; params= []
-    ; desc= "View the current program with relations" }
-  ; { name= "exec"
-    ; alias= "e"
-    ; params= ["event_id"; "[expr]"]
-    ; desc= "Execute an event with an expression" }
-  ; { name= "parse"
-    ; alias= "p"
-    ; params= ["filename"]
-    ; desc= "Parse a file and update the current program" }
-  ; { name= "export"
-    ; alias= "exp"
-    ; params= ["filename"]
-    ; desc= "Export the current program to a file" }
-  ; {name= "exit"; alias= "q"; params= []; desc= "Exit the program"}
-  ; {name= "help"; alias= "h"; params= []; desc= "Display this message"} ]
-
-let cmds_bbk_tree =
-  Misc.Bktree.create
-  @@ (List.map (fun {name; alias; _} -> [name; alias]) cmds |> List.flatten)
+open Misc
+open Monads.ResultMonad
+open Env
+open Printing
+open Cmdliner
 
 (* =============================================================================
    Available functions
@@ -132,3 +103,111 @@ and _view_disabled ?(should_print_relations = false) program =
       is_enabled event program (event_env, expr_env)
       |> function Ok false -> Some event | _ -> None )
     program
+
+(* =============================================================================
+   Runtime State Management Section
+   ============================================================================= *)
+
+type runtime_state =
+  { ty_env: type_expr' env
+  ; expr_env: expr env
+  ; event_env: event env
+  ; program: program
+  ; output: string }
+
+let mk_runtime_state ?(output = "") ?(ty_env = empty_env)
+    ?(expr_env = empty_env) ?(event_env = empty_env) program =
+  {ty_env; expr_env; event_env; program; output}
+
+let empty_runtime_state =
+  mk_runtime_state ~output:"" ~ty_env:empty_env ~expr_env:empty_env
+    ~event_env:empty_env empty_program
+
+(* =============================================================================
+   Available main commands
+   ============================================================================= *)
+
+type cmd_callback =
+  runtime_state -> (runtime_state, detailed_error list) result Cmd.t
+
+let create_cmd (name, alias) term cmds =
+  let cmd = Cmd.v (Cmd.info name) term in
+  (name, cmd) :: (alias, cmd) :: cmds
+
+and quit_term =
+  let quit_cmd _ = exit 0 in
+  Term.(const quit_cmd $ const empty_runtime_state)
+
+and help_term =
+  let help_cmd _ =
+    let header = CString.colorize ~color:BrightCyan "Available Commands:" in
+    let cmds_section =
+      [ ("exit (q)", [], "Quit the program")
+      ; ("help (h)", [], "Show this help message")
+      ; ("view (v)", [], "View the current program")
+      ; ( "execute (e)"
+        , ["<event_id>"; "<expr>"]
+        , "Execute an event with an expression" ) ]
+      (* |> List.map (fun (name, desc) -> Printf.sprintf "%-20s %s" name desc) *)
+      |> List.map (fun (name, params, desc) ->
+             Printf.sprintf "- %s %-15s %s"
+               (CString.colorize ~color:Green name)
+               (String.concat ", "
+                  (List.map (CString.colorize ~color:Red) params) )
+               desc )
+      |> String.concat "\n"
+    in
+    Printf.printf "%s" @@ String.concat "\n" [header; cmds_section] ;
+    return empty_runtime_state
+  in
+  Term.(const help_cmd $ const empty_runtime_state)
+
+and view_term =
+  let all_flag =
+    Arg.(
+      value & opt bool false & info ["all"] ~docv:"ALL" ~doc:"View all events" )
+  and view_cmd is_all =
+    match is_all with
+    | true ->
+        CPrinter.cprintln ~color:Magenta "Viewing all events" ;
+        return empty_runtime_state
+    | false ->
+        CPrinter.cprintln ~color:Magenta "Viewing enabled events" ;
+        return empty_runtime_state
+  in
+  Term.(const view_cmd $ all_flag)
+
+and execute_term =
+  let parse_expression expr_string =
+    (* let expr = expr_string |> String.concat " " in *)
+    let expr_lexbuf = Lexing.from_string expr_string in
+    Logger.debug @@ "Parsing expression " ^ expr_string ;
+    parse_expression expr_lexbuf
+  in
+  let event_id =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"EVENT_ID" ~doc:"The event id to execute" )
+  and expr =
+    Arg.(
+      required
+      & pos 1 (some string) None
+      & info [] ~docv:"EXPR" ~doc:"The expression to execute" )
+  and execute_cmd event_id expr_str =
+    parse_expression expr_str
+    >>= fun expr ->
+    CPrinter.cprintln ~color:Magenta "Executing event" ;
+    execute ~event_id ~expr:expr.data empty_program
+    >>= fun (program, event_env, expr_env) ->
+    return (mk_runtime_state ~ty_env:empty_env ~expr_env ~event_env program)
+  in
+  Term.(const execute_cmd $ event_id $ expr)
+
+let cmds =
+  create_cmd ("exit", "q") quit_term []
+  |> create_cmd ("help", "h") help_term
+  |> create_cmd ("view", "v") view_term
+  |> create_cmd ("execute", "e") execute_term
+
+let cmds_bbk_tree = Misc.Bktree.create @@ List.map (fun (name, _) -> name) cmds

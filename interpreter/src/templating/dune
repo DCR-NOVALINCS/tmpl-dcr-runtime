@@ -2,7 +2,7 @@
  (name templating)
  (preprocess
   (pps ppx_yojson_conv ppx_deriving.show))
- (libraries misc))
+ (libraries misc cmdliner))
 
 (ocamllex lexer)
 

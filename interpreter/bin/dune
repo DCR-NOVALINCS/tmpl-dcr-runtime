@@ -1,21 +1,4 @@
 (executable
  (name main)
  (public_name tmpl_dcr)
- (libraries templating))
-
-; (executable
-;  (name jsruntime)
-;  (public_name runtime)
-;  (modes byte)
-;  (libraries templating js_of_ocaml)
-;  ;  (preprocess
-;  ;   (pps js_of_ocaml-ppx))
-;  )
-
-; (rule
-;  (alias js)
-;  (deps
-;   (file jsruntime.bc))
-;  (targets runtime.js)
-;  (action
-;   (run %{bin:js_of_ocaml} -o %{targets} %{deps})))
+ (libraries templating cmdliner))
