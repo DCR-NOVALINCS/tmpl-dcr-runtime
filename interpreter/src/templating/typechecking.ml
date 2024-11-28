@@ -379,11 +379,11 @@ and typecheck_expr ?(ty_env = empty_env) expr =
   (* Typechecking a unary operation, e.g -, ~, etc. *)
   and typecheck_unop e_ty op =
     ( match op with
-    | Minus -> return (BoolTy, BoolTy)
-    | Negation -> return (IntTy, IntTy) )
+    | Negation -> return (BoolTy, BoolTy)
+    | Minus -> return (IntTy, IntTy) )
     >>= fun (expected_e_ty, expected_result_ty) ->
     if e_ty = expected_e_ty then return expected_result_ty
-    else type_mismatch ~loc:expr.loc [expected_e_ty; expected_result_ty] [e_ty]
+    else type_mismatch ~loc:expr.loc [expected_e_ty] [e_ty]
   (* Typechecking a identifier *)
   and typecheck_identifier id ty_env =
     match find_flat id.data ty_env with

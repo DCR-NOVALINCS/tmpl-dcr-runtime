@@ -29,6 +29,7 @@ build:
 watch:
 	make pre-build
 	dune build -w --terminal-persistence=clear-on-rebuild
+	clear
 
 check:
 	make pre-build

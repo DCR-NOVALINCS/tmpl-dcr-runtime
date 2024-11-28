@@ -3,12 +3,16 @@
 
 a -->> {
     (e1: E)[@trigger.value]
-    (e2: E)[@trigger.value > 0]
+    
     a -->> {
-        (e3: E)[true AND 0]
+        (e2: E2)[true AND e1.value / 2 != 0]
     }
 }
 
 a -->> {
-    (e1: E)[@trigger.value > 0]
+    (e1: E)[@trigger.value * 2]
+
+    a -->> {
+        (e2: E2)[false OR @trigger.value <= 0]
+    }
 }

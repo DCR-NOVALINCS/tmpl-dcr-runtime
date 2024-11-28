@@ -1,21 +1,34 @@
-# (a: A)[?] - when 0 > 1
-# (b: B)[?]
+# Notes: 
+# - 0...3 returns a list with 4 elements: [0, 1, 2, 3]
 
-# a -->* b
-# b -->% a
+# Previous syntax
+
+%(a: A)[0]
+%(b: B)[?]
+(c: C)[?: Number] - when a.value > 1 | foreach i in 0...3 
+(d: D)[?: String] - when a.value <= 1
+
+c -->% a - when a.value > 1 | foreach i in 0...3
+c -->+ b - when a.value > 1 | foreach i in 0...3
+
+d -->+ a - when a.value <= 1
+d -->% b - when a.value <= 1
 
 # Alternative syntax
 
-if (0 > 1) 
+%(a: A)[0]
+%(b: B)[?]
+
+if (a.value > 1) 
     foreach i in 0...3
-        (a: A)[?] 
-        a -->* b 
-        b -->% a 
+        (c: C)[?: Number]
+        c -->% a
+        c -->+ b
     /foreach
 else 
-    (c: C)[?]
-    c -->* b
+    (d: D)[?: String]
+    
+    d -->+ a
+    d -->% b
 /if
-(b: B)[?]
-
 

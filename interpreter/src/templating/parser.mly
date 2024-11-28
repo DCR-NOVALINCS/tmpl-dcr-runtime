@@ -351,7 +351,7 @@ plain_compareop:
 | compareop GREATERTHAN arith                       { BinaryOp($1,$3,GreaterThan) }
 | compareop GREATEREQTHAN arith                     { BinaryOp($1,$3,GreaterOrEqual) }
 | compareop LESSTHAN arith                          { BinaryOp($1,$3,LessThan) }
-| compareop LESSEQTHAN arith                          { BinaryOp($1,$3,LessOrEqual) }
+| compareop LESSEQTHAN arith                        { BinaryOp($1,$3,LessOrEqual) }
 | plain_arith                                       { $1 } 
 ;
 

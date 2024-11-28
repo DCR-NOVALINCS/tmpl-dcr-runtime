@@ -6,7 +6,6 @@
 (s: S)['a']
 (b: B)[true]
 (l: L)[[0, 1, 2]]
-(l1: L)[?: List[Number]]
 
 i0 -[n1.value > n0.value]->% s, b
 i1 -[s.value == 'b']->+ i0, s, b
@@ -18,4 +17,10 @@ i1 -->> {
     (b2: B)[@trigger.value.isActivated]
 
     i0 *-[@trigger.value.isActivated OR true == b2.value]-> i1
+}
+
+i1 -->> {
+    (n2: N)[@trigger.value.id + 2]
+    (b2: B)[~@trigger.value.isActivated]
+    (l1: L1)[?: List[Number]]
 }

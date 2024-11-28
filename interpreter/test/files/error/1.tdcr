@@ -6,6 +6,5 @@
 
 tmpl i(e: E): E { } => e
 
-(dummy: E)[0]
-
+(dummy: E)[?]
 i(e -> dummy) => renamed_dummy
