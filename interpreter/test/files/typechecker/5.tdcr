@@ -8,4 +8,5 @@ tmpl g(n: Number): A, B {
     f(n = 0, e -> a) => b
 } => a, b
 
+(a: A)[?]
 g(n = 0, e -> a) => a, b

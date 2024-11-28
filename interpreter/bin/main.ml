@@ -200,11 +200,7 @@ let read_command tokens program (ty_env, expr_env, event_env) =
       let nearest, distance =
         nearest_neighbor levenshtein_distance cmds_bbk_tree line
       in
-      todo "read_line"
-      >>= fun _ ->
-      todo "read_line"
-      >>= fun _ ->
-      todo "read_line" >>= fun _ -> invalid_command ~nearest ~distance tokens
+      invalid_command ~nearest ~distance tokens
 
 let rec prompt program (ty_env, expr_env, event_env) =
   CPrinter.cprint ~color:BrightGreen "> " ;
@@ -222,26 +218,51 @@ let rec prompt program (ty_env, expr_env, event_env) =
 let runtime =
   (* Logger settings *)
   Logger.enable () ;
-  Logger.set_logger_level Warn ;
-  (* Get & Parse the initial input *)
-  get_program
-  >>= (fun program ->
-        (* Preprocess program *)
-        Logger.info "Program parsed successfully" ;
-        preprocess_program program
-        >>= fun (event_env, expr_env, program) ->
-        (* Typecheck program *)
-        typecheck ~event_env program
-        >>= fun (ty_env, event_env) ->
-        Logger.info "Program typechecked successfully" ;
-        (* Instantiate initial templates *)
-        instantiate ~expr_env ~event_env program
-        >>= fun (program, event_env, expr_env) ->
-        Logger.info "Program instantiated successfully" ;
+  Logger.set_logger_level Debug ;
+  let initialize_program =
+    (* Get & Parse the initial input *)
+    get_program
+    >>= fun program ->
+    Logger.info "Program parsed successfully" ;
+    (* Preprocess program *)
+    preprocess_program program
+    >>= fun (event_env, expr_env, program) ->
+    (* Typecheck program *)
+    typecheck ~event_env program
+    >>= fun (ty_env, event_env) ->
+    Logger.info "Program typechecked successfully" ;
+    (* Instantiate initial templates *)
+    instantiate ~expr_env ~event_env program
+    >>| fun (program, event_env, expr_env) ->
+    Logger.info "Program instantiated successfully" ;
+    (ty_env, expr_env, event_env, program)
+  in
+  initialize_program
+  >>= (fun (ty_env, expr_env, event_env, program) ->
         (* Display welcome message *)
         start_header ;
         (* Start the prompt *)
         prompt program (ty_env, expr_env, event_env) )
   |> print_output ~previous_state:empty_runtime_state
+
+(* get_program
+   >>= (fun program ->
+         (* Preprocess program *)
+         Logger.info "Program parsed successfully" ;
+         preprocess_program program
+         >>= fun (event_env, expr_env, program) ->
+         (* Typecheck program *)
+         typecheck ~event_env program
+         >>= fun (ty_env, event_env) ->
+         Logger.info "Program typechecked successfully" ;
+         (* Instantiate initial templates *)
+         instantiate ~expr_env ~event_env program
+         >>= fun (program, event_env, expr_env) ->
+         Logger.info "Program instantiated successfully" ;
+         (* Display welcome message *)
+         start_header ;
+         (* Start the prompt *)
+         prompt program (ty_env, expr_env, event_env) )
+   |> print_output ~previous_state:empty_runtime_state *)
 
 let _ = runtime

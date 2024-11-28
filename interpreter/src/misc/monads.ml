@@ -6,14 +6,17 @@ module ResultMonad = struct
   let fail ?map_error e =
     match map_error with Some f -> Error (f e) | None -> Error e
 
-  let bind m ?(map_error = fun error -> error) f =
-    match m with Ok x -> f x | Error e -> Error (map_error e)
+  let bind m f = match m with Ok x -> f x | Error e -> Error e
 
   let ( >>= ) = bind
 
   let apply m f = m >>= fun x -> return (f x)
 
   let ( >>| ) = apply
+
+  let bind_error m f = match m with Error e -> f e | Ok x -> Ok x
+
+  let ( >>! ) = bind_error
 
   let fold_left f acc l =
     List.fold_left (fun acc x -> acc >>= fun acc -> f acc x) (return acc) l
