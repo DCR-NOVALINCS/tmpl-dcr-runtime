@@ -60,7 +60,9 @@ let print_output ?(previous_state = empty_runtime_state) = function
   | Ok runtime_state ->
       let {output; _} = runtime_state in
       CPrinter.cprintln output ; return runtime_state
-  | Error errors -> print_errors errors ; return previous_state
+  | Error errors ->
+      (* Logger.error "Errors found" ; *)
+      print_errors errors ; return previous_state
 
 let sanitize_input input =
   input |> String.split_on_char ' ' |> List.filter (fun s -> s <> "") |> return
@@ -135,7 +137,7 @@ let read_command tokens program (ty_env, expr_env, event_env) =
            event_env ;
       execute ~event_id ~expr:parsed_expr.data ~ty_env ~expr_env ~event_env
         program
-      >>= fun program ->
+      >>= fun (program, event_env, expr_env) ->
       return
         (mk_runtime_state ~ty_env ~expr_env ~event_env
            ~output:
@@ -220,7 +222,7 @@ let rec prompt program (ty_env, expr_env, event_env) =
 let runtime =
   (* Logger settings *)
   Logger.enable () ;
-  (* Logger.set_logger_level Debug; *)
+  Logger.set_logger_level Warn ;
   (* Get & Parse the initial input *)
   get_program
   >>= (fun program ->
@@ -234,7 +236,7 @@ let runtime =
         Logger.info "Program typechecked successfully" ;
         (* Instantiate initial templates *)
         instantiate ~expr_env ~event_env program
-        >>= fun (program, _) ->
+        >>= fun (program, event_env, expr_env) ->
         Logger.info "Program instantiated successfully" ;
         (* Display welcome message *)
         start_header ;

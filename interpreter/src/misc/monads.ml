@@ -18,6 +18,11 @@ module ResultMonad = struct
   let fold_left f acc l =
     List.fold_left (fun acc x -> acc >>= fun acc -> f acc x) (return acc) l
 
+  let fold_left2 f acc l1 l2 =
+    List.fold_left2
+      (fun acc x1 x2 -> acc >>= fun acc -> f acc x1 x2)
+      (return acc) l1 l2
+
   let map f l =
     List.fold_right
       (fun x acc -> acc >>= fun acc -> f x >>| fun x -> x :: acc)

@@ -83,7 +83,9 @@ and duplicate_tmpl ?(errors = []) id =
     :: errors )
 
 and duplicate_event ?(errors = []) id event =
-  let event_id, _ = event.data.info in
+  let line =
+    match event.loc with Location (start, _, _) -> start.pos_lnum | _ -> 0
+  in
   fail
     ( { location= id.loc
       ; message=
@@ -91,9 +93,9 @@ and duplicate_event ?(errors = []) id event =
             (CString.colorize ~color:Yellow id.data)
       ; hint=
           Some
-            (Printf.sprintf "Event %s is already declared at %s"
+            (Printf.sprintf "Event %s is already declared at line %s"
                (CString.colorize ~color:Yellow id.data)
-               (CString.colorize ~color:Yellow event_id.data) ) }
+               (CString.colorize ~color:Yellow (string_of_int line)) ) }
     :: errors )
 
 and file_not_exists ?(errors = []) filename =
@@ -399,21 +401,56 @@ and type_mismatch ?(errors = []) ?(loc = Nowhere) expected_tys got_tys =
       }
     :: errors )
 
+and event_type_mismatch ?(errors = []) ?(loc = Nowhere) expected_ty got_ty =
+  let rec string_tys = function
+    | [] -> CString.colorize ~color:Yellow "?"
+    | [(event_label, event_type, ty)] ->
+        Printf.sprintf "%s as %s event with type %s"
+          (CString.colorize ~color:Yellow event_label)
+          (CString.colorize ~color:Yellow (show_event_type' event_type))
+          (CString.colorize ~color:Yellow (unparse_ty ty))
+    | (event_label, event_type, ty)
+      :: [(event_label_last, event_type_last, ty_last)] ->
+        Printf.sprintf
+          "%s as %s event with type %s and %s as %s event with type %s"
+          (CString.colorize ~color:Yellow event_label)
+          (CString.colorize ~color:Yellow (show_event_type' event_type))
+          (CString.colorize ~color:Yellow (unparse_ty ty))
+          (CString.colorize ~color:Yellow event_label_last)
+          (CString.colorize ~color:Yellow (show_event_type' event_type_last))
+          (CString.colorize ~color:Yellow (unparse_ty ty_last))
+    | (event_label, event_type, ty) :: tys ->
+        Printf.sprintf "%s as %s event with type %s, %s"
+          (CString.colorize ~color:Yellow event_label)
+          (CString.colorize ~color:Yellow (show_event_type' event_type))
+          (CString.colorize ~color:Yellow (unparse_ty ty))
+          (string_tys tys)
+  in
+  fail
+    ( { location= loc
+      ; message=
+          Printf.sprintf "Event type mismatch. Expected %s, but got %s"
+            (CString.colorize ~color:Yellow @@ string_tys expected_ty)
+            (CString.colorize ~color:Yellow @@ string_tys got_ty)
+      ; hint=
+          Some
+            "Verify the type of the event. Check for type mismatches or any typos."
+      }
+    :: errors )
+
 (* ┌──────────────────────────────────────────────────────────────────────────┐
    │ Error printing                                                           │
    └──────────────────────────────────────────────────────────────────────────┘ *)
 
 let get_line_content filepath line =
-  if Sys.file_exists filepath then (
-    let file = open_in filepath in
-    let rec read_line n =
-      match input_line file with
-      | content when n = line -> content
-      | _ -> read_line (n + 1)
-    in
-    let line_content = read_line 1 in
-    close_in file ; line_content )
-  else ""
+  let file = open_in filepath in
+  let rec read_line n =
+    match input_line file with
+    | content when n = line -> content
+    | _ -> read_line (n + 1)
+  in
+  let line_content = read_line 1 in
+  close_in file ; line_content
 
 let extract_location_info loc =
   match loc with
@@ -441,10 +478,12 @@ let pretty_string_error detailed_error =
     in
     match filepath with
     | None -> ""
-    | Some filepath ->
+    | Some filepath when Sys.file_exists filepath ->
         let line_content = get_line_content filepath line in
         Printf.sprintf " %s:%d:%d\n%s │\n%d │ %s\n%s │ %s\n" filepath line
           (start_char + 1) line_margin line line_content line_margin marker
+    | Some filepath ->
+        Printf.sprintf "at %s:%d:%d\n" filepath line (start_char + 1)
   in
   let message_hint =
     match hint with

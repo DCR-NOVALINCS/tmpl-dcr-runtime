@@ -1,10 +1,14 @@
 (a:A)[?: Number]
+# (a2: A)[?: String]
 
 a -->> {
     (e1: E)[@trigger.value]
     (e2: E)[@trigger.value > 0]
+    a -->> {
+        (e3: E)[true AND 0]
+    }
 }
 
 a -->> {
-    (e1: E)[@trigger.value]
+    (e1: E)[@trigger.value > 0]
 }

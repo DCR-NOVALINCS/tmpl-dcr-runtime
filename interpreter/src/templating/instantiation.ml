@@ -86,7 +86,7 @@ and replace_template_inst inst (expr_env, event_env) =
           eval_expr expr expr_env >>= fun value -> return (arg_id, ExprArg value)
       | EventArg event_id -> (
         match find_flat event_id.data event_env with
-        | None -> event_not_found event_id.data
+        | None -> event_not_found ~loc:event_id.loc event_id.data
         | Some event ->
             let event_id, _ = event.data.info in
             return (arg_id, EventArg event_id) ) )
@@ -126,7 +126,7 @@ module EventAnnotationEvaluator = struct
               [] body )
           lst
         >>= fun events -> return (List.flatten events)
-    | _ -> type_mismatch ~loc:value.loc [ListTy (UnitTy)] []
+    | _ -> type_mismatch ~loc:value.loc [ListTy UnitTy] []
 end
 
 module InstantiationAnnotationEvaluator = struct
@@ -160,7 +160,7 @@ module InstantiationAnnotationEvaluator = struct
               [] body )
           lst
         >>= fun insts -> return (List.flatten insts)
-    | _ -> type_mismatch ~loc:value.loc [ListTy ( UnitTy)] []
+    | _ -> type_mismatch ~loc:value.loc [ListTy UnitTy] []
 end
 
 module RelationAnnotationEvaluator = struct
@@ -194,7 +194,7 @@ module RelationAnnotationEvaluator = struct
               [] body )
           lst
         >>= fun relations -> return (List.flatten relations)
-    | _ -> type_mismatch ~loc:value.loc [ListTy ( UnitTy)] []
+    | _ -> type_mismatch ~loc:value.loc [ListTy UnitTy] []
 end
 
 type context = expr env * event env * template_def env
@@ -285,7 +285,7 @@ and bind_prop prop (expr_env, event_env, tmpl_env) =
       >>= fun expr_env -> return (expr_env, event_env, tmpl_env)
   | EventArg event_id -> (
     match find_flat event_id.data event_env with
-    | None -> event_not_found event_id.data
+    | None -> event_not_found ~loc:event_id.loc event_id.data
     | Some event ->
         return (bind prop_id.data event event_env)
         >>= fun event_env -> return (expr_env, event_env, tmpl_env) )
@@ -296,9 +296,10 @@ and bind_prop prop (expr_env, event_env, tmpl_env) =
 
 and instantiate_tmpls tmpl_insts (expr_env, event_env, tmpl_env) =
   fold_left
-    (fun program inst ->
+    (fun (program, event_env, expr_env) inst ->
       instantiate_tmpl program inst (expr_env, event_env, tmpl_env) )
-    empty_subprogram tmpl_insts
+    (empty_subprogram, event_env, expr_env)
+    tmpl_insts
 
 and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
   let {tmpl_id= id; args; x; _} = inst.data in
@@ -323,7 +324,7 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       >>= fun insts_ti ->
       (* Instantiate inside instantiations *)
       instantiate_tmpls insts_ti (expr_env, event_env, tmpl_env)
-      >>= fun (events_q_ti, _, relations_q_ti) ->
+      >>= fun ((events_q_ti, _, relations_q_ti), event_env, expr_env) ->
       (* Instantiate events *)
       map (fun event -> instantiate_event event expr_env) events_ti
       >>= fun events_ti ->
@@ -342,11 +343,6 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       fresh_event_ids events_ti relations_ti []
       >>= fun (events_ti, relations_ti) ->
       (* Put it all together *)
-      Logger.debug "Expr env:"; 
-      Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr expr_env;
-      Logger.debug "Event env:";
-      Logger.debug @@ string_of_env (fun event -> Unparser.PlainUnparser.unparse_events [event]) event_env;
-      (**)
       Logger.debug
       @@ Printf.sprintf "Instantiated events from template %s:" id.data ;
       Logger.debug @@ Unparser.PlainUnparser.unparse_events events_ti ;
@@ -354,10 +350,12 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       @@ Printf.sprintf "Instantiated relations from template %s:" id.data ;
       Logger.debug @@ Unparser.PlainUnparser.unparse_relations relations_ti ;
       return
-      @@ mk_subprogram
-           ~events:(List.flatten [events_ti; result_events])
-           ~relations:(List.flatten [relations_ti; result_relations])
-           ()
+      @@ ( mk_subprogram
+             ~events:(List.flatten [events_ti; result_events])
+             ~relations:(List.flatten [relations_ti; result_relations])
+             ()
+         , event_env
+         , expr_env )
 
 and instantiate_event target_event expr_env =
   replace_event target_event expr_env
@@ -370,7 +368,9 @@ and instantiate_relation target_relation (expr_env, event_env) =
 
 and export_map_events x export (events, relations) =
   if not (List.length x = List.length export) then
-    invalid_number_of_exported_events ~loc:(append_locs (List.map (fun x -> x.loc) x)) x export
+    invalid_number_of_exported_events
+      ~loc:(append_locs (List.map (fun x -> x.loc) x))
+      x export
   else if List.length x > List.length events then
     excessive_exported_events x events
   else
@@ -557,12 +557,21 @@ let instantiate ?(expr_env = empty_env) ?(event_env = empty_env) program =
   (* Instantiate all the instantiations of the program *)
   let insts = program.template_insts in
   instantiate_tmpls insts (expr_env, event_env, tmpl_env)
-  >>= fun tmpled_program ->
+  >>= fun ((events, _, relations), event_env, expr_env) ->
+  (* Bind instantiated graph into the env's *)
+  fold_left
+    (fun (event_env, expr_env) event ->
+      let id, _ = event.data.info in
+      return
+        ( bind id.data event event_env
+        , bind id.data (event_as_expr event) expr_env ) )
+    (event_env, expr_env) events
+  >>= fun (event_env, expr_env) ->
   (* Append the result in the program *)
-  let events, _, relations = tmpled_program in
   return
     ( { program with
         events= List.append program.events events
       ; template_insts= []
       ; relations= List.append program.relations relations }
+    , event_env
     , expr_env )

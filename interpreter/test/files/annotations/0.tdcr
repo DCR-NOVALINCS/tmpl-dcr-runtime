@@ -1,16 +1,21 @@
-(a: A)[?] - when 0 > 1
-(b: B)[?]
+# (a: A)[?] - when 0 > 1
+# (b: B)[?]
 
-a -->* b
-b -->% a
+# a -->* b
+# b -->% a
 
 # Alternative syntax
 
-# if (0 > 1) 
-#     (a: A)[?] 
-#     a -->* b 
-#     b -->% a
-# end
-# (b: B)[?]
+if (0 > 1) 
+    foreach i in 0...3
+        (a: A)[?] 
+        a -->* b 
+        b -->% a 
+    /foreach
+else 
+    (c: C)[?]
+    c -->* b
+/if
+(b: B)[?]
 
 

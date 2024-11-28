@@ -1,0 +1,11 @@
+# --------------------------------------------- #
+# Possible Error: doesn't make sense to export  # 
+#                 an event that is defined in   #
+#                 the parameters of a template  #
+# --------------------------------------------- #
+
+tmpl i(e: E): E { } => e
+
+(dummy: E)[0]
+
+i(e -> dummy) => renamed_dummy

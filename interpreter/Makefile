@@ -23,6 +23,7 @@ build:
 	make pre-build
 	make clean
 	dune build
+	cp -rf $(INTERPRETER_PATH)/_build/default/bin/main.exe tmpl_dcr.exe
 	printf "\nBuild successful\n"
 
 watch:

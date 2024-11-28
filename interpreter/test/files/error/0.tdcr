@@ -1,3 +1,10 @@
+# --------------------------------------------- #
+# Error: cyclic template instantiation detected #
+#                                               #
+# Reason: template j depends on template k      #
+#         and vice versa                        #
+# --------------------------------------------- #
+
 tmpl j(): E {
   (e: E)[0]
   k(event = e) => e2

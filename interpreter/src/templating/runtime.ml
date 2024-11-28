@@ -86,19 +86,20 @@ and check_guard guard expr_env =
 and propagate_effects event (event_env, expr_env) program =
   let relations = program.relations in
   fold_left
-    (fun program relation ->
+    (fun (program, event_env, expr_env) relation ->
       propagate_effect relation event (event_env, expr_env) program )
-    program relations
+    (program, event_env, expr_env)
+    relations
 
 and propagate_effect relation event (event_env, expr_env) program =
   let id, _ = event.data.info in
   match relation.data with
   | SpawnRelation (from, guard, spawn_prog, _annot) ->
-      if not (from.data = id.data) then return program
+      if not (from.data = id.data) then return (program, event_env, expr_env)
       else
         check_guard guard expr_env
         >>= fun is_guard_true ->
-        if not is_guard_true then return program
+        if not is_guard_true then return (program, event_env, expr_env)
         else
           (* FIXME: Alpha rename correctly the events!! *)
           let spawn_events, spawn_insts, spawn_relations = spawn_prog in
@@ -106,17 +107,15 @@ and propagate_effect relation event (event_env, expr_env) program =
           fresh_event_ids spawn_events spawn_relations []
           >>= fun (spawn_events, spawn_relations) ->
           (* Begin new env scope and bind "@trigger" *)
-          return (begin_scope expr_env)
-          >>= fun expr_env ->
-          return (begin_scope event_env)
-          >>= fun event_env ->
-          return (bind "@trigger" (event_as_expr event) expr_env)
-          >>= fun expr_env ->
-          return (bind "@trigger" event event_env)
-          >>= fun event_env ->
+          return (begin_scope event_env, begin_scope expr_env)
+          >>= fun (event_env, expr_env) ->
+          return
+            ( bind "@trigger" event event_env
+            , bind "@trigger" (event_as_expr event) expr_env )
+          >>= fun (event_env, expr_env) ->
           (* Update values of the event inside of the spawn *)
-          map (fun event -> update_event_value event expr_env) spawn_events
-          >>= fun spawn_events ->
+          (* map (fun event -> update_event_value event expr_env) spawn_events
+             >>= fun spawn_events -> *)
           (* Evaluate annotations from spawned elements *)
           let open Instantiation in
           evaluate_annotations_of_subprogram
@@ -142,31 +141,36 @@ and propagate_effect relation event (event_env, expr_env) program =
           >>= fun ( { events= inst_spawn_events
                     ; relations= inst_spawn_relations
                     ; _ }
-                  , _ ) ->
+                  , event_env
+                  , expr_env ) ->
           (* Logger.debug "Instantiated events from spawn:" ; Logger.debug @@
              Unparser.PlainUnparser.unparse_events inst_spawn_events ;
              Logger.debug "Instantiated relations from spawn:" ; Logger.debug @@
              Unparser.PlainUnparser.unparse_relations inst_spawn_relations ; *)
           (* Put it all together *)
           return
-            { program with
-              events=
-                List.flatten [program.events; inst_spawn_events; spawn_events]
-            ; template_insts= []
-            ; relations=
-                List.flatten
-                  [program.relations; inst_spawn_relations; spawn_relations] }
+            ( { program with
+                events=
+                  List.flatten [program.events; inst_spawn_events; spawn_events]
+              ; template_insts= []
+              ; relations=
+                  List.flatten
+                    [program.relations; inst_spawn_relations; spawn_relations]
+              }
+            , end_scope event_env
+            , end_scope expr_env )
   | ControlRelation (from, guard, dest, op, _annot) ->
-      if not (from.data = id.data) then return program
+      if not (from.data = id.data) then return (program, event_env, expr_env)
       else
         check_guard guard expr_env
         >>= fun is_guard_true ->
-        if not is_guard_true then return program
+        if not is_guard_true then return (program, event_env, expr_env)
         else
           (* Get the event [dest] *)
           find_flat dest.data event_env
           |> Option.to_result
-               ~none:(event_not_found dest.data |> Result.get_error)
+               ~none:
+                 (event_not_found ~loc:dest.loc dest.data |> Result.get_error)
           >>= fun dest_event ->
           (* According to [op], apply the effect on the marking for both
              events *)
@@ -177,6 +181,7 @@ and propagate_effect relation event (event_env, expr_env) program =
           | Exclude -> set_marking ~included:false dest_event
           | Include -> set_marking ~included:true dest_event
           | _ -> return dest_event )
-          >>= fun dest_event -> return (update_event dest_event program)
+          >>= fun dest_event ->
+          return (update_event dest_event program, event_env, expr_env)
 
 (* | _ -> return program *)

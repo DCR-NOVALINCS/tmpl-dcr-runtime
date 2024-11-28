@@ -187,6 +187,8 @@ and event_io = event_io' annotated [@@deriving yojson]
 
 and event_io' = Input of type_expr | Output of expr [@@deriving yojson]
 
+and event_type' = InputType | OutputType [@@deriving yojson]
+
 and event_marking = event_marking' annotated [@@deriving yojson]
 
 and event_marking' =
@@ -281,3 +283,5 @@ let empty_subprogram = mk_subprogram ()
 (* =============================================================================
    Program Section: Pretty Printers
    ============================================================================= *)
+
+let show_event_type' = function InputType -> "Input" | OutputType -> "Output"
