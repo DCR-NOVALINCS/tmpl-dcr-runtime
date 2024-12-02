@@ -9,7 +9,7 @@ open Misc
 open Monads.ResultMonad
 open Env
 open Printing
-open Input
+(* open Input *)
 
 (* =============================================================================
    Available functions
@@ -17,7 +17,8 @@ open Input
 
 let rec execute ~event_id ?(expr = Unit) ?(ty_env = empty_env)
     ?(expr_env = empty_env) ?(event_env = empty_env) program =
-  (* preprocess_program program >>= fun (event_env, expr_env, program) -> *)
+  typecheck_expr ~ty_env (annotate expr)
+  >>= fun _ ->
   match find_flat event_id event_env with
   | None -> event_not_found event_id
   | Some event ->
@@ -31,9 +32,8 @@ let rec execute ~event_id ?(expr = Unit) ?(ty_env = empty_env)
         ( match io.data with
         | Input _ -> execute_input_event event expr (ty_env, expr_env)
         | Output _ -> execute_output_event event expr_env )
-        >>= fun event ->
-        (* Update marking *)
-        set_marking ~executed:true event
+        >>= (* Update marking *)
+        set_marking ~executed:true
         >>= fun event ->
         (* Propagate relation effects that this event is apart of. *)
         propagate_effects event (event_env, expr_env)
@@ -72,19 +72,19 @@ and parse_program_from_file filename =
   let lexbuf = Lexing.from_channel (open_in filename) in
   parse_program ~filename lexbuf
 
-and parse_expression_from_string expr_string =
-  sanitize_input expr_string
-  >>= fun expr_string_tokens ->
-  if List.is_empty expr_string_tokens then return (annotate Unit)
+and parse_expression_from_string expr_tokens =
+  (* sanitize_input expr_string
+     >>= fun expr_string_tokens -> *)
+  if List.is_empty expr_tokens then return (annotate Unit)
   else
-    let lexbuf = Lexing.from_string expr_string in
+    let lexbuf = Lexing.from_string (String.concat " " expr_tokens) in
     parse_expression lexbuf
 
 (* --- Unparse --- *)
 
-and unparse_program_tdcr program =
+and unparse_program_tdcr ?(should_print_executed_marking = false) program =
   let open Unparser.PlainUnparser in
-  return (unparse program)
+  return (unparse ~should_print_executed_marking program)
 
 and unparse_program_json program =
   return (Yojson.Safe.pretty_to_string (yojson_of_program program))

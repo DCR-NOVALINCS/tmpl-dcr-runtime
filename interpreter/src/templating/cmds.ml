@@ -63,11 +63,12 @@ and help_term available_cmds =
 
 and view_term =
   let all_flag =
-    Arg.(value & flag & info ["a"; "all"] ~docv:"ALL" ~doc:"View all events")
+    Arg.(
+      value & flag & info ["a"; "all"] ~docv:"ALL" ~doc:"View the whole graph" )
   and view_cmd is_all {program; ty_env; event_env; expr_env; _} =
     match is_all with
     | true ->
-        view ~expr_env ~event_env program
+        unparse_program_tdcr ~should_print_executed_marking:true program
         >>= fun program_str ->
         return
           (mk_runtime_state ~ty_env ~expr_env ~event_env ~output:program_str
@@ -89,8 +90,12 @@ and execute_term =
       & info [] ~docv:"EVENT_ID" ~doc:"The event id to execute" )
   and expr =
     Arg.(
-      value & opt string "" & info ["expr"] ~docv:"EXPR" ~doc:"The expression" )
+      value & pos_right 0 string []
+      & info [] ~docv:"EXPR_STRING" ~doc:"The expression to execute" )
   and execute_cmd event_id expr_str {program; ty_env; event_env; expr_env; _} =
+    Logger.debug
+    @@ Printf.sprintf "Executing event %s with expression %s" event_id
+         (String.concat " " expr_str) ;
     parse_expression_from_string expr_str
     >>= fun expr ->
     execute ~ty_env ~expr_env ~event_env ~event_id ~expr:expr.data program

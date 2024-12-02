@@ -438,6 +438,30 @@ and event_type_mismatch ?(errors = []) ?(loc = Nowhere) expected_ty got_ty =
       }
     :: errors )
 
+and missing_label ?(errors = []) ?(available_labels = []) label =
+  fail
+    ( { location= label.loc
+      ; message=
+          Printf.sprintf "Missing label %s"
+            (CString.colorize ~color:Yellow label.data)
+      ; hint=
+          Some
+            ( "Ensure the label is declared and in scope. Check for typos."
+            ^
+            match available_labels with
+            | [] -> ""
+            | _ ->
+                let available_labels_str =
+                  List.map
+                    (fun label ->
+                      Printf.sprintf " - %s"
+                        (CString.colorize ~color:Yellow label.data) )
+                    available_labels
+                  |> String.concat "\n"
+                in
+                Printf.sprintf "Available labels:\n%s" available_labels_str ) }
+    :: errors )
+
 (* ┌──────────────────────────────────────────────────────────────────────────┐
    │ Error printing                                                           │
    └──────────────────────────────────────────────────────────────────────────┘ *)

@@ -17,8 +17,8 @@ open Input
 let rec start_header =
   CPrinter.cprint "To get started, type " ;
   CPrinter.cprint ~color:Green "help" ;
-  CPrinter.cprint " or " ;
-  CPrinter.cprint ~color:Green "h" ;
+  (* CPrinter.cprint " or " ;
+     CPrinter.cprint ~color:Green "h" ; *)
   CPrinter.cprintln " to see the available commands.\n"
 
 and get_file_extension filename =
@@ -77,7 +77,7 @@ and prompt runtime_state =
       >>= fun tokens ->
       interpret_command tokens runtime_state
       |> print_output ~previous_state:runtime_state
-      >>= fun state -> prompt state
+      >>= fun state -> prompt {state with output= ""}
 
 let runtime filename =
   input_file filename
@@ -113,7 +113,7 @@ let runtime_cmd =
 let _ =
   (* Logger Settings *)
   Logger.enable () ;
-  Logger.set_logger_level Info ;
+  Logger.set_logger_level Debug ;
   match Cmd.eval_value runtime_cmd with
   | Ok (`Ok result) -> result |> print_output |> ignore
   | Error _ -> ()

@@ -94,6 +94,16 @@ and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
     (event_env, expr_env) events
   >>= fun (event_env, expr_env) -> return (event_env, expr_env, program)
 
+and preprocess_subprogram ?(expr_env = empty_env) ?(event_env = empty_env)
+    (events, insts, relations) =
+  preprocess_program ~expr_env ~event_env
+    {empty_program with events; template_insts= insts; relations}
+  >>= fun (event_env, expr_env, program) ->
+  return
+    ( event_env
+    , expr_env
+    , (program.events, program.template_insts, program.relations) )
+
 (* =============================================================================
    Getters
    ============================================================================= *)

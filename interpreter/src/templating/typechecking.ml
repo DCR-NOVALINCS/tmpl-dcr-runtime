@@ -44,6 +44,10 @@ module EventTypes = struct
       acc ^ key ^ ": " ^ kind ^ "\n"
     in
     StringHashtbl.fold f tbl ""
+
+  let to_list tbl =
+    let f key value acc = (key, value) :: acc in
+    StringHashtbl.fold f tbl []
 end
 
 type template_ty =
@@ -89,7 +93,6 @@ let mk_template_ty_from template_def =
 (* - If the relation is a [spawn] relation: *)
 (* - [] *)
 let rec typecheck ?(event_env = empty_env) program =
-  (* todo "typecheck template defs" >>= fun _ -> *)
   let template_decls = program.template_decls in
   let events = program.events in
   let insts = program.template_insts in
@@ -122,7 +125,7 @@ and typecheck_template_decl template_decl
     fold_left
       (fun (ty_env, event_env) (id, param_type) ->
         match param_type with
-        | ExprParam (ty, _default) ->
+        | ExprParam (ty, _) ->
             Logger.debug "Binding expr: " ;
             Logger.debug @@ Unparser.PlainUnparser.unparse_ty ty.data ;
             return (bind id.data ty.data ty_env)
@@ -133,13 +136,21 @@ and typecheck_template_decl template_decl
             ( match EventTypes.find label.data label_types with
             | None ->
                 (* TODO: In case of not found the label in this point of the program, what to do? *)
+                (* todo "error message for not found label" *)
+                (* missing_label
+                   ~available_labels:
+                     ( EventTypes.to_list label_types
+                     |> List.map (fun (x, _) -> annotate x) )
+                   label *)
                 return (Input (annotate UnitTy), label_types)
             | Some (value_ty, event_type) -> (
               match event_type with
               | InputType -> return (Input (annotate value_ty), label_types)
               | OutputType ->
                   return
-                    (Output (annotate ~ty:(Some value_ty) Unit), label_types)
+                    ( Output
+                        (annotate ~ty:(Some value_ty) (default_value value_ty))
+                    , label_types )
                   (* FIXME: Get a value of the output event *) ) )
             >>= fun (event_io, _label_types) ->
             let event = mk_event (id, label) (annotate event_io) in
@@ -307,7 +318,9 @@ and typecheck_inst inst (ty_env, event_env, tmpl_ty_env, label_types) =
               | Some (value_ty, event_type) -> (
                 match event_type with
                 | InputType ->
-                    return (Input (annotate ~loc:x.loc value_ty), label_types)
+                    return
+                      ( Input (annotate ~loc:x.loc ~ty:(Some value_ty) value_ty)
+                      , label_types )
                 | OutputType ->
                     return
                       ( Output

@@ -1,5 +1,8 @@
-open Misc.Env
-open Misc.Monads.ResultMonad
+open Misc
+open Env
+open Monads.ResultMonad
+
+(* open Printing *)
 open Syntax
 open Errors
 
@@ -86,157 +89,137 @@ let rec eval_expr expr env =
   | _ -> invalid_expr ()
 
 and eval_binop v1 v2 op =
-  (* let open Misc.Printing in Logger.debug @@ (yojson_of_expr v1 |>
-     Yojson.Safe.pretty_to_string) ; Logger.debug @@ (yojson_of_expr v2 |>
-     Yojson.Safe.pretty_to_string) ; *)
-  ( match (!(v1.ty), !(v2.ty)) with
-  | Some ty1, Some ty2 -> return (ty1, ty2)
-  (* | Some ty1, _ -> return (ty1, UnitTy) | _, Some ty2 -> return (UnitTy,
-     ty2) *)
-  | Some ty1, None ->
-      should_not_happen ~module_path:"evaluation.ml"
-        (Printf.sprintf
-           "The type of the second operand is missing, the first operand is %s"
-           (Unparser.PlainUnparser.unparse_ty ty1) )
-  | None, Some ty2 ->
-      should_not_happen ~module_path:"evaluation.ml"
-        (Printf.sprintf
-           "The type of the first operand is missing, the second operand is %s"
-           (Unparser.PlainUnparser.unparse_ty ty2) )
-  | _ ->
-      should_not_happen
-        "Either the types of the first or second operand are missing" )
-  >>= fun (ty1, ty2) ->
+  (* ( match (!(v1.ty), !(v2.ty)) with
+     | Some ty1, Some ty2 -> return (ty1, ty2)
+     (* | Some ty1, _ -> return (ty1, UnitTy) | _, Some ty2 -> return (UnitTy,
+        ty2) *)
+     | Some ty1, None ->
+         should_not_happen ~module_path:"evaluation.ml"
+           (Printf.sprintf
+              "The type of the second operand is missing, the first operand is %s"
+              (Unparser.PlainUnparser.unparse_ty ty1) )
+     | None, Some ty2 ->
+         should_not_happen ~module_path:"evaluation.ml"
+           (Printf.sprintf
+              "The type of the first operand is missing, the second operand is %s"
+              (Unparser.PlainUnparser.unparse_ty ty2) )
+     | _ ->
+         should_not_happen
+           "Either the types of the first or second operand are missing" )
+     >>= fun (ty1, ty2) -> *)
   match op with
   | Add -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 + i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
   | Sub -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 - i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
   | Mult -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 * i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
   | Div -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 / i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
   | Eq -> (
     match (v1.data, v2.data) with
     (* Number *)
     | IntLit i1, IntLit i2 ->
         if i1 = i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
     (* String *)
     | StringLit s1, StringLit s2 ->
         if s1 = s2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | StringLit _, _ | _, StringLit _ ->
-        type_mismatch ~loc:v1.loc [StringTy] [ty1; ty2]
     (* Boolean *)
     | True, True | False, False ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
     | True, False | False, True ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | True, _ | False, _ | _, True | _, False ->
-        type_mismatch ~loc:v1.loc [BoolTy] [ty1; ty2]
     (* Other *)
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; StringTy; BoolTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; StringTy; BoolTy] [] )
   | NotEq -> (
     match (v1.data, v2.data) with
     (* Number *)
     | IntLit i1, IntLit i2 ->
         if i1 <> i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
     (* String *)
     | StringLit s1, StringLit s2 ->
         if s1 <> s2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | StringLit _, _ | _, StringLit _ ->
-        type_mismatch ~loc:v1.loc [StringTy] [ty1; ty2]
     (* Boolean *)
     | True, False | False, True ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
     | True, True | False, False ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | True, _ | False, _ | _, True | _, False ->
-        type_mismatch ~loc:v1.loc [BoolTy] [ty1; ty2]
     (* Other *)
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; StringTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; StringTy] [] )
   | GreaterThan -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 > i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
-    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
   | GreaterOrEqual -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 >= i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
-    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
   | LessThan -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 < i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
-    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
   | LessOrEqual -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 <= i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2]
-    | _ -> type_mismatch ~loc:v1.loc [IntTy] [ty1; ty2] )
+    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] []
+    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
   | And -> (
     match (v1.data, v2.data) with
     | True, True -> return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
     | True, False | False, True | False, False ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | _ -> type_mismatch ~loc:v1.loc [BoolTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [BoolTy; BoolTy] [] )
   | Or -> (
     match (v1.data, v2.data) with
     | False, False -> return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
     | True, False | False, True | True, True ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
-    | _ -> type_mismatch ~loc:v1.loc [BoolTy] [ty1; ty2] )
+    | _ -> type_mismatch ~loc:v1.loc [BoolTy; BoolTy] [] )
 
 and eval_unop v op =
-  (* let ty = Option.value ~default:UnitTy !(v.ty) in *)
-  ( match !(v.ty) with
-  | Some ty -> return ty
-  | None ->
-      should_not_happen ~module_path:"evaluation.ml"
-        (Printf.sprintf "The type of the operand is missing, the operand is %s"
-           (Unparser.PlainUnparser.unparse_expr v) ) )
-  >>= fun ty ->
   match op with
   | Minus -> (
     match v.data with
     | IntLit i -> return {v with data= IntLit (-i); ty= ref (Some IntTy)}
-    | _ -> type_mismatch ~loc:v.loc [IntTy] [ty] )
+    | _ -> type_mismatch ~loc:v.loc [IntTy] [] )
   | Negation -> (
     match v.data with
     | True -> return (annotate ~loc:v.loc ~ty:(Some BoolTy) False)
     | False -> return (annotate ~loc:v.loc ~ty:(Some BoolTy) True)
-    | _ -> type_mismatch ~loc:v.loc [BoolTy] [ty] )
+    | _ -> type_mismatch ~loc:v.loc [BoolTy] [] )
 (* | _ -> failwith "Invalid unary operator" *)
 
 and find_id id env =
   match find_flat id.data env with
-  | None -> id_not_found id
+  | None ->
+      (* Logger.debug
+         @@ Printf.sprintf "Expr env: %s"
+              (string_of_env Unparser.PlainUnparser.unparse_expr env) ; *)
+      id_not_found id
   | Some expr -> return expr
 
 (* =============================================================================

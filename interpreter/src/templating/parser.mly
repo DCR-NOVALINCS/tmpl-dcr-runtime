@@ -306,7 +306,7 @@ plain_event_io:
 input_expr: mark_loc_ty(plain_input_expr) { $1 }
 plain_input_expr:
   |                                      { UnitTy }
-  | ty = preceded(COLON, plain_type_expr)      { ty }
+  | COLON; ty = plain_type_expr      { ty }
 ;
 
 node_marking: mark_loc_ty(plain_node_marking) {$1}

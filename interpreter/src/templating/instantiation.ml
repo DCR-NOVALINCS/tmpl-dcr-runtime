@@ -24,6 +24,8 @@ and replace_relation relation (expr_env, event_env) =
   | SpawnRelation (from, guard, subprogram, annotations) ->
       replace_id from
       >>= fun from ->
+      Logger.debug
+      @@ Printf.sprintf "Replacing spawn relation from %s" from.data ;
       eval_expr guard expr_env
       >>= fun guard ->
       let events, insts, relations = subprogram in
@@ -200,14 +202,6 @@ end
 type context = expr env * event env * template_def env
 
 (* =============================================================================
-   Helper functions
-   ============================================================================= *)
-
-(* =============================================================================
-   Error handling
-   ============================================================================= *)
-
-(* =============================================================================
    Binding templates
    ============================================================================= *)
 
@@ -266,10 +260,6 @@ and bind_params params args (expr_env, event_env, tmpl_env) =
   Logger.debug (List.length missing |> string_of_int) ;
   (* if not (List.length props = List.length params) then invalid_number_of_args
      () else *)
-  return (begin_scope expr_env)
-  >>= fun expr_env ->
-  return (begin_scope event_env)
-  >>= fun event_env ->
   fold_left
     (fun (expr_env, event_env, tmpl_env) prop ->
       bind_prop prop (expr_env, event_env, tmpl_env) )
@@ -285,10 +275,14 @@ and bind_prop prop (expr_env, event_env, tmpl_env) =
       >>= fun expr_env -> return (expr_env, event_env, tmpl_env)
   | EventArg event_id -> (
     match find_flat event_id.data event_env with
-    | None -> event_not_found ~loc:event_id.loc event_id.data
+    | None ->
+        Logger.error @@ Printf.sprintf "Event %s not found" event_id.data ;
+        event_not_found ~loc:event_id.loc event_id.data
     | Some event ->
         return (bind prop_id.data event event_env)
-        >>= fun event_env -> return (expr_env, event_env, tmpl_env) )
+        >>= fun event_env ->
+        return (bind prop_id.data (event_as_expr event) expr_env)
+        >>= fun expr_env -> return (expr_env, event_env, tmpl_env) )
 
 (* =============================================================================
    Instantiation
@@ -310,6 +304,11 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       @@ Printf.sprintf "Instantiating template %s"
            (CString.colorize ~color:Yellow ~format:Bold id.data) ;
       let {export; params; export_types= _; graph; _} = tmpl in
+      (* Begin new scope for the template instantiation *)
+      return (begin_scope expr_env, begin_scope event_env)
+      >>= fun (expr_env, event_env) ->
+      preprocess_subprogram ~expr_env ~event_env graph
+      >>= fun (event_env, expr_env, graph) ->
       (* Bind params with respective args in the envs *)
       bind_params params args (expr_env, event_env, tmpl_env)
       >>= fun (expr_env, event_env, _tmpl_env) ->
@@ -356,8 +355,8 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
              ~events:(List.flatten [events_ti; result_events])
              ~relations:(List.flatten [relations_ti; result_relations])
              ()
-         , event_env
-         , expr_env )
+         , end_scope event_env
+         , end_scope expr_env )
 
 and instantiate_event target_event expr_env =
   replace_event target_event expr_env
