@@ -46,6 +46,12 @@ let test_suite =
       >>= fun (program, event_env, _expr_env) -> typecheck ~event_env program
     in
     result |> expecting_ok
+  and test_6 path test_ctxt =
+    let result =
+      build_state (path "6.tdcr") test_ctxt
+      >>= fun (program, event_env, _expr_env) -> typecheck ~event_env program
+    in
+    result |> expecting_error
   and fullpath file = "test/files/typechecker/" ^ file
   and make_test (name, test_fun) =
     name >:: fun test_ctxt -> test_fun fullpath test_ctxt |> ignore
@@ -56,6 +62,7 @@ let test_suite =
        ; make_test ("test_2", test_2)
        ; make_test ("test_3", test_3)
        ; make_test ("test_4", test_4)
-       ; make_test ("test_5", test_5) ]
+       ; make_test ("test_5", test_5)
+       ; make_test ("test_6", test_6) ]
 
 let _ = run_test_tt_main test_suite

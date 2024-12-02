@@ -465,7 +465,9 @@ let error_pointer = '^'
 
 let pretty_string_error detailed_error =
   let {location; message; hint} = detailed_error in
-  let message_header = CString.colorize ~color:Red "error: " ^ message ^ "\n" in
+  let message_header =
+    CString.colorize ~format:Bold ~color:Red "error: " ^ message ^ "\n"
+  in
   let message_file_section =
     let filepath, line, start_char, end_char = extract_location_info location in
     let line_size = String.length (string_of_int line) in
@@ -473,7 +475,7 @@ let pretty_string_error detailed_error =
     let marker =
       String.concat ""
         [ String.make start_char ' '
-        ; CString.colorize ~color:Red
+        ; CString.colorize ~color:Red ~format:Bold
             (String.make (end_char - start_char) error_pointer) ]
     in
     match filepath with
@@ -488,7 +490,8 @@ let pretty_string_error detailed_error =
   let message_hint =
     match hint with
     | None -> ""
-    | Some message -> CString.colorize ~color:Cyan "hint: " ^ message ^ "\n"
+    | Some message ->
+        CString.colorize ~format:Bold ~color:Cyan "hint: " ^ message ^ "\n"
   in
   message_header ^ message_file_section ^ message_hint
 

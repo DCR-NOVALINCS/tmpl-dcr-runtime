@@ -20,6 +20,20 @@ module type ColorType = sig
   val color_code : t -> string
 end
 
+module type FormatType = sig
+  type t =
+    | Bold
+    | Underline
+    | Italic
+    | StrikeThrough
+    | Inverse
+    | Hidden
+    | Default
+    | None
+
+  val format_code : t -> string
+end
+
 module NoColor : ColorType = struct
   type t =
     | Red
@@ -80,23 +94,67 @@ module ASNIColor : ColorType = struct
     | BrightWhite -> "\027[97m"
 end
 
-module ASNIString (Color : ColorType) = struct
+module NoFormat : FormatType = struct
+  type t =
+    | Bold
+    | Underline
+    | Italic
+    | StrikeThrough
+    | Inverse
+    | Hidden
+    | Default
+    | None
+
+  let format_code _ = ""
+end
+
+module ASNIFormat : FormatType = struct
+  type t =
+    | Bold
+    | Underline
+    | Italic
+    | StrikeThrough
+    | Inverse
+    | Hidden
+    | Default
+    | None
+
+  let format_code = function
+    | Bold -> "\027[1m"
+    | Underline -> "\027[4m"
+    | Italic -> "\027[3m"
+    | StrikeThrough -> "\027[9m"
+    | Inverse -> "\027[7m"
+    | Hidden -> "\027[8m"
+    | Default -> "\027[0m"
+    | None -> ""
+end
+
+module ASNIString (Color : ColorType) (Format : FormatType) = struct
   include String
 
-  let colorize ?(color = Color.Default) text =
-    let color_start = Color.color_code color in
-    let color_end = Color.color_code Color.Default in
-    Printf.sprintf "%s%s%s" color_start text color_end
+  let colorize ?(color = Color.Default) ?(format = Format.None) text =
+    let color_start, color_end =
+      (Color.color_code color, Color.color_code Color.Default)
+    in
+    let format_start, format_end =
+      (Format.format_code format, Format.format_code Format.Default)
+    in
+    Printf.sprintf "%s%s%s%s%s" color_start format_start text color_end
+      format_end
 end
 
 module type Printer = sig
   module Color : ColorType
 
-  val cprint : ?color:Color.t -> string -> unit
+  module Format : FormatType
 
-  val cprintln : ?color:Color.t -> string -> unit
+  val cprint : ?color:Color.t -> ?format:Format.t -> string -> unit
 
-  val cprintf : ?color:Color.t -> ('a, unit, string, unit) format4 -> 'a
+  val cprintln : ?color:Color.t -> ?format:Format.t -> string -> unit
+
+  val cprintf :
+    ?color:Color.t -> ?format:Format.t -> ('a, unit, string, unit) format4 -> 'a
 
   val eprint : string -> unit
 
@@ -105,22 +163,31 @@ module type Printer = sig
   val eprintf : ('a, unit, string, unit) format4 -> 'a
 end
 
-module MakePrinter (C : ColorType) : Printer = struct
+module MakePrinter (C : ColorType) (F : FormatType) : Printer = struct
   include Printf
   module Color = C
+  module Format = F
 
-  let cprint ?(color = Color.Default) text =
-    let color_start = Color.color_code color in
-    let color_end = Color.color_code Color.Default in
-    printf "%s%s%s" color_start text color_end
+  let cprint ?(color = Color.Default) ?(format = Format.None) text =
+    let color_start, color_end =
+      (Color.color_code color, Color.color_code Color.Default)
+    in
+    let format_start, format_end =
+      (Format.format_code format, Format.format_code Format.Default)
+    in
+    Printf.printf "%s%s%s%s%s" color_start format_start text color_end
+      format_end
 
-  let cprintln ?(color = Color.Default) text = cprint ~color (text ^ "\n")
+  let cprintln ?(color = Color.Default) ?(format = Format.None) text =
+    cprint ~color ~format (text ^ "\n")
 
-  let cprintf ?(color = Color.Default) fmt = ksprintf (cprint ~color) fmt
+  let cprintf ?(color = Color.Default) ?(format = Format.None) fmt =
+    ksprintf (cprint ~color ~format) fmt
 
   let eprint text =
     let red = Color.Red in
-    cprint ~color:red text
+    let bold = Format.Bold in
+    cprint ~color:red ~format:bold text
 
   let eprintln text = eprint (text ^ "\n")
 
@@ -128,7 +195,7 @@ module MakePrinter (C : ColorType) : Printer = struct
 end
 
 module type Logger = sig
-  type log_t = Log | Error | Warn | Info | Debug
+  type log_t = Log | Error | Warn | Info | Debug | Success
 
   val enabled : bool ref
 
@@ -146,6 +213,8 @@ module type Logger = sig
 
   val warn : string -> unit
 
+  val success : string -> unit
+
   val info : string -> unit
 
   val debug : string -> unit
@@ -155,11 +224,11 @@ module type Logger = sig
   val end_group : unit -> unit
 end
 
-module MakeLogger (Color : ColorType) : Logger = struct
-  module P = MakePrinter (Color)
+module MakeLogger (Color : ColorType) (Format : FormatType) : Logger = struct
+  module P = MakePrinter (Color) (Format)
   module GroupStack = Stack
 
-  type log_t = Log | Error | Warn | Info | Debug
+  type log_t = Log | Error | Warn | Info | Debug | Success
 
   let group_stack = GroupStack.create ()
 
@@ -177,7 +246,8 @@ module MakeLogger (Color : ColorType) : Logger = struct
     | Debug -> ("DEBUG", 1, Blue)
     | Info -> ("INFO", 2, Cyan)
     | Warn -> ("WARN", 3, Yellow)
-    | Error -> ("ERROR", 4, Red)
+    | Success -> ("SUCCESS", 4, BrightGreen)
+    | Error -> ("ERROR", 5, Red)
     | Log -> ("LOG", 99, Default)
 
   let logger_level =
@@ -197,13 +267,15 @@ module MakeLogger (Color : ColorType) : Logger = struct
       else
         let group_size = GroupStack.length group_stack in
         let indent = if group_size > 0 then "│ " ^ indent else indent in
-        P.cprint ~color:Cyan indent ;
-        P.cprintf "[%s]: " ~color:log_color log_type_str ;
+        P.cprint indent ;
+        P.cprintf "[%s]: " ~color:log_color ~format:Bold log_type_str ;
         P.cprintln text
 
   let error text = log ~log_type:Error text
 
   let warn text = log ~log_type:Warn text
+
+  let success text = log ~log_type:Success text
 
   let info text = log ~log_type:Info text
 
@@ -229,8 +301,8 @@ module MakeLogger (Color : ColorType) : Logger = struct
           P.cprintln ~color:Cyan indent
 end
 
-module CPrinter = MakePrinter (ASNIColor)
-module Printer = MakePrinter (NoColor)
-module CString = ASNIString (ASNIColor)
-module String = ASNIString (NoColor)
-module Logger = MakeLogger (ASNIColor)
+module CPrinter = MakePrinter (ASNIColor) (ASNIFormat)
+module Printer = MakePrinter (NoColor) (NoFormat)
+module CString = ASNIString (ASNIColor) (ASNIFormat)
+module String = ASNIString (NoColor) (NoFormat)
+module Logger = MakeLogger (ASNIColor) (ASNIFormat)

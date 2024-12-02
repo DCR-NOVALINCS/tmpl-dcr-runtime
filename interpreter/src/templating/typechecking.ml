@@ -227,12 +227,6 @@ and typecheck_events events (ty_env, event_env, label_types) =
     events
 
 and typecheck_event event (ty_env, event_env, label_types) =
-  (* collect_event_dependencies event (ty_env, event_env)
-     >>= fun deps ->
-     Logger.debug @@ "Dependencies: " ;
-     Logger.debug
-     @@ String.concat ", "
-          (List.map (fun d -> Unparser.PlainUnparser.unparse_events [d]) deps) ; *)
   let {info; io; _} = event.data in
   let id, label = info in
   ( match io.data with
@@ -279,9 +273,7 @@ and typecheck_inst inst (ty_env, event_env, tmpl_ty_env, label_types) =
   match find_flat tmpl_id.data tmpl_ty_env with
   | None -> tmpl_not_found tmpl_id
   | Some template_ty ->
-      let {expr_param_tys; event_param_labels= _; export_tys= _} =
-        template_ty
-      in
+      let {expr_param_tys; event_param_labels= _; export_tys} = template_ty in
       let typecheck_args args (ty_env, event_env) =
         fold_left
           (fun (ty_env, event_env) (id, arg_type) ->
@@ -302,20 +294,37 @@ and typecheck_inst inst (ty_env, event_env, tmpl_ty_env, label_types) =
               | Some _event -> return (ty_env, event_env) ) )
           (ty_env, event_env) args
       and make_x_events xs (ty_env, event_env) =
-        (* Binds exported events to be used in the latter *)
-        fold_left
-          (fun (ty_env, event_env) x ->
-            return
-            @@ mk_event (x, annotate "X") (annotate (Input (annotate IntTy)))
-            >>= fun x_event ->
-            typecheck_event x_event (ty_env, event_env, EventTypes.empty)
-            >>= fun (ty_env, event_env, _) -> return (ty_env, event_env) )
-          (ty_env, event_env) xs
+        if not (List.length xs = List.length export_tys) then
+          todo "error message for missing bind exported events"
+        else
+          return @@ List.combine xs (List.map snd export_tys)
+          >>= fun xs ->
+          (* Binds exported events to be used in the latter *)
+          fold_left
+            (fun (ty_env, event_env, label_types) (x, label) ->
+              ( match EventTypes.find label.data label_types with
+              | None -> todo "error message for not found label"
+              | Some (value_ty, event_type) -> (
+                match event_type with
+                | InputType ->
+                    return (Input (annotate ~loc:x.loc value_ty), label_types)
+                | OutputType ->
+                    return
+                      ( Output
+                          (annotate ~loc:x.loc ~ty:(Some value_ty)
+                             (default_value value_ty) )
+                      , label_types )
+                    (* FIXME: Get a value of the output event *) ) )
+              >>= fun (event_io, label_types) ->
+              let x_event = mk_event (x, label) (annotate event_io) in
+              typecheck_event x_event (ty_env, event_env, label_types) )
+            (ty_env, event_env, label_types)
+            xs
       in
       typecheck_args args (ty_env, event_env)
-      >>= fun (ty_env, event_env) ->
-      make_x_events x (ty_env, event_env)
-      >>= fun (ty_env, event_env) -> return (ty_env, event_env, label_types)
+      >>= fun (ty_env, event_env) -> make_x_events x (ty_env, event_env)
+(* >>= fun (ty_env, event_env, label_types) ->
+   return (ty_env, event_env, label_types) *)
 
 (* =============================================================================
    Typechecking of relations
@@ -544,3 +553,15 @@ and collect_expr_dependencies expr (_ty_env, event_env) =
       | _ -> collect deps rest )
   in
   collect [] [expr]
+
+(* =============================================================================
+   Miscellaneous functions
+   ============================================================================= *)
+
+and default_value ty' =
+  match ty' with
+  | UnitTy -> Unit
+  | BoolTy -> False
+  | IntTy -> IntLit 0
+  | StringTy -> StringLit ""
+  | _ -> failwith "Type not supported"

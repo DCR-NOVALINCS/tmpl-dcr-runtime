@@ -70,7 +70,7 @@ and execute_input_event event expr (ty_env, expr_env) =
 
 and parse_program_from_file filename =
   let lexbuf = Lexing.from_channel (open_in filename) in
-  parse_program lexbuf
+  parse_program ~filename lexbuf
 
 and parse_expression_from_string expr_string =
   sanitize_input expr_string

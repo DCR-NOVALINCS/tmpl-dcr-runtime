@@ -1,0 +1,16 @@
+tmpl f(n: Number, e: A): B {
+    (b: B)[n]
+    e -[n == b.value]->* b
+} => b
+
+tmpl g(n: Number): A, B {
+    (a: A)[?]
+    f(n = 0, e -> a) => b
+} => a, b
+
+(a: A)[?]
+g(n = 1, e -> a2) => a, b
+g(n = 0, e -> a) => a2, b
+
+a -->% b, a2
+b2 -->* a

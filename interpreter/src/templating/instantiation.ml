@@ -306,7 +306,9 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
   match find_flat id.data tmpl_env with
   | None -> tmpl_not_found ~available:(flatten tmpl_env |> List.map fst) id
   | Some tmpl ->
-      Logger.info @@ Printf.sprintf "Instantiating template %s" id.data ;
+      Logger.info
+      @@ Printf.sprintf "Instantiating template %s"
+           (CString.colorize ~color:Yellow ~format:Bold id.data) ;
       let {export; params; export_types= _; graph; _} = tmpl in
       (* Bind params with respective args in the envs *)
       bind_params params args (expr_env, event_env, tmpl_env)
