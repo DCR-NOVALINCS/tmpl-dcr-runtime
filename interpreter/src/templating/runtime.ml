@@ -113,24 +113,12 @@ and propagate_effect relation event (event_env, expr_env) program =
             ( bind "@trigger" event event_env
             , bind "@trigger" (event_as_expr event) expr_env )
           >>= fun (event_env, expr_env) ->
-          (* Update values of the event inside of the spawn *)
-          (* map (fun event -> update_event_value event expr_env) spawn_events
-             >>= fun spawn_events -> *)
           (* Evaluate annotations from spawned elements *)
           let open Instantiation in
           evaluate_annotations_of_subprogram
             (spawn_events, spawn_insts, spawn_relations)
             (expr_env, event_env, empty_env)
           >>= fun (spawn_events, spawn_insts, spawn_relations) ->
-          (* fold_left (fun events event -> let { marking; io; _ } = event.data
-             in begin match io.data with | Input _ -> return (io,
-             marking.data.value) | Output expr -> eval_expr expr expr_env >>=
-             fun value -> return (annotate ~loc:io.loc ~ty:!(io.ty) (Output
-             value), value) end >>= fun (io, value) -> let marking = { marking
-             with data = { marking.data with value } } in return ({ event with
-             data = { event.data with marking; io } } :: events)) []
-             spawn_events >>= fun spawn_events -> *)
-
           (* Instantiate template instances present in the spawn *)
           (* FIXME: Maybe use instantiate_tmpls instead of this function *)
           { template_decls= program.template_decls

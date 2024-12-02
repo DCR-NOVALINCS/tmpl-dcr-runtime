@@ -1,20 +1,14 @@
 open Templating
 open Api
 open Errors
-open Syntax
 open Instantiation
-open Lex_and_parse
 open Typechecking
-
-(* open Unparser *)
 open Program_helper
+open Cmds
 open Misc
-
-(* open Env *)
 open Monads.ResultMonad
 open Printing
-
-(* open Misc.Env *)
+open Input
 
 (* =============================================================================
    Aux functions
@@ -46,9 +40,6 @@ and input_file filename =
    Printf.fprintf oc "%s\n" content ;
    close_out oc *)
 
-and sanitize_input input =
-  input |> String.split_on_char ' ' |> List.filter (fun s -> s <> "") |> return
-
 (* =============================================================================
    Commands Section
    ============================================================================= *)
@@ -60,32 +51,6 @@ let print_output ?(previous_state = empty_runtime_state) = function
   | Error errors ->
       (* Logger.error "Errors found" ; *)
       print_errors errors ; return previous_state
-
-(* let parse_expression expr_string =
-   let expr = expr_string |> String.concat " " in
-   let expr_lexbuf = Lexing.from_string expr in
-   Logger.debug @@ "Parsing expression " ^ expr ;
-   parse_expression expr_lexbuf *)
-
-(* let parse filename =
-   if Sys.file_exists filename then (
-     Logger.debug @@ "Reading file: " ^ CString.colorize ~color:Yellow filename ;
-     let lexbuf = Lexing.from_channel (open_in filename) in
-     let prog = parse_program ~filename lexbuf in
-     prog )
-   else file_not_exists filename *)
-
-(* let get_program =
-   if Array.length Sys.argv < 2 then return empty_program
-   else
-     let filename = Sys.argv.(1) in
-     input_file filename >>= fun _ -> parse filename *)
-
-(* =============================================================================
-   Command Management Section
-   ============================================================================= *)
-
-open Cmdliner
 
 (* =============================================================================
    Main Section
@@ -224,6 +189,8 @@ open Cmdliner
    REPL Section
    ============================================================================= *)
 
+open Cmdliner
+
 let rec interpret_command tokens runtime_state =
   match tokens with
   | [] -> return runtime_state
@@ -235,13 +202,12 @@ let rec interpret_command tokens runtime_state =
           nearest_neighbor levenshtein_distance cmds_bbk_tree cmd_name
         in
         invalid_command ~nearest ~distance tokens
-    | Some cmd -> (
+    | Some {callback; _} -> (
         let argv = Array.of_list tokens in
-        match Cmd.eval_value ~argv cmd with
-        | Ok _ -> return runtime_state
-        | Error _ ->
-            CPrinter.cprintln "Command failed" ;
-            return runtime_state ) )
+        match Cmd.eval_value ~argv callback with
+        | Ok (`Ok result) -> result runtime_state >>= fun state -> return state
+        | Error _ -> return runtime_state
+        | _ -> return runtime_state ) )
 
 and prompt runtime_state =
   start_header ;
@@ -260,8 +226,7 @@ and prompt runtime_state =
 let runtime filename =
   input_file filename
   >>= fun _ ->
-  let lexbuf = Lexing.from_channel (open_in filename) in
-  parse_program ~filename lexbuf
+  parse_program_from_file filename
   >>= fun program ->
   preprocess_program program
   >>= fun (event_env, expr_env, program) ->
@@ -285,4 +250,8 @@ let runtime_cmd =
   let input_program_main = Term.(const runtime $ input_filename) in
   Cmd.v info input_program_main
 
-let _ = match Cmd.eval_value runtime_cmd with Ok _ -> () | Error _ -> ()
+let _ =
+  match Cmd.eval_value runtime_cmd with
+  | Ok (`Ok result) -> result |> print_output |> ignore
+  | Error _ -> ()
+  | _ -> ()
