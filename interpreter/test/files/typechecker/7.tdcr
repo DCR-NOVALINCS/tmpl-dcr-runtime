@@ -1,6 +1,6 @@
 tmpl f(n: Number, e: A): B {
     (b: B)[n]
-    e -->* b
+    e -->+ b
 } => b
 
 (a: A)[?: { n: Number, b: Boolean }]

@@ -153,7 +153,6 @@ and event_as_expr event =
   (* let {marking; _} = event.data in *)
   let {marking; io; _} = event.data in
   let value =
-    let open Syntax in
     match (marking.data, io.data) with
     | _, Output expr -> expr
     | {value; _}, Input _ -> !value

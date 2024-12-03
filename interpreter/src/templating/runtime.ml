@@ -106,12 +106,12 @@ and propagate_effect relation event (event_env, expr_env) program =
           (* Rename the event ids to new ones, to prevent id clashing *)
           fresh_event_ids spawn_events spawn_relations []
           >>= fun (spawn_events, spawn_relations) ->
-          (* Begin new env scope and bind "@trigger" *)
+          (* Begin new env scope and bind trigger_id *)
           return (begin_scope event_env, begin_scope expr_env)
           >>= fun (event_env, expr_env) ->
           return
-            ( bind "@trigger" event event_env
-            , bind "@trigger" (event_as_expr event) expr_env )
+            ( bind trigger_id event event_env
+            , bind trigger_id (event_as_expr event) expr_env )
           >>= fun (event_env, expr_env) ->
           (* Evaluate annotations from spawned elements *)
           let open Instantiation in

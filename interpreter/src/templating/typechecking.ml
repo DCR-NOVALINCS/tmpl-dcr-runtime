@@ -103,6 +103,7 @@ let rec typecheck ?(event_env = empty_env) program =
   >>= fun (ty_env, event_env, tmpl_ty_env, label_types) ->
   typecheck_subprogram (events, insts, relations)
     (ty_env, event_env, tmpl_ty_env, label_types)
+  >>= fun (ty_env, event_env, _) -> return (ty_env, event_env)
 
 (* =============================================================================
    Typechecking of template definitions
@@ -167,7 +168,7 @@ and typecheck_template_decl template_decl
   (* Typecheck the graph of the template *)
   typecheck_subprogram (events, insts, relations)
     (ty_env, event_env, tmpl_ty_env, label_types)
-  >>= fun (_tmpl_ty_env, tmpl_event_env) ->
+  >>= fun (_tmpl_ty_env, tmpl_event_env, label_types) ->
   (* Check the exported events and their typings *)
   partition_map
     (fun export_id ->
@@ -215,16 +216,16 @@ and typecheck_subprogram (events, insts, relations)
     (ty_env, event_env, tmpl_ty_env, label_types) =
   typecheck_events events (ty_env, event_env, label_types)
   >>= fun (ty_env, event_env, label_types) ->
-  Logger.debug @@ "Event env: " ;
-  Logger.debug
-  @@ string_of_env
-       (fun e -> Unparser.PlainUnparser.unparse_events [e])
-       event_env ;
-  Logger.debug @@ "Label type hashtbl: " ;
-  Logger.debug @@ EventTypes.show label_types ;
+  (* Logger.debug @@ "Event env: " ;
+     Logger.debug
+     @@ string_of_env
+          (fun e -> Unparser.PlainUnparser.unparse_events [e])
+          event_env ;
+     Logger.debug @@ "Label type hashtbl: " ;
+     Logger.debug @@ EventTypes.show label_types ; *)
   typecheck_insts insts (ty_env, event_env, tmpl_ty_env, label_types)
-  >>= fun (ty_env, event_env, _label_types) ->
-  typecheck_relations relations (ty_env, event_env, tmpl_ty_env)
+  >>= fun (ty_env, event_env, label_types) ->
+  typecheck_relations relations (ty_env, event_env, tmpl_ty_env, label_types)
 
 (* =============================================================================
    Typechecking of events
@@ -238,7 +239,7 @@ and typecheck_events events (ty_env, event_env, label_types) =
     events
 
 and typecheck_event event (ty_env, event_env, label_types) =
-  let {info; io; _} = event.data in
+  let {info; io; marking; _} = event.data in
   let id, label = info in
   ( match io.data with
   | Input ty -> return (ty.data, InputType)
@@ -247,6 +248,10 @@ and typecheck_event event (ty_env, event_env, label_types) =
   >>= fun (got_value_ty, got_event_type) ->
   ( match EventTypes.find label.data label_types with
   | None ->
+      Logger.info
+      @@ Printf.sprintf "%s -> %s(%s)" label.data
+           (show_event_type' got_event_type)
+           (Unparser.PlainUnparser.unparse_ty got_value_ty) ;
       return
         (EventTypes.add
            (label.data, (got_value_ty, got_event_type))
@@ -260,6 +265,8 @@ and typecheck_event event (ty_env, event_env, label_types) =
           [(label.data, expected_event_type, expected_value_ty)]
           [(label.data, got_event_type, got_value_ty)] )
   >>= fun label_types ->
+  marking.data.value :=
+    annotate ~ty:(Some got_value_ty) !(marking.data.value).data ;
   return (RecordTy [(annotate "value", annotate got_value_ty)])
   (* return (event_as_ty event) *)
   >>= fun event_ty ->
@@ -343,13 +350,16 @@ and typecheck_inst inst (ty_env, event_env, tmpl_ty_env, label_types) =
    Typechecking of relations
    ============================================================================= *)
 
-and typecheck_relations relations (ty_env, event_env, tmpl_ty_env) =
+and typecheck_relations relations (ty_env, event_env, tmpl_ty_env, label_types)
+    =
   fold_left
-    (fun (ty_env, event_env) relation ->
-      typecheck_relation relation (ty_env, event_env, tmpl_ty_env) )
-    (ty_env, event_env) relations
+    (fun (ty_env, event_env, label_types) relation ->
+      typecheck_relation relation (ty_env, event_env, tmpl_ty_env, label_types)
+      )
+    (ty_env, event_env, label_types)
+    relations
 
-and typecheck_relation relation (ty_env, event_env, tmpl_ty_env) =
+and typecheck_relation relation (ty_env, event_env, tmpl_ty_env, label_types) =
   let check_event_id id =
     match find_flat id.data event_env with
     | None ->
@@ -370,7 +380,8 @@ and typecheck_relation relation (ty_env, event_env, tmpl_ty_env) =
       check_event_id from_id
       >>= fun _ ->
       check_event_id dest
-      >>= fun _ -> check_guard_expr guard >>= fun _ -> return (ty_env, event_env)
+      >>= fun _ ->
+      check_guard_expr guard >>= fun _ -> return (ty_env, event_env, label_types)
   | SpawnRelation (from_id, guard, subprogram, _annot) ->
       check_event_id from_id
       >>= fun from_event ->
@@ -379,11 +390,13 @@ and typecheck_relation relation (ty_env, event_env, tmpl_ty_env) =
       return (begin_scope event_env, begin_scope ty_env)
       >>= fun (event_env, ty_env) ->
       return
-        ( bind "@trigger" from_event event_env
-        , bind "@trigger" (event_as_ty from_event) ty_env )
+        ( bind trigger_id from_event event_env
+        , bind trigger_id (event_as_ty from_event) ty_env )
       >>= fun (event_env, ty_env) ->
       typecheck_subprogram subprogram
-        (ty_env, event_env, tmpl_ty_env, EventTypes.empty)
+        (ty_env, event_env, tmpl_ty_env, label_types)
+      >>= fun (ty_env, event_env, label_types) ->
+      return (end_scope ty_env, end_scope event_env, label_types)
 
 (* =============================================================================
    Typechecking of expressions
@@ -464,7 +477,7 @@ and typecheck_expr ?(ty_env = empty_env) expr =
   | UnaryOp (e, op) ->
       typecheck_expr ~ty_env e >>= fun e_ty -> typecheck_unop e_ty op
   | Identifier id -> typecheck_identifier id ty_env
-  | Trigger -> typecheck_identifier (annotate ~loc "@trigger") ty_env
+  | Trigger -> typecheck_identifier (annotate ~loc trigger_id) ty_env
   | PropDeref (r, p) ->
       typecheck_expr ~ty_env r >>= fun r_ty -> typecheck_prop r_ty p
   | List lst -> typecheck_list lst ty_env
@@ -557,7 +570,7 @@ and collect_expr_dependencies expr (_ty_env, event_env) =
       | Identifier id -> collect_from_id id rest
       | Trigger ->
           collect_from_id
-            (annotate ~loc:expr.loc ~ty:!(expr.ty) "@trigger")
+            (annotate ~loc:expr.loc ~ty:!(expr.ty) trigger_id)
             rest
       | PropDeref (r, _) -> collect deps (r :: rest)
       | Record fields ->

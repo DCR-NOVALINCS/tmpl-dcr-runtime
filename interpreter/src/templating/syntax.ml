@@ -229,9 +229,9 @@ let mk_pos ?(filename = "") line column =
 
 let mk_marking ?(executed = false) ?(pending = false) ?(included = true)
     ?(value = Unit) () =
-  { executed= annotate executed
-  ; pending= annotate pending
-  ; included= annotate included
+  { executed= annotate ~ty:(Some BoolTy) executed
+  ; pending= annotate ~ty:(Some BoolTy) pending
+  ; included= annotate ~ty:(Some BoolTy) included
   ; value= ref @@ annotate value }
 
 let default_marking = mk_marking ()
@@ -285,3 +285,9 @@ let empty_subprogram = mk_subprogram ()
    ============================================================================= *)
 
 let show_event_type' = function InputType -> "Input" | OutputType -> "Output"
+
+(* =============================================================================
+   Program Section: Constants
+   ============================================================================= *)
+
+let trigger_id = "@trigger"

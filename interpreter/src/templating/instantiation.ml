@@ -15,21 +15,25 @@ let rec replace_event event expr_env = update_event_value event expr_env
 and replace_relation relation (expr_env, event_env) =
   let replace_id id =
     match find_flat id.data event_env with
-    | None -> return id
+    | None -> id_not_found id
     | Some event ->
         let event_id, _ = event.data.info in
-        return event_id
+        return (event_id, event)
   in
   match relation.data with
   | SpawnRelation (from, guard, subprogram, annotations) ->
       replace_id from
-      >>= fun from ->
-      Logger.debug
-      @@ Printf.sprintf "Replacing spawn relation from %s" from.data ;
+      >>= fun (from_id, from_event) ->
       eval_expr guard expr_env
       >>= fun guard ->
       let events, insts, relations = subprogram in
-      (* FIXME: Don't forget to add @trigger into the envs *)
+      return (begin_scope expr_env, begin_scope event_env)
+      >>= fun (expr_env, event_env) ->
+      (* Bind @trigger *)
+      return
+        ( bind trigger_id (event_as_expr from_event) expr_env
+        , bind trigger_id from_event event_env )
+      >>= fun (expr_env, event_env) ->
       map (fun event -> replace_event event expr_env) events
       >>= fun events ->
       map (fun inst -> replace_template_inst inst (expr_env, event_env)) insts
@@ -42,16 +46,17 @@ and replace_relation relation (expr_env, event_env) =
       >>= fun subprogram ->
       return
         { relation with
-          data= SpawnRelation (from, guard, subprogram, annotations) }
+          data= SpawnRelation (from_id, guard, subprogram, annotations) }
   | ControlRelation (from, guard, dest, t, annotations) ->
       replace_id from
-      >>= fun from ->
+      >>= fun (from_id, _) ->
       replace_id dest
-      >>= fun dest ->
+      >>= fun (dest_id, _) ->
       eval_expr guard expr_env
       >>= fun guard ->
       return
-        {relation with data= ControlRelation (from, guard, dest, t, annotations)}
+        { relation with
+          data= ControlRelation (from_id, guard, dest_id, t, annotations) }
 
 and replace_template_inst inst (expr_env, event_env) =
   let {args; _} = inst.data in

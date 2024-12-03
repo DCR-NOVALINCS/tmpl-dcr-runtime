@@ -36,7 +36,7 @@ let rec eval_expr expr env =
       eval_binop v1 v2 op
   | UnaryOp (e, op) -> eval_expr e env >>= fun v -> eval_unop v op
   | Identifier id -> find_id id env
-  | Trigger -> find_id (annotate ~loc:expr.loc ~ty:!(expr.ty) "@trigger") env
+  | Trigger -> find_id (annotate ~loc:expr.loc ~ty:!(expr.ty) trigger_id) env
   | PropDeref (e, p) -> (
       eval_expr e env
       >>= fun v ->

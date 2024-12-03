@@ -415,7 +415,7 @@ module PlainUnparser = struct
         unparse_unary_op ~buffer op ;
         unparse_expr ~indent ~buffer e |> ignore
     | Identifier id -> Buffer.add_string buffer @@ id.data
-    | Trigger -> Buffer.add_string buffer @@ "@trigger"
+    | Trigger -> Buffer.add_string buffer @@ trigger_id
     | PropDeref (e, prop) ->
         unparse_expr ~indent ~buffer e |> ignore ;
         Buffer.add_string buffer @@ "." ;
