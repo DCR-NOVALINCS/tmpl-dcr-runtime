@@ -1,0 +1,26 @@
+tmpl f(n: Number, e: A): B {
+    (b: B)[n]
+    e -->+ b
+} => b
+
+tmpl h(b: Boolean) {
+    (a0: A)[?: { n: Number, b: Boolean }]
+    (a1: A)[?: { n: Number, b: Boolean }]
+
+    a0 -[b]->% a1
+}
+
+tmpl g(n: Number): A {
+    (a: A)[?: { n: Number, b: Boolean }]
+    a -->> {
+        (c: C)[?: Boolean]
+        f(n = @trigger.value.n, e -> a) => b0
+        c -->> {
+            h(b = @trigger.value) 
+        }
+    }
+} => a
+
+
+
+g(n = 1) => a0

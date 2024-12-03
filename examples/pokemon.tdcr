@@ -1,0 +1,34 @@
+tmpl pokemon( name: String, type: String ): Pokemon {
+    (p: Pokemon)[{ name: name, type: type }]
+} => p
+
+tmpl fire_pokemon ( name: String ): Pokemon {
+    pokemon(name = name, type = 'fire') => fp
+} => fp
+
+tmpl water_pokemon ( name: String ): Pokemon {
+    pokemon(name = name, type = 'water') => wp
+} => wp
+
+tmpl grass_pokemon ( name: String ): Pokemon {
+    pokemon(name = name, type = 'grass') => gp
+} => gp
+
+grass_pokemon(name = 'bulbasaur') => bulbasaur
+fire_pokemon(name = 'charmander') => charmander
+water_pokemon(name = 'squirtle') => squirtle
+
+# (ap: addPokemon)[?: { name: String, type: String }]
+# (b: Battle)[?: { p1: Pokemon, p2: Pokemon }]
+
+# ap -->> {
+#     pokemon(name = @trigger.value.name, type = @trigger.value.type) => p
+# }
+
+# b -->> {
+#     p1, p2 -[
+#         (p1.value.type == 'fire' AND p2.value.type == 'grass') OR
+#         (p1.value.type == 'water' AND p2.value.type == 'fire') OR
+#         (p1.value.type == 'grass' AND p2.value.type == 'water')
+#     ]->% p1, p2
+# }

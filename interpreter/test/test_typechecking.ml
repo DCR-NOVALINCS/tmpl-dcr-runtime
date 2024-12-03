@@ -1,15 +1,13 @@
 open OUnit2
 open Misc
 open Monads.ResultMonad
+open Printing
 open Templating
-
-(* open Syntax
-   open Api
-   open Program_helper *)
 open Typechecking
 
 let test_suite =
   let open Common in
+  Logger.enable () ;
   let rec test_0 path test_ctxt =
     let result =
       build_state (path "0.tdcr") test_ctxt

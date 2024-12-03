@@ -268,7 +268,7 @@ module MakeLogger (Color : ColorType) (Format : FormatType) : Logger = struct
         let group_size = GroupStack.length group_stack in
         let indent = if group_size > 0 then "│ " ^ indent else indent in
         P.cprint indent ;
-        P.cprintf "[%s]: " ~color:log_color ~format:Bold log_type_str ;
+        P.cprintf "[%s] " ~color:log_color ~format:Bold log_type_str ;
         P.cprintln text
 
   let error text = log ~log_type:Error text

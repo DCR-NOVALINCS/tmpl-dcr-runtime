@@ -11,7 +11,7 @@ open Errors
    ============================================================================= *)
 
 let rec eval_expr expr env =
-  let open Misc.Printing in
+  (* let open Misc.Printing in *)
   match expr.data with
   | Unit ->
       expr.ty := Some UnitTy ;
@@ -31,8 +31,8 @@ let rec eval_expr expr env =
       >>= fun v1 ->
       eval_expr e2 env
       >>= fun v2 ->
-      Logger.debug @@ "Expr env" ;
-      Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr env ;
+      (* Logger.debug @@ "Expr env" ;
+         Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr env ; *)
       eval_binop v1 v2 op
   | UnaryOp (e, op) -> eval_expr e env >>= fun v -> eval_unop v op
   | Identifier id -> find_id id env
@@ -112,22 +112,38 @@ and eval_binop v1 v2 op =
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 + i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid addition (+) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
   | Sub -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 - i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid subtraction (-) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
   | Mult -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 * i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid multiplication (*) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
   | Div -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         return {v1 with data= IntLit (i1 / i2); ty= ref (Some IntTy)}
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid division (/) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
   | Eq -> (
     match (v1.data, v2.data) with
     (* Number *)
@@ -144,7 +160,11 @@ and eval_binop v1 v2 op =
     | True, False | False, True ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
     (* Other *)
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; StringTy; BoolTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid equality (==) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
   | NotEq -> (
     match (v1.data, v2.data) with
     (* Number *)
@@ -161,56 +181,87 @@ and eval_binop v1 v2 op =
     | True, True | False, False ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
     (* Other *)
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; StringTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid inequality (!=) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
   | GreaterThan -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 > i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid greater than (>) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
   | GreaterOrEqual -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 >= i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid greater or equal (>=) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
   | LessThan -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 < i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid less than (<) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
   | LessOrEqual -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
         if i1 <= i2 then return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
         else return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | IntLit _, _ | _, IntLit _ -> type_mismatch ~loc:v1.loc [IntTy] []
-    | _ -> type_mismatch ~loc:v1.loc [IntTy; IntTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid less or equal (<=) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
   | And -> (
     match (v1.data, v2.data) with
     | True, True -> return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
     | True, False | False, True | False, False ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
-    | _ -> type_mismatch ~loc:v1.loc [BoolTy; BoolTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid and (AND) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
   | Or -> (
     match (v1.data, v2.data) with
     | False, False -> return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
     | True, False | False, True | True, True ->
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
-    | _ -> type_mismatch ~loc:v1.loc [BoolTy; BoolTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          (Printf.sprintf "Invalid or (OR) between %s and %s"
+             (Unparser.PlainUnparser.unparse_expr v1)
+             (Unparser.PlainUnparser.unparse_expr v2) ) )
 
 and eval_unop v op =
   match op with
   | Minus -> (
     match v.data with
     | IntLit i -> return {v with data= IntLit (-i); ty= ref (Some IntTy)}
-    | _ -> type_mismatch ~loc:v.loc [IntTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml" "Invalid unary minus (-)"
+    )
   | Negation -> (
     match v.data with
     | True -> return (annotate ~loc:v.loc ~ty:(Some BoolTy) False)
     | False -> return (annotate ~loc:v.loc ~ty:(Some BoolTy) True)
-    | _ -> type_mismatch ~loc:v.loc [BoolTy] [] )
+    | _ ->
+        should_not_happen ~module_path:"evaluation.ml"
+          "Invalid unary negation (~)" )
 (* | _ -> failwith "Invalid unary operator" *)
 
 and find_id id env =

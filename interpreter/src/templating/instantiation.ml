@@ -60,32 +60,32 @@ and replace_relation relation (expr_env, event_env) =
 
 and replace_template_inst inst (expr_env, event_env) =
   let {args; _} = inst.data in
-  Logger.debug "Args: " ;
-  Logger.debug "Expr based args: " ;
-  Logger.debug
-  @@ ( List.map
-         (fun (id, _) -> id.data)
-         (List.filter
-            (fun (_, arg_ty) ->
-              match arg_ty with ExprArg _ -> true | _ -> false )
-            args )
-     |> String.concat ", " ) ;
-  Logger.debug "Event based args: " ;
-  Logger.debug
-  @@ ( List.map
-         (fun (id, _) -> id.data)
-         (List.filter
-            (fun (_, arg_ty) ->
-              match arg_ty with EventArg _ -> true | _ -> false )
-            args )
-     |> String.concat ", " ) ;
-  Logger.debug "Expr env: " ;
-  Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
-  Logger.debug "Event env: " ;
-  Logger.debug
-  @@ string_of_env
-       (fun event -> Unparser.PlainUnparser.unparse_events [event])
-       event_env ;
+  (* Logger.debug "Args: " ;
+     Logger.debug "Expr based args: " ;
+     Logger.debug
+     @@ ( List.map
+            (fun (id, _) -> id.data)
+            (List.filter
+               (fun (_, arg_ty) ->
+                 match arg_ty with ExprArg _ -> true | _ -> false )
+               args )
+        |> String.concat ", " ) ;
+     Logger.debug "Event based args: " ;
+     Logger.debug
+     @@ ( List.map
+            (fun (id, _) -> id.data)
+            (List.filter
+               (fun (_, arg_ty) ->
+                 match arg_ty with EventArg _ -> true | _ -> false )
+               args )
+        |> String.concat ", " ) ;
+     Logger.debug "Expr env: " ;
+     Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
+     Logger.debug "Event env: " ;
+     Logger.debug
+     @@ string_of_env
+          (fun event -> Unparser.PlainUnparser.unparse_events [event])
+          event_env ; *)
   map
     (fun (arg_id, arg_tmpl_ty) ->
       match arg_tmpl_ty with

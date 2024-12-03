@@ -216,13 +216,6 @@ and typecheck_subprogram (events, insts, relations)
     (ty_env, event_env, tmpl_ty_env, label_types) =
   typecheck_events events (ty_env, event_env, label_types)
   >>= fun (ty_env, event_env, label_types) ->
-  (* Logger.debug @@ "Event env: " ;
-     Logger.debug
-     @@ string_of_env
-          (fun e -> Unparser.PlainUnparser.unparse_events [e])
-          event_env ;
-     Logger.debug @@ "Label type hashtbl: " ;
-     Logger.debug @@ EventTypes.show label_types ; *)
   typecheck_insts insts (ty_env, event_env, tmpl_ty_env, label_types)
   >>= fun (ty_env, event_env, label_types) ->
   typecheck_relations relations (ty_env, event_env, tmpl_ty_env, label_types)
@@ -248,7 +241,7 @@ and typecheck_event event (ty_env, event_env, label_types) =
   >>= fun (got_value_ty, got_event_type) ->
   ( match EventTypes.find label.data label_types with
   | None ->
-      Logger.info
+      Logger.debug
       @@ Printf.sprintf "%s -> %s(%s)" label.data
            (show_event_type' got_event_type)
            (Unparser.PlainUnparser.unparse_ty got_value_ty) ;
@@ -258,7 +251,8 @@ and typecheck_event event (ty_env, event_env, label_types) =
            label_types )
   | Some (expected_value_ty, expected_event_type) ->
       if
-        got_value_ty = expected_value_ty && got_event_type = expected_event_type
+        equal_types got_value_ty expected_value_ty
+        && got_event_type = expected_event_type
       then return label_types
       else
         event_type_mismatch ~loc:io.loc
@@ -590,4 +584,7 @@ and default_value ty' =
   | BoolTy -> False
   | IntTy -> IntLit 0
   | StringTy -> StringLit ""
+  | RecordTy fields ->
+      let default_field (name, ty) = (name, annotate (default_value ty.data)) in
+      Record (List.map default_field fields)
   | _ -> failwith "Type not supported"

@@ -3,7 +3,8 @@ open OUnit2
 (* open Misc.Env *)
 open Misc
 open Monads.ResultMonad
-open Printing
+
+(* open Printing *)
 open Templating
 (* open Instantiation *)
 
@@ -22,18 +23,11 @@ let parse filename =
     let lexbuf = Lexing.from_channel file in
     parse_program ~filename lexbuf >>| fun program -> close_in file ; program
   with
-  | Sys_error _msg ->
-      file_not_exists filename
-      (* fail
-         [ { location= Nowhere
-           ; message=
-               Printf.sprintf "File not found: %s. Current directory %s" filename
-                 (Sys.getcwd ())
-           ; hint= Some msg } ] *)
+  | Sys_error _msg -> file_not_exists filename
   | _ -> should_not_happen "Unknown error"
 
 let setup filename _test_ctxt =
-  Logger.disable () ;
+  (* Logger.disable () ; *)
   parse filename
   >>= fun program ->
   preprocess_program program
