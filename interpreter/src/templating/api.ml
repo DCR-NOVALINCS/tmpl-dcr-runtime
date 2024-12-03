@@ -98,7 +98,7 @@ and view ?(filter = fun _ event -> Some event) ?(should_print_events = true)
   >>= fun events ->
   let open Unparser.PlainUnparser in
   return
-    (unparse ~should_print_events ~should_print_value:true
+    (unparse ~should_print_events ~should_print_value:false
        ~should_print_executed_marking:true ~should_print_relations
        ~should_print_template_decls:false {program with events} )
 

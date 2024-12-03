@@ -362,6 +362,14 @@ and should_not_happen ?(errors = []) ?(module_path = "?") ?(line = "?") message
 
 and something_went_wrong ?(loc = Nowhere) message = fixme ~loc message
 
+and invalid_logger_level level =
+  fail
+    [ { location= Nowhere
+      ; message=
+          Printf.sprintf "Invalid logger level %s"
+            (CString.colorize ~color:Yellow level)
+      ; hint= None } ]
+
 and todo ?(loc = Nowhere) message =
   fail
     [ { location= loc

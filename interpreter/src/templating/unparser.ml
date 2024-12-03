@@ -24,8 +24,7 @@ module PlainUnparser = struct
   open UnparserList
 
   let rec unparse ?(indent = "") ?(abbreviated = true) ?(separator = "\n")
-      ?((* ?(_colorize = false) *)
-        should_print_template_decls = true) ?(should_print_events = true)
+      ?(should_print_template_decls = true) ?(should_print_events = true)
       ?(should_print_value = false) ?(should_print_executed_marking = false)
       ?(should_print_template_insts = true) ?(should_print_relations = true)
       ?(buffer = Buffer.create 100) program =
@@ -43,16 +42,14 @@ module PlainUnparser = struct
     return ()
     >>= ( print_template_decls
         , fun _ ->
-            unparse_template_decls ~indent ~abbreviated
-              ~separator:(separator ^ "\n") ~should_print_events
-              ~should_print_template_insts ~should_print_relations ~buffer
-              program.template_decls
+            unparse_template_decls ~indent ~abbreviated ~separator
+              ~should_print_events ~should_print_template_insts
+              ~should_print_relations ~buffer program.template_decls
             |> ignore ;
-            Buffer.add_string buffer @@ separator ^ separator )
+            Buffer.add_string buffer @@ separator )
     >>= ( print_events || print_template_insts || print_relations
         , fun _ ->
-            unparse_subprogram ~indent ~abbreviated
-              ~separator:(separator ^ "\n") ~print_events
+            unparse_subprogram ~indent ~abbreviated ~separator ~print_events
               ~print_value:(print_events && should_print_value)
               ~print_executed:(print_events && should_print_executed_marking)
               ~print_template_insts ~print_relations ~buffer
@@ -116,7 +113,9 @@ module PlainUnparser = struct
     in
     unparse_list ~buffer ~separator
       (fun ~buffer template_decl ->
-        unparse_template_decl ~indent ~abbreviated ~buffer template_decl )
+        unparse_template_decl ~indent ~abbreviated ~buffer template_decl
+        |> ignore ;
+        Buffer.add_string buffer @@ separator )
       template_decls ;
     Buffer.contents buffer
 
@@ -132,13 +131,14 @@ module PlainUnparser = struct
             unparse_events ~indent ~abbreviated ~print_value ~print_executed
               ~buffer events
             |> ignore )
+    >>= ( print_events && print_template_insts
+        , fun _ -> Buffer.add_string buffer @@ separator )
     >>= ( print_template_insts
-        , fun _ ->
-            Buffer.add_string buffer @@ separator ;
-            unparse_template_insts ~indent ~buffer insts |> ignore )
+        , fun _ -> unparse_template_insts ~indent ~buffer insts |> ignore )
+    >>= ( (print_events || print_template_insts) && print_relations
+        , fun _ -> Buffer.add_string buffer @@ separator )
     >>= ( print_relations
         , fun _ ->
-            Buffer.add_string buffer @@ separator ;
             unparse_relations ~indent ~abbreviated ~buffer relations |> ignore
         ) ;
     Buffer.contents buffer

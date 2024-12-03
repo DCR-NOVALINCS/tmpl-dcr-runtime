@@ -32,7 +32,7 @@ and input_file filename =
   else
     get_file_extension filename
     |> function
-    | ext when ext = file_extension -> return ()
+    | ext when ext = file_extension -> return filename
     | got -> invalid_file_extension ~supported:file_extension ~got ()
 
 let print_output ?(previous_state = empty_runtime_state) = function
@@ -41,11 +41,26 @@ let print_output ?(previous_state = empty_runtime_state) = function
       CPrinter.cprintln output ; return runtime_state
   | Error errors -> print_errors errors ; return previous_state
 
+let set_logger logger_level =
+  Logger.enable () ;
+  match String.trim logger_level with
+  | "debug" -> return @@ Logger.set_logger_level Debug
+  | "info" -> return @@ Logger.set_logger_level Info
+  | "warn" -> return @@ Logger.set_logger_level Warn
+  | "error" -> return @@ Logger.set_logger_level Error
+  | "success" -> return @@ Logger.set_logger_level Success
+  | "" -> return @@ Logger.disable ()
+  | _ -> invalid_logger_level logger_level
+
 (* =============================================================================
    REPL Section
    ============================================================================= *)
 
 open Cmdliner
+
+type options = {logger_level: string}
+
+(* let default_options = {logger_level= "debug"} *)
 
 let rec interpret_command tokens runtime_state =
   match tokens with
@@ -62,7 +77,6 @@ let rec interpret_command tokens runtime_state =
         let argv = Array.of_list tokens in
         match Cmd.eval_value ~argv callback with
         | Ok (`Ok result) -> result runtime_state >>= fun state -> return state
-        | Error _ -> return runtime_state
         | _ -> return runtime_state ) )
 
 and prompt runtime_state =
@@ -79,7 +93,9 @@ and prompt runtime_state =
       |> print_output ~previous_state:runtime_state
       >>= fun state -> prompt {state with output= ""}
 
-let runtime filename =
+let runtime options filename =
+  set_logger options.logger_level
+  >>= fun _ ->
   input_file filename
   >>= fun _ ->
   parse_program_from_file filename
@@ -103,11 +119,17 @@ let runtime_cmd =
       "An implementation of a interpreter for Templates in DCR Graphs"
     in
     Cmd.info ~doc ~version:"0.1" "tmpl_dcr"
+  and options =
+    let logger_level =
+      let doc = "The level of logging to be used" in
+      Arg.(value & opt string "debug" & info ["l"; "logger-level"] ~doc)
+    in
+    Term.(const (fun logger_level -> {logger_level}) $ logger_level)
   and input_filename =
     let doc = "The input file to be processed" in
     Arg.(required & pos 0 (some string) None & info [] ~doc)
   in
-  let input_program_main = Term.(const runtime $ input_filename) in
+  let input_program_main = Term.(const runtime $ options $ input_filename) in
   Cmd.v info input_program_main
 
 let _ =

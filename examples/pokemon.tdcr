@@ -18,12 +18,12 @@ grass_pokemon(name = 'bulbasaur') => bulbasaur
 fire_pokemon(name = 'charmander') => charmander
 water_pokemon(name = 'squirtle') => squirtle
 
-# (ap: addPokemon)[?: { name: String, type: String }]
+(ap: addPokemon)[?: { name: String, type: String }]
 # (b: Battle)[?: { p1: Pokemon, p2: Pokemon }]
 
-# ap -->> {
-#     pokemon(name = @trigger.value.name, type = @trigger.value.type) => p
-# }
+ap -->> {
+    pokemon(name = @trigger.value.name, type = @trigger.value.type) => p
+}
 
 # b -->> {
 #     p1, p2 -[
