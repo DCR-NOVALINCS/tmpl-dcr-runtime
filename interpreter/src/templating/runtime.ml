@@ -108,10 +108,15 @@ and propagate_effect relation event (event_env, expr_env) program =
           (* Begin new env scope and bind trigger_id *)
           return (begin_scope event_env, begin_scope expr_env)
           >>= fun (event_env, expr_env) ->
+          eval_expr (event_as_expr event) expr_env
+          >>= fun event_expr ->
           return
             ( bind trigger_id event event_env
-            , bind trigger_id (event_as_expr event) expr_env )
+            , bind trigger_id event_expr expr_env )
           >>= fun (event_env, expr_env) ->
+          (* Update event values *)
+          map (fun e -> update_event_value e expr_env) spawn_events
+          >>= fun spawn_events ->
           (* Evaluate annotations from spawned elements *)
           let open Instantiation in
           evaluate_annotations_of_subprogram
@@ -120,10 +125,12 @@ and propagate_effect relation event (event_env, expr_env) program =
           >>= fun (spawn_events, spawn_insts, spawn_relations) ->
           (* Instantiate template instances present in the spawn *)
           (* FIXME: Maybe use instantiate_tmpls instead of this function *)
-          { template_decls= program.template_decls
-          ; events= []
-          ; template_insts= spawn_insts
-          ; relations= [] }
+          (* { template_decls= program.template_decls
+             ; events= []
+             ; template_insts= spawn_insts
+             ; relations= [] } *)
+          mk_program ~template_decls:program.template_decls
+            ~template_insts:spawn_insts ()
           |> instantiate ~expr_env ~event_env
           >>= fun ( { events= inst_spawn_events
                     ; relations= inst_spawn_relations
@@ -138,11 +145,11 @@ and propagate_effect relation event (event_env, expr_env) program =
           return
             ( { program with
                 events=
-                  List.flatten [program.events; inst_spawn_events; spawn_events]
+                  List.flatten [inst_spawn_events; spawn_events; program.events]
               ; template_insts= []
               ; relations=
                   List.flatten
-                    [program.relations; inst_spawn_relations; spawn_relations]
+                    [inst_spawn_relations; spawn_relations; program.relations]
               }
             , end_scope event_env
             , end_scope expr_env )

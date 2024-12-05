@@ -37,10 +37,19 @@ let rec execute ~event_id ?(expr = Unit) ?(ty_env = empty_env)
         >>= fun event ->
         return (update_event event program)
         >>= fun program ->
-        preprocess_program program
-        >>= fun (event_env, expr_env, program) ->
+        Logger.debug @@ "Updated events:\n"
+        ^ Unparser.PlainUnparser.unparse_events program.events ;
+        (* Debug event_env *)
+        Logger.debug @@ "Event Env after executing event:\n"
+        ^ string_of_env
+            (fun e -> Unparser.PlainUnparser.unparse_events [e])
+            event_env ;
         (* Propagate relation effects that this event is apart of. *)
         propagate_effects event (event_env, expr_env) program
+        >>= fun (program, _, _) ->
+        preprocess_program program
+        >>= fun (event_env, expr_env, program) ->
+        return (program, event_env, expr_env)
 
 and execute_output_event event expr_env =
   let {info; io; _} = event.data in

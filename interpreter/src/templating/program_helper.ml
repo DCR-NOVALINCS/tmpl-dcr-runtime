@@ -25,17 +25,18 @@ let rec update_event event program =
   {program with events}
 
 and update_event_value event expr_env =
-  let {marking; io; _} = event.data in
-  ( match io.data with
-  | Input ty ->
-      eval_expr !(marking.data.value) expr_env
-      >>= fun value -> return ({io with data= Input ty}, value)
-  | Output expr ->
-      eval_expr expr expr_env
-      >>= fun value -> return ({io with data= Output value}, value) )
-  >>= fun (io, value) ->
-  set_marking ~value event
-  >>= fun event -> return {event with data= {event.data with io}}
+  (* let {marking; io; _} = event.data in *)
+  (* ( match io.data with
+     | Input ty ->
+         eval_expr !(marking.data.value) expr_env
+         >>= fun value -> return ({io with data= Input ty}, value)
+     | Output expr ->
+         eval_expr expr expr_env
+         >>= fun value -> return ({io with data= Output value}, value) ) *)
+  update_event_io event expr_env
+(* >>= fun (io, value) ->
+   set_marking ~value event *)
+(* >>= fun event -> return {event with data= {event.data with io}} *)
 
 and set_marking ?included ?pending ?executed ?value event =
   let {marking; _} = event.data in
@@ -51,12 +52,34 @@ and set_marking ?included ?pending ?executed ?value event =
     { event with
       data= {event.data with marking= {marking with data= new_marking}} }
 
+and update_event_io event expr_env =
+  let {marking; io; _} = event.data in
+  match io.data with
+  | Input _ ->
+      eval_expr !(marking.data.value) expr_env
+      >>= fun value -> set_marking ~value event
+  | Output expr ->
+      eval_expr expr expr_env
+      >>= fun value ->
+      set_marking ~value event
+      >>= fun event ->
+      return
+        {event with data= {event.data with io= {io with data= Output value}}}
+
 and change_info_event ~new_id ~new_label event =
   let id, label = event.data.info in
   { event with
     data=
       { event.data with
         info= ({id with data= new_id}, {label with data= new_label}) } }
+
+and update_event_env program event_env =
+  let events = program.events in
+  fold_left
+    (fun event_env event ->
+      let id, _ = event.data.info in
+      return (bind id.data event event_env) )
+    event_env events
 
 (* =============================================================================
    Updating relation functions
@@ -224,3 +247,16 @@ and fresh_event_ids events relations exports_mapping =
   >>= fun fresh_relations ->
   let fresh_events = List.map (fun (_, _, e) -> e) events_mapping in
   return (fresh_events, fresh_relations)
+
+(* =============================================================================
+   Binding functions
+   ============================================================================= *)
+
+and bind_events events (event_env, expr_env) =
+  fold_left
+    (fun (event_env, expr_env) event ->
+      let id, _ = event.data.info in
+      return
+        ( bind id.data event event_env
+        , bind id.data (event_as_expr event) expr_env ) )
+    (event_env, expr_env) events
