@@ -373,13 +373,14 @@ and invalid_logger_level level =
 and todo ?(loc = Nowhere) message =
   fail
     [ { location= loc
-      ; message= CString.colorize ~color:Cyan "[todo] " ^ message
+      ; message= CString.colorize ~color:Cyan ~format:Bold "[todo] " ^ message
       ; hint= None } ]
 
 and fixme ?(loc = Nowhere) message =
   fail
     [ { location= loc
-      ; message= CString.colorize ~color:Yellow "[fixme] " ^ message
+      ; message=
+          CString.colorize ~color:Yellow ~format:Bold "[fixme] " ^ message
       ; hint= None } ]
 
 (* ┌──────────────────────────────────────────────────────────────────────────┐
@@ -409,7 +410,8 @@ and type_mismatch ?(errors = []) ?(loc = Nowhere) expected_tys got_tys =
       }
     :: errors )
 
-and event_type_mismatch ?(errors = []) ?(loc = Nowhere) expected_ty got_ty =
+and event_type_mismatch ?(errors = []) ?(loc = Nowhere) ?(available = [])
+    expected_ty got_ty =
   let rec string_tys = function
     | [] -> CString.colorize ~color:Yellow "?"
     | [(event_label, event_type, ty)] ->
@@ -442,8 +444,15 @@ and event_type_mismatch ?(errors = []) ?(loc = Nowhere) expected_ty got_ty =
             (CString.colorize ~color:Yellow @@ string_tys got_ty)
       ; hint=
           Some
-            "Verify the type of the event. Check for type mismatches or any typos."
-      }
+            (Printf.sprintf
+               "Verify the type of the event. Check for type mismatches or any typos.\n\nAvailable event types:\n%s"
+               (String.concat "\n"
+                  (List.map
+                     (fun (event_type, ty) ->
+                       Printf.sprintf "- %s: %s"
+                         (show_event_type' event_type)
+                         (Unparser.PlainUnparser.unparse_ty ty) )
+                     available ) ) ) }
     :: errors )
 
 and missing_label ?(errors = []) ?(available_labels = []) label =

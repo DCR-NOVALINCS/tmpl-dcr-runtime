@@ -1,0 +1,13 @@
+tmpl f(a: A): B {
+    
+}
+
+(a: A)[?: Number]
+
+a -->> {
+    {{if @trigger.value > 0}} 
+        f(a) => b
+    {{else}} 
+        f(a) => b
+    {{/if}}
+}

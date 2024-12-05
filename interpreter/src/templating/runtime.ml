@@ -16,8 +16,7 @@ let rec is_enabled event program (event_env, expr_env) =
   fold_left
     (fun enabled relation ->
       is_enabled_by relation event (event_env, expr_env)
-      >>= fun is_enabled_by_relation ->
-      return (enabled && is_enabled_by_relation) )
+      >>| fun is_enabled_by_relation -> enabled && is_enabled_by_relation )
     enabled relations
 
 and is_enabled_by relation event (event_env, expr_env) =
@@ -34,24 +33,24 @@ and is_enabled_by relation event (event_env, expr_env) =
         if not is_guard_check then return true
         else
           (* Get the event that is on the left side *)
+          (* FIXME: Update event_env when altering any event marking *)
           match find_flat from.data event_env with
           | None -> return true
           | Some from_event -> (
               (* Check the enabledness of the event, according the selected
                  events and type of relation *)
-              let {marking= from_marking; _} = from_event.data in
-              let {marking= dest_marking; _} = event.data in
+              let {marking= {data= from_marking; _}; _} = from_event.data in
+              let {marking= {data= dest_marking; _}; _} = event.data in
               match op with
               | Condition ->
                   return
-                    ( from_marking.data.included.data
-                    && from_marking.data.executed.data
-                    && dest_marking.data.included.data )
+                    ( from_marking.included.data && from_marking.executed.data
+                    && dest_marking.included.data )
               | Milestone ->
                   return
-                    ( (not from_marking.data.pending.data)
-                    && from_marking.data.included.data
-                    && dest_marking.data.included.data )
+                    ( (not from_marking.pending.data)
+                    && from_marking.included.data && dest_marking.included.data
+                    )
               | _ -> return true ) )
 
 (** [check_guard guard expr_env] checks if the [guard] is true with the
@@ -101,9 +100,9 @@ and propagate_effect relation event (event_env, expr_env) program =
         >>= fun is_guard_true ->
         if not is_guard_true then return (program, event_env, expr_env)
         else
-          (* FIXME: Alpha rename correctly the events!! *)
           let spawn_events, spawn_insts, spawn_relations = spawn_prog in
           (* Rename the event ids to new ones, to prevent id clashing *)
+          (* FIXME: Change alpha renaming position!!! *)
           fresh_event_ids spawn_events spawn_relations []
           >>= fun (spawn_events, spawn_relations) ->
           (* Begin new env scope and bind trigger_id *)

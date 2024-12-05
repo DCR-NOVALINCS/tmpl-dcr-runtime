@@ -10,9 +10,13 @@ module ResultMonad = struct
 
   let ( >>= ) = bind
 
+  let ( let* ) = bind
+
   let apply m f = m >>= fun x -> return (f x)
 
   let ( >>| ) = apply
+
+  let ( let+ ) = apply
 
   let bind_error m f = match m with Error e -> f e | Ok x -> Ok x
 

@@ -29,6 +29,12 @@ module PlainUnparser = struct
       ?(should_print_template_insts = true) ?(should_print_relations = true)
       ?(buffer = Buffer.create 100) program =
     let open Misc.Monads.FilterMonad in
+    (* TODO: Select the module if the caller wants a colorized version of the result *)
+    (* let module M : String =
+         match true || false with
+         | true -> (module String : String)
+         | false -> (module CString : String)
+       in *)
     let print_template_decls =
       should_print_template_decls && List.length program.template_decls > 0
     in

@@ -55,3 +55,22 @@ else
     d -->+ a
     d -->% b
 {% endif %}
+
+
+# Alternative syntax 3
+
+{!if a.value > 1}
+    {!foreach i in 0...3}
+        (c: C)[?: Number]
+        c -->% a
+        c -->+ b
+    {!foreach}
+{:else if a.value > 0}
+    (e: E)[?: Boolean]
+    e --><> e
+{:else}
+    (d: D)[?: String]
+    
+    d -->+ a
+    d -->% b
+{/if}

@@ -1,59 +1,59 @@
 open OUnit2
 open Misc
 open Monads.ResultMonad
-open Printing
 open Templating
 open Typechecking
 
 let test_suite =
   let open Common in
-  Logger.enable () ;
+  (* let open Printing in
+     Logger.enable () ; *)
   let rec test_0 path test_ctxt =
     let result =
       build_state (path "0.tdcr") test_ctxt
-      >>= fun (program, event_env, _expr_env) -> typecheck ~event_env program
+      >>= fun (program, event_env, _) -> typecheck ~event_env program
     in
     result |> expecting_ok
   and test_1 path test_ctxt =
     let result =
       build_state (path "1.tdcr") test_ctxt
-      >>= fun (program, event_env, _expr_env) -> typecheck ~event_env program
+      >>= fun (program, event_env, _) -> typecheck ~event_env program
     in
     result |> expecting_ok
   and test_2 path test_ctxt =
     let result =
       build_state (path "2.tdcr") test_ctxt
-      >>= fun (program, event_env, _expr_env) -> typecheck ~event_env program
+      >>= fun (program, event_env, _) -> typecheck ~event_env program
     in
     result |> expecting_ok
   and test_3 path test_ctxt =
     let result =
       build_state (path "3.tdcr") test_ctxt
-      >>= fun (program, event_env, _expr_env) -> typecheck ~event_env program
+      >>= fun (program, event_env, _) -> typecheck ~event_env program
     in
     result |> expecting_error
   and test_4 path test_ctxt =
     let result =
       build_state (path "4.tdcr") test_ctxt
-      >>= fun (program, event_env, _expr_env) -> typecheck ~event_env program
+      >>= fun (program, event_env, _) -> typecheck ~event_env program
     in
     result |> expecting_error
   and test_5 path test_ctxt =
     let result =
       build_state (path "5.tdcr") test_ctxt
-      >>= fun (program, event_env, _expr_env) -> typecheck ~event_env program
+      >>= fun (program, event_env, _) -> typecheck ~event_env program
     in
     result |> expecting_ok
   and test_6 path test_ctxt =
     let result =
       build_state (path "6.tdcr") test_ctxt
-      >>= fun (program, event_env, _expr_env) -> typecheck ~event_env program
+      >>= fun (program, event_env, _) -> typecheck ~event_env program
     in
     result |> expecting_error
   and test_7 path test_ctxt =
     let result =
       build_state (path "7.tdcr") test_ctxt
-      >>= fun (program, event_env, _expr_env) -> typecheck ~event_env program
+      >>= fun (program, event_env, _) -> typecheck ~event_env program
     in
     result |> expecting_ok
   and fullpath file = "test/files/typechecker/" ^ file

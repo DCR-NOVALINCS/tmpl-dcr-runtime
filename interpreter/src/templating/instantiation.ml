@@ -221,7 +221,7 @@ and bind_tmpl tmpl (expr_env, event_env, tmpl_env) =
   let id = tmpl.id in
   Logger.info
   @@ Printf.sprintf "Binding template %s"
-       (CString.colorize ~color:Yellow id.data) ;
+       (CString.colorize ~color:Yellow ~format:Bold id.data) ;
   return (bind id.data tmpl tmpl_env)
   >>= fun tmpl_env -> return (expr_env, event_env, tmpl_env)
 
@@ -296,7 +296,19 @@ and bind_prop prop (expr_env, event_env, tmpl_env) =
 and instantiate_tmpls tmpl_insts (expr_env, event_env, tmpl_env) =
   fold_left
     (fun (program, event_env, expr_env) inst ->
-      instantiate_tmpl program inst (expr_env, event_env, tmpl_env) )
+      instantiate_tmpl program inst (expr_env, event_env, tmpl_env)
+      (* Bind newly instantiated events into the envs *)
+      >>= fun (result_program, event_env, expr_env) ->
+      let events, _, _ = result_program in
+      fold_left
+        (fun (event_env, expr_env) event ->
+          let id, _ = event.data.info in
+          return
+          @@ ( bind id.data event event_env
+             , bind id.data (event_as_expr event) expr_env ) )
+        (event_env, expr_env) events
+      >>= fun (event_env, expr_env) ->
+      return (result_program, event_env, expr_env) )
     (empty_subprogram, event_env, expr_env)
     tmpl_insts
 
@@ -316,7 +328,7 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       >>= fun (event_env, expr_env, graph) ->
       (* Bind params with respective args in the envs *)
       bind_params params args (expr_env, event_env, tmpl_env)
-      >>= fun (expr_env, event_env, _tmpl_env) ->
+      >>= fun (expr_env, event_env, tmpl_env) ->
       (* Get events, instantiations and relations from the template *)
       let events_ti, insts_ti, relations_ti = graph in
       let result_events, _, result_relations = result_program in
@@ -355,6 +367,14 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       Logger.debug
       @@ Printf.sprintf "Instantiated relations from template %s:" id.data ;
       Logger.debug @@ Unparser.PlainUnparser.unparse_relations relations_ti ;
+      (*Debug envs *)
+      Logger.debug @@ "Expr Env after instantiation:" ;
+      Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
+      Logger.debug @@ "Event Env after instantiation:" ;
+      Logger.debug
+      @@ string_of_env
+           (fun e -> Unparser.PlainUnparser.unparse_events [e])
+           event_env ;
       return
       @@ ( mk_subprogram
              ~events:(List.flatten [events_ti; result_events])
@@ -377,11 +397,18 @@ and export_map_events x export (events, relations) =
     invalid_number_of_exported_events
       ~loc:(append_locs (List.map (fun x -> x.loc) x))
       x export
-  else if List.length x > List.length events then
-    excessive_exported_events x events
   else
-    return (List.combine (deannotate_list x) (deannotate_list export))
-    >>= fun export_mapping ->
+    let* export_mapping =
+      return (List.combine (deannotate_list export) (deannotate_list x))
+    in
+    (* return (List.combine (deannotate_list x) (deannotate_list export))
+       >>= fun export_mapping -> *)
+    (* Logger.debug
+       ( "Export mapping:\n"
+       ^ String.concat "\n"
+           (List.map
+              (fun (x, exp) -> Printf.sprintf "%s -> %s" x exp)
+              export_mapping ) ) ; *)
     map
       (fun event ->
         let id, label = event.data.info in
@@ -390,9 +417,8 @@ and export_map_events x export (events, relations) =
         | Some new_id ->
             return
               { event with
-                data=
-                  {event.data with info= (annotate ~loc:id.loc new_id, label)}
-              } )
+                data= {event.data with info= ({id with data= new_id}, label)} }
+        )
       events
     >>= fun events ->
     map
@@ -564,15 +590,6 @@ let instantiate ?(expr_env = empty_env) ?(event_env = empty_env) program =
   let insts = program.template_insts in
   instantiate_tmpls insts (expr_env, event_env, tmpl_env)
   >>= fun ((events, _, relations), event_env, expr_env) ->
-  (* Bind instantiated graph into the env's *)
-  fold_left
-    (fun (event_env, expr_env) event ->
-      let id, _ = event.data.info in
-      return
-        ( bind id.data event event_env
-        , bind id.data (event_as_expr event) expr_env ) )
-    (event_env, expr_env) events
-  >>= fun (event_env, expr_env) ->
   (* Append the result in the program *)
   return
     ( { program with

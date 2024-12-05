@@ -29,12 +29,10 @@ and update_event_value event expr_env =
   ( match io.data with
   | Input ty ->
       eval_expr !(marking.data.value) expr_env
-      >>= fun value ->
-      return (annotate ~loc:io.loc ~ty:!(io.ty) (Input ty), value)
+      >>= fun value -> return ({io with data= Input ty}, value)
   | Output expr ->
       eval_expr expr expr_env
-      >>= fun value ->
-      return (annotate ~loc:io.loc ~ty:!(io.ty) (Output value), value) )
+      >>= fun value -> return ({io with data= Output value}, value) )
   >>= fun (io, value) ->
   set_marking ~value event
   >>= fun event -> return {event with data= {event.data with io}}
@@ -207,7 +205,7 @@ and fresh_event_ids events relations exports_mapping =
         | None -> id
         | Some new_id -> new_id
       in
-      let fresh_id = annotate ~loc:id.loc ~ty:!(id.ty) (fresh export_id.data) in
+      let fresh_id = {id with data= fresh export_id.data} in
       let fresh_event =
         change_info_event ~new_id:fresh_id.data ~new_label:label.data event
       in

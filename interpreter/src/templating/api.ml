@@ -35,9 +35,12 @@ let rec execute ~event_id ?(expr = Unit) ?(ty_env = empty_env)
         >>= (* Update marking *)
         set_marking ~executed:true
         >>= fun event ->
+        return (update_event event program)
+        >>= fun program ->
+        preprocess_program program
+        >>= fun (event_env, expr_env, program) ->
         (* Propagate relation effects that this event is apart of. *)
-        propagate_effects event (event_env, expr_env)
-          (update_event event program)
+        propagate_effects event (event_env, expr_env) program
 
 and execute_output_event event expr_env =
   let {info; io; _} = event.data in

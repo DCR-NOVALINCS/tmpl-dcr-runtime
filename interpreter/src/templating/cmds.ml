@@ -92,7 +92,8 @@ and execute_term =
     Arg.(
       value & pos_right 0 string []
       & info [] ~docv:"EXPR_STRING" ~doc:"The expression to execute" )
-  and execute_cmd event_id expr_str {program; ty_env; event_env; expr_env; _} =
+  and execute_cmd event_id expr_str state =
+    let {ty_env; expr_env; event_env; program; _} = state in
     Logger.debug
     @@ Printf.sprintf "Executing event %s with expression %s" event_id
          (String.concat " " expr_str) ;
@@ -101,13 +102,15 @@ and execute_term =
     execute ~ty_env ~expr_env ~event_env ~event_id ~expr:expr.data program
     >>= fun (program, event_env, expr_env) ->
     return
-      (mk_runtime_state ~ty_env ~expr_env ~event_env
-         ~output:
-           (Printf.sprintf "Executed event %s with expression %s\n"
-              (CString.colorize ~color:Yellow event_id)
-              (CString.colorize ~color:Yellow
-                 (Unparser.PlainUnparser.unparse_expr expr) ) )
-         program )
+      { state with
+        program
+      ; event_env
+      ; expr_env
+      ; output=
+          Printf.sprintf "Executed event %s with expression %s\n"
+            (CString.colorize ~color:Yellow event_id)
+            (CString.colorize ~color:Yellow
+               (Unparser.PlainUnparser.unparse_expr expr) ) }
   in
   Term.(const execute_cmd $ event_id $ expr)
 
@@ -177,7 +180,7 @@ let cmds =
     |> create_cmd
          ( "execute"
          , ["EVENT_ID"; "EXPR_STRING"]
-         , "Executes the event [EVENT_ID] with the expression [EXPR_STRING], if needed."
+         , "Executes the event <EVENT_ID> with the expression <EXPR_STRING>, if needed."
          )
          execute_term
     |> create_cmd

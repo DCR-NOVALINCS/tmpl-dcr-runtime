@@ -6,6 +6,7 @@ open Typechecking
 open Program_helper
 open Cmds
 open Misc
+open Env
 open Monads.ResultMonad
 open Printing
 open Input
@@ -15,11 +16,9 @@ open Input
    ============================================================================= *)
 
 let rec start_header =
-  CPrinter.cprint "To get started, type " ;
-  CPrinter.cprint ~color:Green "help" ;
-  (* CPrinter.cprint " or " ;
-     CPrinter.cprint ~color:Green "h" ; *)
-  CPrinter.cprintln " to see the available commands.\n"
+  "To get started, type "
+  ^ CString.colorize ~color:Green "help"
+  ^ " to see the available commands.\n"
 
 and get_file_extension filename =
   let parts = String.split_on_char '.' filename in
@@ -53,7 +52,7 @@ let set_logger logger_level =
   | _ -> invalid_logger_level logger_level
 
 (* =============================================================================
-   REPL Section
+   Runtime functions
    ============================================================================= *)
 
 open Cmdliner
@@ -76,11 +75,10 @@ let rec interpret_command tokens runtime_state =
     | Some {callback; _} -> (
         let argv = Array.of_list tokens in
         match Cmd.eval_value ~argv callback with
-        | Ok (`Ok result) -> result runtime_state >>= fun state -> return state
+        | Ok (`Ok cmd_fn) -> cmd_fn runtime_state
         | _ -> return runtime_state ) )
 
 and prompt runtime_state =
-  start_header ;
   CPrinter.cprint ~color:BrightGreen "> " ;
   flush stdout ;
   (* Get command from input *)
@@ -103,14 +101,24 @@ let runtime options filename =
   Logger.success "Parsed successfully" ;
   preprocess_program program
   >>= fun (event_env, expr_env, program) ->
-  Logger.success "Preprocessed successfully" ;
+  (* Logger.success "Preprocessed successfully" ; *)
+  Logger.debug @@ "Expr Env after preprocessing:\n"
+  ^ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
+  Logger.debug @@ "Event Env after preprocessing:\n"
+  ^ string_of_env (fun e -> Unparser.PlainUnparser.unparse_events [e]) event_env ;
   typecheck ~event_env program
   >>= fun (ty_env, event_env) ->
   Logger.success "Typechecked successfully" ;
   instantiate ~expr_env ~event_env program
   >>= fun (program, event_env, expr_env) ->
   Logger.success "Instantiated successfully" ;
-  let runtime_state = mk_runtime_state ~ty_env ~expr_env ~event_env program in
+  Logger.debug @@ "Expr Env after instantiation:\n"
+  ^ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
+  Logger.debug @@ "Event Env after instantiation:\n"
+  ^ string_of_env (fun e -> Unparser.PlainUnparser.unparse_events [e]) event_env ;
+  let runtime_state =
+    mk_runtime_state ~ty_env ~expr_env ~event_env ~output:start_header program
+  in
   prompt runtime_state
 
 let runtime_cmd =
@@ -122,7 +130,7 @@ let runtime_cmd =
   and options =
     let logger_level =
       let doc = "The level of logging to be used" in
-      Arg.(value & opt string "debug" & info ["l"; "logger-level"] ~doc)
+      Arg.(value & opt string "" & info ["l"; "logger-level"] ~doc)
     in
     Term.(const (fun logger_level -> {logger_level}) $ logger_level)
   and input_filename =

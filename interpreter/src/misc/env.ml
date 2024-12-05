@@ -48,13 +48,13 @@
 
    let flatten env = List.flatten env *)
 
-type 'a env = Empty | Scope of (string * 'a) list * 'a env
+type 'a env = Empty | Scope of (string * 'a) list * 'a env [@@deriving show]
 
 exception Not_found
 
 exception Empty_env
 
-exception Duplicate_binding
+exception Duplicate_binding of string
 
 let empty_env = Scope ([], Empty)
 
@@ -69,7 +69,7 @@ let bind x v env =
   match env with
   | Empty -> raise Empty_env
   | Scope (binds, sl) ->
-      (* if List.mem_assoc x binds then raise Duplicate_binding
+      (* if List.mem_assoc x binds then raise (Duplicate_binding x)
          else *)
       Scope ((x, v) :: binds, sl)
 
@@ -78,8 +78,8 @@ let rec find_flat x env =
   | Empty -> None
   | Scope (binds, sl) -> (
     match List.assoc_opt x binds with
-    | Some v -> Some v
-    | None -> find_flat x sl )
+    | None -> find_flat x sl
+    | _ as value -> value )
 
 let get x env = Option.get (find_flat x env)
 
@@ -95,9 +95,10 @@ let rec string_of_env v_fmt env =
   let rec string_of_scope sc =
     match sc with
     | [] -> ""
+    | (x, v) :: [] -> x ^ " = " ^ v_fmt v
     | (x, v) :: sc -> x ^ " = " ^ v_fmt v ^ "; " ^ string_of_scope sc
   in
   match env with
   | Empty -> ""
   | Scope (sc, sl) ->
-      "Scope { " ^ string_of_scope sc ^ " }" ^ "\n" ^ string_of_env v_fmt sl
+      "{ " ^ string_of_scope sc ^ " }" ^ "\n" ^ string_of_env v_fmt sl

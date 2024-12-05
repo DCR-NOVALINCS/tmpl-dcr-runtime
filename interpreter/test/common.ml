@@ -1,14 +1,7 @@
 open OUnit2
-
-(* open Misc.Env *)
 open Misc
 open Monads.ResultMonad
-
-(* open Printing *)
 open Templating
-(* open Instantiation *)
-
-(* open Api *)
 open Errors
 open Syntax
 open Lex_and_parse
