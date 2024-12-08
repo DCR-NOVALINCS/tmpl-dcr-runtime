@@ -415,26 +415,22 @@ and event_type_mismatch ?(errors = []) ?(loc = Nowhere) ?(available = [])
   let rec string_tys = function
     | [] -> CString.colorize ~color:Yellow "?"
     | [(event_label, event_type, ty)] ->
-        Printf.sprintf "%s as %s event with type %s"
-          (CString.colorize ~color:Yellow event_label)
-          (CString.colorize ~color:Yellow (show_event_type' event_type))
-          (CString.colorize ~color:Yellow (unparse_ty ty))
+        string_of_event_type_pair (event_label, event_type, ty)
     | (event_label, event_type, ty)
       :: [(event_label_last, event_type_last, ty_last)] ->
-        Printf.sprintf
-          "%s as %s event with type %s and %s as %s event with type %s"
-          (CString.colorize ~color:Yellow event_label)
-          (CString.colorize ~color:Yellow (show_event_type' event_type))
-          (CString.colorize ~color:Yellow (unparse_ty ty))
-          (CString.colorize ~color:Yellow event_label_last)
-          (CString.colorize ~color:Yellow (show_event_type' event_type_last))
-          (CString.colorize ~color:Yellow (unparse_ty ty_last))
+        Printf.sprintf "%s and %s"
+          (string_of_event_type_pair (event_label, event_type, ty))
+          (string_of_event_type_pair
+             (event_label_last, event_type_last, ty_last) )
     | (event_label, event_type, ty) :: tys ->
-        Printf.sprintf "%s as %s event with type %s, %s"
-          (CString.colorize ~color:Yellow event_label)
-          (CString.colorize ~color:Yellow (show_event_type' event_type))
-          (CString.colorize ~color:Yellow (unparse_ty ty))
+        Printf.sprintf "%s, %s"
+          (string_of_event_type_pair (event_label, event_type, ty))
           (string_tys tys)
+  and string_of_event_type_pair (event_label, event_type, ty) =
+    Printf.sprintf "%s as %s event with type %s"
+      (CString.colorize ~color:Yellow event_label)
+      (CString.colorize ~color:Yellow (show_event_type' event_type))
+      (CString.colorize ~color:Yellow (unparse_ty ty))
   in
   fail
     ( { location= loc
@@ -448,8 +444,8 @@ and event_type_mismatch ?(errors = []) ?(loc = Nowhere) ?(available = [])
                "Verify the type of the event. Check for type mismatches or any typos.\n\nAvailable event types:\n%s"
                (String.concat "\n"
                   (List.map
-                     (fun (event_type, ty) ->
-                       Printf.sprintf "- %s: %s"
+                     (fun (event_label, (event_type, ty)) ->
+                       Printf.sprintf "- %s: %s(%s)" event_label
                          (show_event_type' event_type)
                          (Unparser.PlainUnparser.unparse_ty ty) )
                      available ) ) ) }

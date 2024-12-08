@@ -3,7 +3,7 @@ tmpl f(n: Number, e: A): B {
     e -->+ b
 } => b
 
-tmpl g(n: Number): A {
+tmpl g(): A {
     (a: A)[?: { n: Number, b: Boolean }]
     a -->> {
         f(n = @trigger.value.n, e -> a) => b0
@@ -12,4 +12,4 @@ tmpl g(n: Number): A {
     }
 } => a
 
-g(n = 1) => a0
+g() => a0

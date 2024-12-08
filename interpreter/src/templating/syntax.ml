@@ -85,6 +85,7 @@ and expr' =
   | Record of expr record_field list
   (* ADD Template Expr *)
   | Template of template_instance
+  | EventRef of event ref
 [@@deriving yojson]
 
 and binary_op_type =

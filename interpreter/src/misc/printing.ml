@@ -130,18 +130,39 @@ module ASNIFormat : FormatType = struct
     | None -> ""
 end
 
-module ASNIString (Color : ColorType) (Format : FormatType) = struct
-  include String
+module type ColoredString = sig
+  module C : ColorType
 
-  let colorize ?(color = Color.Default) ?(format = Format.None) text =
-    let color_start, color_end =
-      (Color.color_code color, Color.color_code Color.Default)
-    in
+  module F : FormatType
+
+  val colorize : ?color:C.t -> ?format:F.t -> string -> string
+end
+
+module ASNIString (Color : ColorType) (Format : FormatType) : ColoredString =
+struct
+  include String
+  module C = Color
+  module F = Format
+
+  let colorize ?(color = C.Default) ?(format = F.None) text =
+    let color_start, color_end = (C.color_code color, C.color_code C.Default) in
     let format_start, format_end =
-      (Format.format_code format, Format.format_code Format.Default)
+      (F.format_code format, F.format_code F.Default)
     in
     Printf.sprintf "%s%s%s%s%s" color_start format_start text color_end
       format_end
+end
+
+module NoColoredString : ColoredString = struct
+  include String
+  module C = NoColor
+  module F = NoFormat
+
+  let colorize ?(color = NoColor.Default) ?(format = NoFormat.None) text =
+    let color_start, format_start =
+      (C.color_code color, F.format_code format)
+    in
+    Printf.sprintf "%s%s%s" color_start format_start text
 end
 
 module type Printer = sig
@@ -304,5 +325,4 @@ end
 module CPrinter = MakePrinter (ASNIColor) (ASNIFormat)
 module Printer = MakePrinter (NoColor) (NoFormat)
 module CString = ASNIString (ASNIColor) (ASNIFormat)
-module String = ASNIString (NoColor) (NoFormat)
 module Logger = MakeLogger (ASNIColor) (ASNIFormat)

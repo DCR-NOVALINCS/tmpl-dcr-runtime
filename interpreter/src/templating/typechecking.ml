@@ -258,7 +258,7 @@ and typecheck_event event (ty_env, event_env, label_types) =
         event_type_mismatch ~loc:io.loc
           ~available:
             ( EventTypes.to_list label_types
-            |> List.map (fun (_, (ty, et)) -> (et, ty)) )
+            |> List.map (fun (label, (ty, et)) -> (label, (et, ty))) )
           [(label.data, expected_event_type, expected_value_ty)]
           [(label.data, got_event_type, got_value_ty)] )
   >>= fun label_types ->

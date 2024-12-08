@@ -56,18 +56,26 @@ let test_suite =
       >>= fun (program, event_env, _) -> typecheck ~event_env program
     in
     result |> expecting_ok
+  and test_8 path test_ctxt =
+    let result =
+      build_state (path "8.tdcr") test_ctxt
+      >>= fun (program, event_env, _) ->
+      typecheck ~event_env program >>= fun _ -> return ()
+    in
+    result |> expecting_ok
   and fullpath file = "test/files/typechecker/" ^ file
   and make_test (name, test_fun) =
     name >:: fun test_ctxt -> test_fun fullpath test_ctxt |> ignore
   in
   "typechecking"
-  >::: [ make_test ("test_0", test_0)
-       ; make_test ("test_1", test_1)
-       ; make_test ("test_2", test_2)
-       ; make_test ("test_3", test_3)
-       ; make_test ("test_4", test_4)
-       ; make_test ("test_5", test_5)
-       ; make_test ("test_6", test_6)
-       ; make_test ("test_7", test_7) ]
+  >::: [ make_test ("test.0", test_0)
+       ; make_test ("test.1", test_1)
+       ; make_test ("test.2", test_2)
+       ; make_test ("test.3", test_3)
+       ; make_test ("test.4", test_4)
+       ; make_test ("test.5", test_5)
+       ; make_test ("test.6", test_6)
+       ; make_test ("test.7", test_7)
+       ; make_test ("test.8", test_8) ]
 
 let _ = run_test_tt_main test_suite

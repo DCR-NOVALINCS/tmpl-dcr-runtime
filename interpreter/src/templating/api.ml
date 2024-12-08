@@ -81,8 +81,10 @@ and execute_input_event event expr (ty_env, expr_env) =
 (* --- Parse --- *)
 
 and parse_program_from_file filename =
-  let lexbuf = Lexing.from_channel (open_in filename) in
+  let file_channel = open_in filename in
+  let lexbuf = Lexing.from_channel file_channel in
   parse_program ~filename lexbuf
+  >>| fun program -> close_in file_channel ; program
 
 and parse_expression_from_string expr_tokens =
   (* sanitize_input expr_string

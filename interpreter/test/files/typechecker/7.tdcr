@@ -6,7 +6,7 @@ tmpl f(n: Number, e: A): B {
 (a: A)[?: { n: Number, b: Boolean }]
 
 a -->> {
-    f(n = @trigger.value.n, e -> @trigger) => b0
+    f(n = @trigger.value.n, e -> a) => b0
 
     b0 -[@trigger.value.b]->% b0
 }

@@ -30,6 +30,14 @@ module ResultMonad = struct
       (fun acc x1 x2 -> acc >>= fun acc -> f acc x1 x2)
       (return acc) l1 l2
 
+  let fold_right f acc l =
+    List.fold_right (fun x acc -> acc >>= fun acc -> f acc x) l (return acc)
+
+  let fold_right2 f acc l1 l2 =
+    List.fold_right2
+      (fun x1 x2 acc -> acc >>= fun acc -> f acc x1 x2)
+      l1 l2 (return acc)
+
   let map f l =
     List.fold_right
       (fun x acc -> acc >>= fun acc -> f x >>| fun x -> x :: acc)

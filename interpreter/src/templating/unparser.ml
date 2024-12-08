@@ -1,6 +1,6 @@
 open Syntax
-open Misc.Printing
-module String = CString
+open Misc
+(* module String = CString *)
 
 module UnparserList = struct
   let unparse_list ?(initial = "") ?(separator = "")
@@ -22,27 +22,19 @@ end
 
 module PlainUnparser = struct
   open UnparserList
+  open Monads.FilterMonad
 
   let rec unparse ?(indent = "") ?(abbreviated = true) ?(separator = "\n")
       ?(should_print_template_decls = true) ?(should_print_events = true)
       ?(should_print_value = false) ?(should_print_executed_marking = false)
       ?(should_print_template_insts = true) ?(should_print_relations = true)
       ?(buffer = Buffer.create 100) program =
-    let open Misc.Monads.FilterMonad in
-    (* TODO: Select the module if the caller wants a colorized version of the result *)
-    (* let module M : String =
-         match true || false with
-         | true -> (module String : String)
-         | false -> (module CString : String)
-       in *)
     let print_template_decls =
       should_print_template_decls && List.length program.template_decls > 0
-    in
-    let print_events = should_print_events && List.length program.events > 0 in
-    let print_template_insts =
+    and print_events = should_print_events && List.length program.events > 0
+    and print_template_insts =
       should_print_template_insts && List.length program.template_insts > 0
-    in
-    let print_relations =
+    and print_relations =
       should_print_relations && List.length program.relations > 0
     in
     return ()

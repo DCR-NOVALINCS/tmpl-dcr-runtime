@@ -1,8 +1,7 @@
 open Misc
 open Env
 open Monads.ResultMonad
-
-(* open Printing *)
+open Printing
 open Syntax
 open Errors
 
@@ -36,8 +35,11 @@ let rec eval_expr expr env =
       eval_binop v1 v2 op
   | UnaryOp (e, op) -> eval_expr e env >>= fun v -> eval_unop v op
   | Identifier id -> find_id id env
-  | Trigger -> find_id (annotate ~loc:expr.loc ~ty:!(expr.ty) trigger_id) env
+  | Trigger -> find_id {expr with data= trigger_id} env
   | PropDeref (e, p) -> (
+      (* Debug expr env *)
+      Logger.debug @@ "Expr env in prop deref" ;
+      Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr env ;
       eval_expr e env
       >>= fun v ->
       let rec_ty = Option.value ~default:UnitTy !(v.ty) in
@@ -49,8 +51,10 @@ let rec eval_expr expr env =
           match List.assoc_opt p.data fields with
           | None -> property_not_found p v
           | Some v -> return (annotate ~loc:v.loc ~ty:(Some rec_ty) v.data) )
-      | _ -> type_mismatch ~loc:e.loc [RecordTy [(p, annotate UnitTy)]] [rec_ty]
-      )
+      | _ ->
+          should_not_happen ~module_path:"evaluation.ml"
+            ( "Tried to dereference a non-record value "
+            ^ Unparser.PlainUnparser.unparse_expr v ) )
   | List es ->
       map (fun e -> eval_expr e env) es >>| fun es -> {expr with data= List es}
   | Range (s, e) ->
