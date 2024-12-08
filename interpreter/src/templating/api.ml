@@ -96,9 +96,10 @@ and parse_expression_from_string expr_tokens =
 
 (* --- Unparse --- *)
 
-and unparse_program_tdcr ?(should_print_executed_marking = false) program =
+and unparse_program_tdcr ?(should_print_value = false)
+    ?(should_print_executed_marking = false) program =
   let open Unparser.PlainUnparser in
-  return (unparse ~should_print_executed_marking program)
+  return (unparse ~should_print_executed_marking ~should_print_value program)
 
 and unparse_program_json program =
   return (Yojson.Safe.pretty_to_string (yojson_of_program program))
@@ -106,13 +107,13 @@ and unparse_program_json program =
 (* --- Vizualization functions --- *)
 
 and view ?(filter = fun _ event -> Some event) ?(should_print_events = true)
-    ?(should_print_relations = false) ?(expr_env = empty_env)
-    ?(event_env = empty_env) program =
+    ?(should_print_value = false) ?(should_print_relations = false)
+    ?(expr_env = empty_env) ?(event_env = empty_env) program =
   filter_map (fun event -> filter (event_env, expr_env) event) program.events
   >>= fun events ->
   let open Unparser.PlainUnparser in
   return
-    (unparse ~should_print_events ~should_print_value:false
+    (unparse ~should_print_events ~should_print_value
        ~should_print_executed_marking:true ~should_print_relations
        ~should_print_template_decls:false {program with events} )
 
@@ -121,9 +122,9 @@ and view_debug program =
   return @@ unparse ~should_print_executed_marking:true program
 (* view ~should_print_relations:true program *)
 
-and view_enabled ?(should_print_relations = false) ?(expr_env = empty_env)
-    ?(event_env = empty_env) program =
-  view ~should_print_relations ~event_env ~expr_env
+and view_enabled ?(should_print_value = false) ?(should_print_relations = false)
+    ?(expr_env = empty_env) ?(event_env = empty_env) program =
+  view ~should_print_value ~should_print_relations ~event_env ~expr_env
     ~filter:(fun (event_env, expr_env) event ->
       is_enabled event program (event_env, expr_env)
       |> function Ok true -> Some event | _ -> None )

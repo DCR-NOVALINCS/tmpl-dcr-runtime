@@ -94,16 +94,15 @@ let mk_template_ty_from template_def =
 (* - [] *)
 let rec typecheck ?(event_env = empty_env) program =
   let template_decls = program.template_decls in
-  let events = program.events in
-  let insts = program.template_insts in
-  let relations = program.relations in
-  let ty_env = empty_env in
-  let label_types = EventTypes.empty in
+  let events, insts, relations =
+    (program.events, program.template_insts, program.relations)
+  in
+  let ty_env, label_types = (empty_env, EventTypes.empty) in
   typecheck_template_decls template_decls (ty_env, event_env, label_types)
   >>= fun (ty_env, event_env, tmpl_ty_env, label_types) ->
   typecheck_subprogram (events, insts, relations)
     (ty_env, event_env, tmpl_ty_env, label_types)
-  >>= fun (ty_env, event_env, _) -> return (ty_env, event_env)
+  >>| fun (ty_env, event_env, _) -> (ty_env, event_env)
 
 (* =============================================================================
    Typechecking of template definitions

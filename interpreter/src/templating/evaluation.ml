@@ -1,9 +1,9 @@
+open Syntax
+open Errors
 open Misc
 open Env
 open Monads.ResultMonad
-open Printing
-open Syntax
-open Errors
+(* open Printing *)
 
 (* =============================================================================
    Expression Evaluation functions
@@ -12,37 +12,29 @@ open Errors
 let rec eval_expr expr env =
   (* let open Misc.Printing in *)
   match expr.data with
-  | Unit ->
-      expr.ty := Some UnitTy ;
-      return {expr with ty= ref (Some UnitTy)}
-  | True | False ->
-      expr.ty := Some BoolTy ;
-      return {expr with ty= ref (Some BoolTy)}
-  | IntLit _ ->
-      expr.ty := Some IntTy ;
-      return {expr with ty= ref (Some IntTy)}
-  | StringLit _ ->
-      expr.ty := Some StringTy ;
-      return {expr with ty= ref (Some StringTy)}
+  | Unit | True | False | IntLit _ | StringLit _ -> return expr
+  | Ref expr_ref -> eval_expr !expr_ref env
   | Parenthesized e -> eval_expr e env
-  | BinaryOp (e1, e2, op) ->
-      eval_expr e1 env
-      >>= fun v1 ->
-      eval_expr e2 env
-      >>= fun v2 ->
-      (* Logger.debug @@ "Expr env" ;
-         Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr env ; *)
-      eval_binop v1 v2 op
-  | UnaryOp (e, op) -> eval_expr e env >>= fun v -> eval_unop v op
+  | BinaryOp (l, r, op) ->
+      (* Evaluate left expression *)
+      eval_expr l env
+      >>= fun lv ->
+      (* Evaluate right expression *)
+      eval_expr r env
+      >>= fun rv ->
+      (* Evaluate the expression according to [op] with corresponding values [lv] and [rv] *)
+      eval_binop lv rv op
+  | UnaryOp (e, op) ->
+      (* Evaluate expression *)
+      eval_expr e env
+      >>= fun v ->
+      (* Evaluate the expression according to [op] with corresponding value [v] *)
+      eval_unop v op
   | Identifier id -> find_id id env
   | Trigger -> find_id {expr with data= trigger_id} env
   | PropDeref (e, p) -> (
-      (* Debug expr env *)
-      Logger.debug @@ "Expr env in prop deref" ;
-      Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr env ;
       eval_expr e env
       >>= fun v ->
-      let rec_ty = Option.value ~default:UnitTy !(v.ty) in
       match v.data with
       | Record fields -> (
           let fields =
@@ -50,13 +42,20 @@ let rec eval_expr expr env =
           in
           match List.assoc_opt p.data fields with
           | None -> property_not_found p v
-          | Some v -> return (annotate ~loc:v.loc ~ty:(Some rec_ty) v.data) )
+          | Some v -> return (annotate ~loc:v.loc v.data) )
+      | EventRef event_ref -> (
+          let event = !event_ref in
+          let {marking; _} = event.data in
+          match p.data with
+          | "value" -> eval_expr {expr with data= Ref marking.data.value} env
+          | _ -> property_not_found p v )
       | _ ->
           should_not_happen ~module_path:"evaluation.ml"
-            ( "Tried to dereference a non-record value "
+            ( "Tried to dereference a non-record value"
             ^ Unparser.PlainUnparser.unparse_expr v ) )
-  | List es ->
-      map (fun e -> eval_expr e env) es >>| fun es -> {expr with data= List es}
+  | List elems ->
+      map (fun elem -> eval_expr elem env) elems
+      >>| fun elems -> {expr with data= List elems}
   | Range (s, e) ->
       eval_expr s env
       >>= (fun start_value ->
@@ -69,48 +68,23 @@ let rec eval_expr expr env =
                   else start_int :: range (start_int + 1) end_int
                 in
                 range s e
-                |> List.map (fun i ->
-                       annotate ~loc:expr.loc ~ty:(Some IntTy) (IntLit i) )
+                |> List.map (fun i -> annotate ~loc:expr.loc (IntLit i))
                 |> return
-            | _ -> type_mismatch ~loc:s.loc [IntTy] [] )
+            | _ -> type_mismatch ~loc:s.loc [IntTy; IntTy] [] )
       >>| fun es -> annotate ~loc:expr.loc ~ty:(Some (ListTy IntTy)) (List es)
   | Record fields ->
-      map
-        (fun (name, expr) -> eval_expr expr env >>= fun v -> return (name, v))
-        fields
-      >>= fun expr_fields ->
-      map
-        (fun (name, expr) ->
-          match !(expr.ty) with
-          | Some ty -> return (name, annotate ~loc:expr.loc ~ty:(Some ty) ty)
-          | _ ->
-              should_not_happen ~module_path:"evaluation.ml" ~line:"58"
-                "The type of the record field is not annotated" )
-        expr_fields
-      >>| fun type_fields ->
-      expr.ty := Some (RecordTy type_fields) ;
-      {expr with data= Record expr_fields; ty= ref (Some (RecordTy type_fields))}
+      eval_record_fields fields env
+      >>| fun fields -> {expr with data= Record fields}
+      (* | EventRef event_ref ->
+          let event = !event_ref in
+          let {marking; _} = event.data in
+          let fields =
+            [(annotate "value", annotate ~loc:event.loc !(marking.data.value).data)]
+          in
+          return {expr with data= Record fields} *)
   | _ -> invalid_expr ()
 
 and eval_binop v1 v2 op =
-  (* ( match (!(v1.ty), !(v2.ty)) with
-     | Some ty1, Some ty2 -> return (ty1, ty2)
-     (* | Some ty1, _ -> return (ty1, UnitTy) | _, Some ty2 -> return (UnitTy,
-        ty2) *)
-     | Some ty1, None ->
-         should_not_happen ~module_path:"evaluation.ml"
-           (Printf.sprintf
-              "The type of the second operand is missing, the first operand is %s"
-              (Unparser.PlainUnparser.unparse_ty ty1) )
-     | None, Some ty2 ->
-         should_not_happen ~module_path:"evaluation.ml"
-           (Printf.sprintf
-              "The type of the first operand is missing, the second operand is %s"
-              (Unparser.PlainUnparser.unparse_ty ty2) )
-     | _ ->
-         should_not_happen
-           "Either the types of the first or second operand are missing" )
-     >>= fun (ty1, ty2) -> *)
   match op with
   | Add -> (
     match (v1.data, v2.data) with
@@ -270,12 +244,19 @@ and eval_unop v op =
 
 and find_id id env =
   match find_flat id.data env with
-  | None ->
-      (* Logger.debug
-         @@ Printf.sprintf "Expr env: %s"
-              (string_of_env Unparser.PlainUnparser.unparse_expr env) ; *)
-      id_not_found id
+  | None -> id_not_found id
   | Some expr -> return expr
+
+and eval_record_fields fields env =
+  map
+    (fun (name, expr) -> eval_expr expr env >>= fun v -> return (name, v))
+    fields
+
+and reference_of_event expr =
+  match expr.data with
+  | EventRef event_ref -> return event_ref
+  | _ ->
+      should_not_happen ~module_path:"evaluation.ml" "Invalid event reference"
 
 (* =============================================================================
    Expression Partial Evaluation functions

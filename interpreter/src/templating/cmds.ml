@@ -65,22 +65,27 @@ and view_term =
   let all_flag =
     Arg.(
       value & flag & info ["a"; "all"] ~docv:"ALL" ~doc:"View the whole graph" )
-  and view_cmd is_all {program; ty_env; event_env; expr_env; _} =
+  and show_value =
+    Arg.(
+      value & flag
+      & info ["v"; "value"] ~docv:"VALUE" ~doc:"Show the value of the events" )
+  and view_cmd is_all show_value {program; ty_env; event_env; expr_env; _} =
     match is_all with
     | true ->
-        unparse_program_tdcr ~should_print_executed_marking:true program
+        unparse_program_tdcr ~should_print_executed_marking:true
+          ~should_print_value:show_value program
         >>= fun program_str ->
         return
           (mk_runtime_state ~ty_env ~expr_env ~event_env ~output:program_str
              program )
     | false ->
-        view_enabled ~expr_env ~event_env program
+        view_enabled ~should_print_value:show_value ~expr_env ~event_env program
         >>= fun program_str ->
         return
           (mk_runtime_state ~ty_env ~expr_env ~event_env ~output:program_str
              program )
   in
-  Term.(const view_cmd $ all_flag)
+  Term.(const view_cmd $ all_flag $ show_value)
 
 and execute_term =
   let event_id =

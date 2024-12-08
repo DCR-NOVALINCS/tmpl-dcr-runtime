@@ -83,9 +83,8 @@ and expr' =
   | List of expr list
   | Range of expr * expr
   | Record of expr record_field list
-  (* ADD Template Expr *)
-  | Template of template_instance
   | EventRef of event ref
+  | Ref of expr ref
 [@@deriving yojson]
 
 and binary_op_type =
@@ -278,6 +277,8 @@ let mk_subprogram ?(events = []) ?(template_insts = []) ?(relations = []) _ =
 let empty_program = mk_program ()
 
 let empty_subprogram = mk_subprogram ()
+
+let mk_record fields = Record fields |> annotate
 
 (* let empty_template_inst = mk_template_inst "" [] ~x:[] *)
 

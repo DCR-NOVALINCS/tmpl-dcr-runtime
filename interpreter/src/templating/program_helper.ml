@@ -106,7 +106,7 @@ and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
   (* map (fun event -> update_event_value event expr_env) events >>= fun events
      -> *)
   (* Add all events as value into event environment *)
-  fold_left
+  fold_right
     (fun (event_env, expr_env) event ->
       let id, _ = event.data.info in
       return
@@ -172,15 +172,16 @@ and is_event_present_on_relation id relation =
 
 and event_as_expr event =
   (* let {marking; _} = event.data in *)
-  let {marking; io; _} = event.data in
-  let value =
-    match (marking.data, io.data) with
-    | _, Output expr -> expr
-    | {value; _}, Input _ -> !value
-  in
+  (* let {marking; io; _} = event.data in
+     let value =
+       match (marking.data, io.data) with
+       | _, Output expr -> expr
+       | {value; _}, Input _ -> !value
+     in *)
   (* let _, label = info in *)
-  annotate ~loc:event.loc ~ty:!(marking.ty)
-    (Record [(annotate ~ty:!(marking.ty) "value", value)])
+  (* annotate ~loc:event.loc ~ty:!(marking.ty)
+     (Record [(annotate ~ty:!(marking.ty) "value", value)]) *)
+  annotate ~loc:event.loc (EventRef (ref event))
 
 and event_as_ty event =
   let {io; _} = event.data in
