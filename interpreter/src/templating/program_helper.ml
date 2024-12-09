@@ -88,13 +88,13 @@ and update_event_env program event_env =
 
 and change_relation old_id new_id relation =
   match relation.data with
-  | ControlRelation (from, guard, dest, t, annot) ->
+  | ControlRelation (from, guard, dest, t) ->
       let new_from = if from.data = old_id.data then new_id else from in
       let new_dest = if dest.data = old_id.data then new_id else dest in
-      {relation with data= ControlRelation (new_from, guard, new_dest, t, annot)}
-  | SpawnRelation (from, guard, subprogram, annot) ->
+      {relation with data= ControlRelation (new_from, guard, new_dest, t)}
+  | SpawnRelation (from, guard, subprogram) ->
       let new_from = if from.data = old_id.data then new_id else from in
-      {relation with data= SpawnRelation (new_from, guard, subprogram, annot)}
+      {relation with data= SpawnRelation (new_from, guard, subprogram)}
 
 (* =============================================================================
    Updating relation functions
@@ -145,24 +145,24 @@ and get_relation ?(filter = fun _ -> true) id program =
   List.find_opt
     (fun r ->
       match r.data with
-      | ControlRelation (from, _, dest, _, _) ->
+      | ControlRelation (from, _, dest, _) ->
           (from.data = id || dest.data = id) && filter r
-      | SpawnRelation (from, _, _, _) -> from.data = id && filter r )
+      | SpawnRelation (from, _, _) -> from.data = id && filter r )
     relations
 
 and is_spawn r = match r.data with SpawnRelation _ -> true | _ -> false
 
 and is_ctrl op r =
-  match r.data with ControlRelation (_, _, _, op', _) -> op = op' | _ -> false
+  match r.data with ControlRelation (_, _, _, op') -> op = op' | _ -> false
 
 and has_relation ?(filter = fun _ -> true) id program =
   Option.is_some @@ get_relation ~filter id program
 
 and is_event_present_on_relation id relation =
   match relation.data with
-  | ControlRelation (from, _, dest, _, _) ->
+  | ControlRelation (from, _, dest, _) ->
       from.data = id.data || dest.data = id.data
-  | SpawnRelation (from, _, _, _) -> from.data = id.data
+  | SpawnRelation (from, _, _) -> from.data = id.data
 
 (* =============================================================================
    Aux functions

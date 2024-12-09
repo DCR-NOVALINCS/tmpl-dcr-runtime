@@ -22,6 +22,8 @@ module EventTypes = struct
 
   let empty : event_kind StringHashtbl.t = StringHashtbl.create size
 
+  let reset tbl = StringHashtbl.reset tbl
+
   let add (label, kind) tbl =
     StringHashtbl.replace tbl label kind ;
     tbl
@@ -102,7 +104,9 @@ let rec typecheck ?(event_env = empty_env) program =
   >>= fun (ty_env, event_env, tmpl_ty_env, label_types) ->
   typecheck_subprogram (events, insts, relations)
     (ty_env, event_env, tmpl_ty_env, label_types)
-  >>| fun (ty_env, event_env, _) -> (ty_env, event_env)
+  >>| fun (ty_env, event_env, label_types) ->
+  EventTypes.reset label_types ;
+  (ty_env, event_env)
 
 (* =============================================================================
    Typechecking of template definitions
@@ -135,8 +139,7 @@ and typecheck_template_decl template_decl
             Logger.debug label.data ;
             ( match EventTypes.find label.data label_types with
             | None ->
-                (* TODO: In case of not found the label in this point of the program, what to do? *)
-                (* todo "error message for not found label" *)
+                (* FIXME: In case of not found the label in this point of the program, what to do? *)
                 (* missing_label
                    ~available_labels:
                      ( EventTypes.to_list label_types
@@ -388,13 +391,13 @@ and typecheck_relation relation (ty_env, event_env, tmpl_ty_env, label_types) =
     else type_mismatch ~loc:guard.loc [BoolTy] [guard_ty]
   in
   match relation.data with
-  | ControlRelation (from_id, guard, dest, _op, _annot) ->
+  | ControlRelation (from_id, guard, dest, _) ->
       check_event_id from_id
       >>= fun _ ->
       check_event_id dest
       >>= fun _ ->
       check_guard_expr guard >>= fun _ -> return (ty_env, event_env, label_types)
-  | SpawnRelation (from_id, guard, subprogram, _annot) ->
+  | SpawnRelation (from_id, guard, subprogram) ->
       check_event_id from_id
       >>= fun from_event ->
       check_guard_expr guard

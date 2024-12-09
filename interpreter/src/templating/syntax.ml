@@ -204,9 +204,8 @@ and event_marking' =
 and relation = relation' annotated [@@deriving yojson]
 
 and relation' =
-  | ControlRelation of
-      event_id * expr * event_id * relation_type * template_annotation' list
-  | SpawnRelation of event_id * expr * subprogram * template_annotation' list
+  | ControlRelation of event_id * expr * event_id * relation_type
+  | SpawnRelation of event_id * expr * subprogram
 [@@deriving yojson]
 
 and relation_type = Condition | Include | Exclude | Milestone | Response
@@ -245,27 +244,22 @@ let default_marking_pend_excl = mk_marking ~pending:true ~included:false ()
 let mk_event ?(marking = default_marking) ?(annotations = []) info io =
   annotate {info; io; marking= annotate marking; annotations}
 
-let mk_ctrl_relation ?(annotations = []) ~from ?(guard = annotate True) ~dest t
-    =
-  annotate @@ ControlRelation (from, guard, dest, t, annotations)
+let mk_ctrl_relation ~from ?(guard = annotate True) ~dest t =
+  annotate @@ ControlRelation (from, guard, dest, t)
 
-let mk_ctrl_relations ?(annotations = []) left_ids expr right_ids t =
+let mk_ctrl_relations left_ids expr right_ids t =
   List.concat_map
     (fun id1 ->
       List.map
-        (fun id2 ->
-          mk_ctrl_relation ~from:id1 ~guard:expr ~dest:id2 ~annotations t )
+        (fun id2 -> mk_ctrl_relation ~from:id1 ~guard:expr ~dest:id2 t)
         right_ids )
     left_ids
 
-let mk_spawn_relation ?(annotations = []) ~from ?(guard = annotate True)
-    subprogram =
-  annotate @@ SpawnRelation (from, guard, subprogram, annotations)
+let mk_spawn_relation ~from ?(guard = annotate True) subprogram =
+  annotate @@ SpawnRelation (from, guard, subprogram)
 
-let mk_spawn_relations ?(annotations = []) left_ids expr prog =
-  List.map
-    (fun id -> mk_spawn_relation ~from:id ~guard:expr ~annotations prog)
-    left_ids
+let mk_spawn_relations left_ids expr prog =
+  List.map (fun id -> mk_spawn_relation ~from:id ~guard:expr prog) left_ids
 
 let mk_program ?(template_decls = []) ?(events = []) ?(template_insts = [])
     ?(relations = []) _ =

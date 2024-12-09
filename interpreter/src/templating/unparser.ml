@@ -284,15 +284,15 @@ module PlainUnparser = struct
       let guard_buffer = Buffer.create 100 in
       Buffer.add_string buffer @@ indent ;
       match relation.data with
-      | ControlRelation (from, guard, dest, t, annot) ->
+      | ControlRelation (from, guard, dest, t) ->
           Buffer.add_string buffer @@ from.data ;
           Buffer.add_string buffer @@ " " ;
           unparse_relation_type ~buffer ~guard:(guard, guard_buffer) t |> ignore ;
           Buffer.add_string buffer @@ " " ;
           Buffer.add_string buffer @@ dest.data ;
-          unparse_annotations ~buffer annot |> ignore ;
+          (* unparse_annotations ~buffer annot |> ignore ; *)
           ()
-      | SpawnRelation (from, guard, subprogram, annot) ->
+      | SpawnRelation (from, guard, subprogram) ->
           Buffer.add_string buffer @@ from.data ;
           Buffer.add_string buffer @@ " " ;
           unparse_relation_arrow ~arrow_start:"-" ~guard:(guard, guard_buffer)
@@ -309,9 +309,9 @@ module PlainUnparser = struct
             ~print_relations:(List.length spawn_relations > 0)
             ~abbreviated ~buffer subprogram
           |> ignore ;
-          Buffer.add_string buffer @@ "\n" ^ indent ^ "}" ;
-          (* Buffer.add_string buffer @@ " - "; *)
-          unparse_annotations ~indent ~buffer annot |> ignore
+          Buffer.add_string buffer @@ "\n" ^ indent ^ "}"
+      (* Buffer.add_string buffer @@ " - "; *)
+      (* unparse_annotations ~indent ~buffer annot |> ignore *)
     in
     unparse_list ~buffer ~separator:"\n"
       (fun ~buffer relation ->

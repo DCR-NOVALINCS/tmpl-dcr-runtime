@@ -21,7 +21,7 @@ and replace_relation relation (expr_env, event_env) =
         return (event_id, event)
   in
   match relation.data with
-  | SpawnRelation (from, guard, subprogram, annotations) ->
+  | SpawnRelation (from, guard, subprogram) ->
       replace_id from
       >>= fun (from_id, from_event) ->
       eval_expr guard expr_env
@@ -44,19 +44,15 @@ and replace_relation relation (expr_env, event_env) =
       >>= fun relations ->
       return (events, insts, relations)
       >>= fun subprogram ->
-      return
-        { relation with
-          data= SpawnRelation (from_id, guard, subprogram, annotations) }
-  | ControlRelation (from, guard, dest, t, annotations) ->
+      return {relation with data= SpawnRelation (from_id, guard, subprogram)}
+  | ControlRelation (from, guard, dest, t) ->
       replace_id from
       >>= fun (from_id, _) ->
       replace_id dest
       >>= fun (dest_id, _) ->
       eval_expr guard expr_env
       >>= fun guard ->
-      return
-        { relation with
-          data= ControlRelation (from_id, guard, dest_id, t, annotations) }
+      return {relation with data= ControlRelation (from_id, guard, dest_id, t)}
 
 and replace_template_inst inst (expr_env, event_env) =
   let {args; _} = inst.data in
@@ -325,21 +321,19 @@ and export_map_events x export (events, relations) =
           | Some new_id -> return @@ annotate ~loc:id.loc new_id
         in
         match relation.data with
-        | SpawnRelation (from, guard, subprogram, annotations) ->
+        | SpawnRelation (from, guard, subprogram) ->
             replace_id from
             >>= fun from_id ->
             return
-              { relation with
-                data= SpawnRelation (from_id, guard, subprogram, annotations) }
-        | ControlRelation (from, guard, dest, t, annotations) ->
+              {relation with data= SpawnRelation (from_id, guard, subprogram)}
+        | ControlRelation (from, guard, dest, t) ->
             replace_id from
             >>= fun from_id ->
             replace_id dest
             >>= fun dest_id ->
             return
-              { relation with
-                data= ControlRelation (from_id, guard, dest_id, t, annotations)
-              } )
+              {relation with data= ControlRelation (from_id, guard, dest_id, t)}
+        )
       relations
     >>= fun relations -> return (events, relations)
 

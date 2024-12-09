@@ -23,7 +23,7 @@ and is_enabled_by relation event (event_env, expr_env) =
   let id, _ = event.data.info in
   match relation.data with
   | SpawnRelation _ -> return true
-  | ControlRelation (from, guard, dest, op, _) -> (
+  | ControlRelation (from, guard, dest, op) -> (
       if not (id.data = dest.data) then return true
       else
         (* Check the value of the guard, if it evaluates to false, the event is
@@ -93,7 +93,7 @@ and propagate_effects event (event_env, expr_env) program =
 and propagate_effect relation event (event_env, expr_env) program =
   let id, _ = event.data.info in
   match relation.data with
-  | SpawnRelation (from, guard, spawn_prog, _annot) ->
+  | SpawnRelation (from, guard, spawn_prog) ->
       if not (from.data = id.data) then return (program, event_env, expr_env)
       else
         check_guard guard expr_env
@@ -153,7 +153,7 @@ and propagate_effect relation event (event_env, expr_env) program =
               }
             , end_scope event_env
             , end_scope expr_env )
-  | ControlRelation (from, guard, dest, op, _annot) ->
+  | ControlRelation (from, guard, dest, op) ->
       if not (from.data = id.data) then return (program, event_env, expr_env)
       else
         check_guard guard expr_env
