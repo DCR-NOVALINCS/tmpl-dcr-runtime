@@ -444,7 +444,7 @@ and event_type_mismatch ?(errors = []) ?(loc = Nowhere) ?(available = [])
                "Verify the type of the event. Check for type mismatches or any typos.\n\nAvailable event types:\n%s"
                (String.concat "\n"
                   (List.map
-                     (fun (event_label, (event_type, ty)) ->
+                     (fun (event_label, (ty, event_type)) ->
                        Printf.sprintf "- %s: %s(%s)" event_label
                          (show_event_type' event_type)
                          (Unparser.PlainUnparser.unparse_ty ty) )

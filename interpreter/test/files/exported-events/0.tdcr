@@ -5,5 +5,5 @@ tmpl d(e: A, n: Number): A {
 
 (a: A)[0]
 
-d(e -> a, n = a.value) => a2
 d(e -> a2, n = a2.value) => a3
+d(e -> a, n = a.value) => a2

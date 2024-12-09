@@ -278,7 +278,12 @@ let empty_program = mk_program ()
 
 let empty_subprogram = mk_subprogram ()
 
-let mk_record fields = Record fields |> annotate
+let mk_record fields =
+  let fields = List.map (fun (k, v) -> (annotate k, annotate v)) fields in
+  annotate (Record fields)
+
+let get_event_type io =
+  match io.data with Input _ -> InputType | Output _ -> OutputType
 
 (* let empty_template_inst = mk_template_inst "" [] ~x:[] *)
 

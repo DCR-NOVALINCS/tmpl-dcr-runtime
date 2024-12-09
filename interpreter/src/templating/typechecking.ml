@@ -158,12 +158,19 @@ and typecheck_template_decl template_decl
             >>= fun event_env -> return (ty_env, event_env) )
       (ty_env, event_env) params
   in
+  Logger.info
+    ("Typechecking template: " ^ CString.colorize ~color:Yellow id.data) ;
   (* Begin new scope *)
-  return @@ (begin_scope ty_env, begin_scope event_env)
+  return (begin_scope ty_env, begin_scope event_env)
   >>= fun (ty_env, event_env) ->
   (* Typecheck the parameters *)
   typecheck_params params (ty_env, event_env)
   >>= fun (ty_env, event_env) ->
+  (* Bind the events from the template into the env's *)
+  (* bind_events ~f:(fun event -> event_as_ty event) events ty_env
+     >>= fun ty_env -> *)
+  bind_events ~f:(fun event -> event) events event_env
+  >>= fun event_env ->
   (* Typecheck the graph of the template *)
   typecheck_subprogram (events, insts, relations)
     (ty_env, event_env, tmpl_ty_env, label_types)
@@ -176,6 +183,11 @@ and typecheck_template_decl template_decl
       | Some event -> Left event )
     export
   >>= fun (exported_events, event_ids_not_found) ->
+  Logger.debug @@ "Exported events: " ;
+  Logger.debug @@ Unparser.PlainUnparser.unparse_events exported_events ;
+  Logger.debug @@ "Event ids not found: " ;
+  Logger.debug
+  @@ String.concat ", " (List.map (fun x -> x.data) event_ids_not_found) ;
   if not (List.is_empty event_ids_not_found) then
     (* Error when some exported events are not found *)
     let event_id = List.hd event_ids_not_found in
@@ -184,10 +196,11 @@ and typecheck_template_decl template_decl
     else
       (* FIXME: make the location of all elements of the list *)
       events_not_found ~loc:event_id.loc event_ids_not_found
-  else if not (List.length exported_events = List.length export) then
+  else if
+    (not (List.length exported_events = List.length export))
+    || not (List.length exported_events = List.length export_types)
+  then
     (* Error when the number of exported events does not match the number of export types *)
-    todo "error message for excess or less of exported events"
-  else if not (List.length exported_events = List.length export_types) then
     todo "error message for excess or less of exported events"
   else
     return @@ List.combine exported_events export_types
@@ -218,6 +231,10 @@ and typecheck_subprogram (events, insts, relations)
   typecheck_insts insts (ty_env, event_env, tmpl_ty_env, label_types)
   >>= fun (ty_env, event_env, label_types) ->
   typecheck_relations relations (ty_env, event_env, tmpl_ty_env, label_types)
+  >>= fun (ty_env, event_env, label_types) ->
+  Logger.debug @@ "Event Env after typechecking subprogram:\n"
+  ^ string_of_env (fun e -> Unparser.PlainUnparser.unparse_events [e]) event_env ;
+  return (ty_env, event_env, label_types)
 
 (* =============================================================================
    Typechecking of events
@@ -255,20 +272,16 @@ and typecheck_event event (ty_env, event_env, label_types) =
       then return label_types
       else
         event_type_mismatch ~loc:io.loc
-          ~available:
-            ( EventTypes.to_list label_types
-            |> List.map (fun (label, (ty, et)) -> (label, (et, ty))) )
+          ~available:(EventTypes.to_list label_types)
           [(label.data, expected_event_type, expected_value_ty)]
           [(label.data, got_event_type, got_value_ty)] )
   >>= fun label_types ->
-  marking.data.value :=
-    annotate ~ty:(Some got_value_ty) !(marking.data.value).data ;
+  !(marking.data.value).ty := Some got_value_ty ;
   return (RecordTy [(annotate "value", annotate got_value_ty)])
   (* return (event_as_ty event) *)
   >>= fun event_ty ->
   io.ty := Some event_ty ;
-  return
-    (bind id.data event_ty ty_env, bind id.data event event_env, label_types)
+  return (bind id.data event_ty ty_env, event_env, label_types)
 
 (* =============================================================================
    Typechecking of template instances
@@ -329,10 +342,13 @@ and typecheck_inst inst (ty_env, event_env, tmpl_ty_env, label_types) =
                       ( Output
                           (annotate ~loc:x.loc ~ty:(Some value_ty)
                              (default_value value_ty) )
-                      , label_types )
-                    (* FIXME: Get a value of the output event *) ) )
+                      , label_types ) ) )
               >>= fun (event_io, label_types) ->
               let x_event = mk_event (x, label) (annotate event_io) in
+              bind_events ~f:event_as_ty [x_event] ty_env
+              >>= fun ty_env ->
+              bind_events ~f:(fun e -> e) [x_event] event_env
+              >>= fun event_env ->
               typecheck_event x_event (ty_env, event_env, label_types) )
             (ty_env, event_env, label_types)
             xs
@@ -441,15 +457,18 @@ and typecheck_expr ?(ty_env = empty_env) expr =
     (* Typechecking each element of the list [lst] *)
     map (fun e -> typecheck_expr ~ty_env e) lst
     >>= fun elem_tys ->
-    let expected_ty = List.hd elem_tys in
-    partition_map
-      (fun elem_ty ->
-        if equal_types elem_ty expected_ty then Left elem_ty else Right elem_ty
-        )
-      elem_tys
-    >>= fun (_, wrong_tys) ->
-    if List.is_empty wrong_tys then return (ListTy expected_ty)
-    else type_mismatch ~loc:expr.loc [expected_ty] wrong_tys
+    if List.is_empty elem_tys then return (ListTy UnitTy)
+    else
+      (* Check if all elements have the same type *)
+      let expected_ty = List.hd elem_tys in
+      partition_map
+        (fun elem_ty ->
+          if equal_types elem_ty expected_ty then Left elem_ty
+          else Right elem_ty )
+        elem_tys
+      >>= fun (_, wrong_tys) ->
+      if List.is_empty wrong_tys then return (ListTy expected_ty)
+      else type_mismatch ~loc:expr.loc [expected_ty] wrong_tys
   (* Typechecking a record *)
   and typecheck_record fields ty_env =
     map

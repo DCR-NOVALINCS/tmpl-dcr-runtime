@@ -52,7 +52,7 @@ let mk_program_from_top_level_input =
 // %token FLOWS TOP BOT
 // templates
 %token TEMPLATE
-%token FOREACH WHEN IN
+%token FOREACH WHEN IF ELSE IN
 // misc
 %token QUESTION PROP_DEREF BOLDARROW ARROW
 
@@ -104,15 +104,17 @@ plain_program:
 
 plain_program_spawn:
   | input = list(plain_top_input); 
-    { let { events; template_insts; relations; _ } = mk_program_from_top_level_input input in
-    (events, template_insts, relations) }
+    { 
+      let { events; template_insts; relations; _ } = mk_program_from_top_level_input input in
+      (events, template_insts, relations) 
+    }
 
 
 plain_top_input:
   // | plain_template_decl { TemplateDef($1) }
-  | event_decl { Event($1) }
-  | template_inst { TemplateInst($1) }
-  | plain_ctrl_relation_decl_list { Relations($1) }
+  | event_decl                                                                  { Event($1) }
+  | template_inst                                                               { TemplateInst($1) }
+  | plain_ctrl_relation_decl_list                                               { Relations($1) }
 
 // =====
 // ===== template declaration 
@@ -127,8 +129,8 @@ plain_template_decl:
     { { id; params; export_types = Option.value ~default:[] export_types; graph; export = Option.value ~default:[] export } }
 
 plain_template_param_pair:
-  | id=id; COLON; ty=type_expr; default_expr=preceded(ASSIGN, expr)?; { (id, ExprParam(ty, default_expr)) }
-  | id=id; COLON; label=id { (id, EventParam(label)) }
+  | id=id; COLON; ty=type_expr; default_expr=preceded(ASSIGN, expr)?;           { (id, ExprParam(ty, default_expr)) }
+  | id=id; COLON; label=id                                                      { (id, EventParam(label)) }
 
 // ===== template instantiation
 template_inst: mark_loc_ty(plain_template_inst) {$1}
@@ -152,8 +154,8 @@ plain_arg_pair:
 
 // template annotations 
 plain_template_annotation:
-  | WHEN; expr = expr { When(expr) }
-  | FOREACH; id=id; IN; l=expr { Foreach (id, l) }
+  | WHEN; expr = expr                                                           { When(expr) }
+  | FOREACH; id=id; IN; l=expr                                                  { Foreach (id, l) }
 
 // =====
 // ===== event declarations
@@ -191,25 +193,23 @@ plain_event_decl:
 
 marking_prefix: mark_loc_ty(plain_marking_prefix) {$1}
 plain_marking_prefix:
-  | EXCL                      { default_marking_excl }
-  | PEND                      { default_marking_pend }
-  | EXCL PEND | PEND EXCL     { default_marking_pend_excl }
+  | EXCL                                                                        { default_marking_excl }
+  | PEND                                                                        { default_marking_pend }
+  | EXCL PEND | PEND EXCL                                                       { default_marking_pend_excl }
 ;
 
 // event_info: mark_loc_ty(plain_event_info) {$1}
 plain_event_info:
-  | separated_pair(id, COLON, id)    { $1 }
+  | separated_pair(id, COLON, id)                                               { $1 }
 ;
 
 // =====
 // ===== control relation declarations
 // ctrl_relation_decl:list: mark_loc_ty(plain_ctrl_relation_decl_list) {$1}
 plain_ctrl_relation_decl_list:
-  | rels=nonempty_list(plain_group_ctrl_relation_decl);
-  { List.flatten rels }
+  | rels=nonempty_list(plain_group_ctrl_relation_decl);                         { List.flatten rels }
 
 
-//FIXME: Repetition of the template annotations in the plain_group_ctrl_relation_decl
 // group_ctrl_relation_decl: mark_loc_ty(plain_group_ctrl_relation_decl) {$1}
 plain_group_ctrl_relation_decl:
   // ==== Unguarded relations ====
@@ -301,30 +301,37 @@ plain_group_ctrl_relation_decl:
 
 event_io: mark_loc_ty(plain_event_io) {$1}
 plain_event_io:
-| input_type = preceded(QUESTION, input_expr)           { Input(input_type) }
-| computationExpr = expr                    { Output(computationExpr) }
+| input_type = preceded(QUESTION, input_expr)                                   { Input(input_type) }
+| computationExpr = expr                                                        { Output(computationExpr) }
 ;
 
 input_expr: mark_loc_ty(plain_input_expr) { $1 }
 plain_input_expr:
-  |                                      { UnitTy }
-  | COLON; ty = plain_type_expr      { ty }
+  |                                                                             { UnitTy }
+  | COLON; ty = plain_type_expr                                                 { ty }
 ;
 
 node_marking: mark_loc_ty(plain_node_marking) {$1}
 plain_node_marking:
-  | exec=bool; COMMA; pend=bool; COMMA; inc=bool        { {executed = exec; pending = pend; included = inc; value = ref @@ annotate Unit} }
+  | exec=bool; COMMA; pend=bool; COMMA; inc=bool                                
+  { 
+    { executed = exec
+    ; pending = pend
+    ; included = inc
+    ; value = ref @@ annotate Unit
+    } 
+  }
 ;
 
 
 type_expr: mark_loc_ty(plain_type_expr) {$1}
 plain_type_expr:
-| STRTY                                             { StringTy }
-| INTTY                                             { IntTy    }
-| BOOLTY                                            { BoolTy   }
-// | plain_id                                          { EventTy($1) }
-| delimited(LBRACE, plain_record_type_field_list, RBRACE)    { RecordTy($1) }
-| LISTTY; item_type=delimited(LBRACKET, plain_type_expr, RBRACKET)             { ListTy(item_type) }
+| STRTY                                                                         { StringTy }
+| INTTY                                                                         { IntTy    }
+| BOOLTY                                                                        { BoolTy   }
+// | plain_id                                                                      { EventTy($1) }
+| delimited(LBRACE, plain_record_type_field_list, RBRACE)                       { RecordTy($1) }
+| LISTTY; item_type=delimited(LBRACKET, plain_type_expr, RBRACKET)              { ListTy(item_type) }
 ;
 
 // ================= expressions
@@ -348,44 +355,44 @@ plain_andop:
 
 compareop: mark_loc_ty(plain_compareop) { $1 }
 plain_compareop:
-| compareop EQ arith                                { BinaryOp($1,$3,Eq) }
-| compareop NEQ arith                               { BinaryOp($1,$3,NotEq) }
-| compareop GREATERTHAN arith                       { BinaryOp($1,$3,GreaterThan) }
-| compareop GREATEREQTHAN arith                     { BinaryOp($1,$3,GreaterOrEqual) }
-| compareop LESSTHAN arith                          { BinaryOp($1,$3,LessThan) }
-| compareop LESSEQTHAN arith                        { BinaryOp($1,$3,LessOrEqual) }
-| plain_arith                                       { $1 } 
+| compareop EQ arith                                                            { BinaryOp($1,$3,Eq) }
+| compareop NEQ arith                                                           { BinaryOp($1,$3,NotEq) }
+| compareop GREATERTHAN arith                                                   { BinaryOp($1,$3,GreaterThan) }
+| compareop GREATEREQTHAN arith                                                 { BinaryOp($1,$3,GreaterOrEqual) }
+| compareop LESSTHAN arith                                                      { BinaryOp($1,$3,LessThan) }
+| compareop LESSEQTHAN arith                                                    { BinaryOp($1,$3,LessOrEqual) }
+| plain_arith                                                                   { $1 } 
 ;
 
 arith: mark_loc_ty(plain_arith) { $1 }
 plain_arith: 
-| arith PLUS term                                   { BinaryOp($1,$3,Add) }
-| arith MINUS term                                  { BinaryOp($1,$3,Sub) }
-| plain_term                                        { $1          }
+| arith PLUS term                                                               { BinaryOp($1,$3,Add) }
+| arith MINUS term                                                              { BinaryOp($1,$3,Sub) }
+| plain_term                                                                    { $1          }
 ;
 
 term: mark_loc_ty(plain_term) { $1 }
 plain_term: 
-| term MULT fact                                                    { BinaryOp($1,$3,Mult) }
-| term DIV fact                                                     { BinaryOp($1,$3,Div) }
-| plain_fact                                                        { $1 }
+| term MULT fact                                                                { BinaryOp($1,$3,Mult) }
+| term DIV fact                                                                 { BinaryOp($1,$3,Div) }
+| plain_fact                                                                    { $1 }
 ;
 
 fact: mark_loc_ty(plain_fact) { $1 }
 plain_fact:
-| TRUE                                                              { True }
-| FALSE                                                             { False }
-| INT                                                               { IntLit($1) }
-| STR                                                               { StringLit($1) }
-| id                                                                { Identifier($1) } 
-| TRIGGER                                                           { Trigger }
-| v = plain_record                                                  { Record(v) }
-| expr = preceded(NEG, fact)                                        { UnaryOp(expr,Negation) }
-| MINUS fact                                                        { UnaryOp($2, Minus) }
-| expr = fact; PROP_DEREF; prop = id;                               { PropDeref(expr, prop) }
-| expr = delimited(LPAR, plain_expr, RPAR)                                { expr }
-| list = delimited(LBRACKET, separated_list(COMMA, expr), RBRACKET)                        { List(list) }
-| RANGE; LPAR; start_expr = expr; COMMA; end_expr = expr; RPAR { Range(start_expr, end_expr) }
+| TRUE                                                                          { True }
+| FALSE                                                                         { False }
+| INT                                                                           { IntLit($1) }
+| STR                                                                           { StringLit($1) }
+| id                                                                            { Identifier($1) } 
+| TRIGGER                                                                       { Trigger }
+| v = plain_record                                                              { Record(v) }
+| expr = preceded(NEG, fact)                                                    { UnaryOp(expr,Negation) }
+| MINUS fact                                                                    { UnaryOp($2, Minus) }
+| expr = fact; PROP_DEREF; prop = id;                                           { PropDeref(expr, prop) }
+| expr = delimited(LPAR, expr, RPAR)                                            { Parenthesized(expr) }
+| list = delimited(LBRACKET, separated_list(COMMA, expr), RBRACKET)             { List(list) }
+| RANGE; LPAR; start_expr = expr; COMMA; end_expr = expr; RPAR                  { Range(start_expr, end_expr) }
 ;
 
 bool: mark_loc_ty(plain_bool) { $1 }
@@ -406,20 +413,10 @@ plain_record_field_list:
 | fields = separated_nonempty_list(COMMA, plain_record_field(expr)) { fields }
 ;
 
-/* record_field: mark_loc_ty(plain_record_field) { $1 } */
-// plain_record_field:
-// | name=id; COLON; value=expr               {(name, value)}
-// ;
-
 // record_type_field_list: mark_loc_ty(plain_record_type_field_list) { $1 }
 plain_record_type_field_list:
   separated_nonempty_list(COMMA, plain_record_field(type_expr)) { $1 } 
 ;
-
-// record_field_type: mark_loc_ty(plain_record_type_field) {$1}
-// plain_record_type_field:
-// | name=id; COLON; value=type_expr     {(name, value)}
-// ;
 
 plain_record_field(X):
 | name=id; COLON; value=X               {(name, value)}

@@ -75,14 +75,14 @@ let rec eval_expr expr env =
   | Record fields ->
       eval_record_fields fields env
       >>| fun fields -> {expr with data= Record fields}
-      (* | EventRef event_ref ->
-          let event = !event_ref in
-          let {marking; _} = event.data in
-          let fields =
-            [(annotate "value", annotate ~loc:event.loc !(marking.data.value).data)]
-          in
-          return {expr with data= Record fields} *)
-  | _ -> invalid_expr ()
+  | EventRef event_ref ->
+      let event = !event_ref in
+      let {marking; _} = event.data in
+      let fields =
+        [(annotate "value", annotate ~loc:event.loc !(marking.data.value).data)]
+      in
+      return {expr with data= Record fields}
+(* | _ -> invalid_expr () *)
 
 and eval_binop v1 v2 op =
   match op with

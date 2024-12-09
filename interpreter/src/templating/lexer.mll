@@ -83,7 +83,8 @@ rule read_token = parse
 	| "List" 			{ LISTTY }
 	| "tmpl" | "template" | "process" { TEMPLATE }
 	| "when" 			{ WHEN }
-	(* | "if" 				{ IF } *)
+	| "if" 				{ IF }
+	| "else" 			{ ELSE }
 	| "foreach"  		{ FOREACH }
 	| "in"				{ IN }
 	| "range"			{ RANGE }

@@ -1,0 +1,9 @@
+tmpl f(e: A): B {
+    (b: B)[?: Number]
+    e -->% b
+} => b
+
+(a: A)[?]
+f(e -> a) => b0
+
+b0 --><> a

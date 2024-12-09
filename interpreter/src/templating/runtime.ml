@@ -119,10 +119,10 @@ and propagate_effect relation event (event_env, expr_env) program =
           >>= fun spawn_events ->
           (* Evaluate annotations from spawned elements *)
           let open Instantiation in
-          evaluate_annotations_of_subprogram
-            (spawn_events, spawn_insts, spawn_relations)
-            (expr_env, event_env, empty_env)
-          >>= fun (spawn_events, spawn_insts, spawn_relations) ->
+          (* evaluate_annotations_of_subprogram
+               (spawn_events, spawn_insts, spawn_relations)
+               (expr_env, event_env, empty_env)
+             >>= fun (spawn_events, spawn_insts, spawn_relations) -> *)
           (* Instantiate template instances present in the spawn *)
           (* FIXME: Maybe use instantiate_tmpls instead of this function *)
           (* { template_decls= program.template_decls

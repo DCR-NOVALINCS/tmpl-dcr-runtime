@@ -90,34 +90,42 @@ and prompt runtime_state =
       >>= fun state -> prompt {state with output= ""}
 
 let runtime options filename =
-  set_logger options.logger_level
-  >>= fun _ ->
-  input_file filename
-  >>= fun _ ->
-  parse_program_from_file filename
-  >>= fun program ->
-  Logger.success "Parsed successfully" ;
-  preprocess_program program
-  >>= fun (event_env, expr_env, program) ->
-  (* Logger.success "Preprocessed successfully" ; *)
-  Logger.debug @@ "Expr Env after preprocessing:\n"
-  ^ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
-  Logger.debug @@ "Event Env after preprocessing:\n"
-  ^ string_of_env (fun e -> Unparser.PlainUnparser.unparse_events [e]) event_env ;
-  typecheck ~event_env program
-  >>= fun (ty_env, event_env) ->
-  Logger.success "Typechecked successfully" ;
-  instantiate ~expr_env ~event_env program
-  >>= fun (program, event_env, expr_env) ->
-  Logger.success "Instantiated successfully" ;
-  Logger.debug @@ "Expr Env after instantiation:\n"
-  ^ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
-  Logger.debug @@ "Event Env after instantiation:\n"
-  ^ string_of_env (fun e -> Unparser.PlainUnparser.unparse_events [e]) event_env ;
-  let runtime_state =
-    mk_runtime_state ~ty_env ~expr_env ~event_env ~output:start_header program
-  in
-  prompt runtime_state
+  try
+    set_logger options.logger_level
+    >>= fun _ ->
+    input_file filename
+    >>= fun _ ->
+    parse_program_from_file filename
+    >>= fun program ->
+    Logger.success "Parsed successfully" ;
+    preprocess_program program
+    >>= fun (event_env, expr_env, program) ->
+    (* Logger.success "Preprocessed successfully" ; *)
+    Logger.debug @@ "Expr Env after preprocessing:\n"
+    ^ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
+    Logger.debug @@ "Event Env after preprocessing:\n"
+    ^ string_of_env
+        (fun e -> Unparser.PlainUnparser.unparse_events [e])
+        event_env ;
+    typecheck ~event_env program
+    >>= fun (ty_env, event_env) ->
+    Logger.success "Typechecked successfully" ;
+    instantiate ~expr_env ~event_env program
+    >>= fun (program, event_env, expr_env) ->
+    Logger.success "Instantiated successfully" ;
+    Logger.debug @@ "Expr Env after instantiation:\n"
+    ^ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
+    Logger.debug @@ "Event Env after instantiation:\n"
+    ^ string_of_env
+        (fun e -> Unparser.PlainUnparser.unparse_events [e])
+        event_env ;
+    let runtime_state =
+      mk_runtime_state ~ty_env ~expr_env ~event_env ~output:start_header program
+    in
+    prompt runtime_state
+  with Duplicate_binding id ->
+    Logger.error @@ "Duplicate binding: " ^ id ;
+    return empty_runtime_state
 
 let runtime_cmd =
   let info =

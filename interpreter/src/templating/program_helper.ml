@@ -3,6 +3,7 @@ open Evaluation
 open Misc
 open Monads.ResultMonad
 open Env
+(* open Printing *)
 
 (* =============================================================================
    Updating event functions
@@ -101,10 +102,7 @@ and change_relation old_id new_id relation =
 
 and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
     =
-  (* Evaluate the value inside of the events *)
   let events = program.events in
-  (* map (fun event -> update_event_value event expr_env) events >>= fun events
-     -> *)
   (* Add all events as value into event environment *)
   fold_left
     (fun (event_env, expr_env) event ->
@@ -253,11 +251,9 @@ and fresh_event_ids events relations exports_mapping =
    Binding functions
    ============================================================================= *)
 
-and bind_events events (event_env, expr_env) =
+and bind_events ~f events env =
   fold_left
-    (fun (event_env, expr_env) event ->
+    (fun env event ->
       let id, _ = event.data.info in
-      return
-        ( bind id.data event event_env
-        , bind id.data (event_as_expr event) expr_env ) )
-    (event_env, expr_env) events
+      return (bind id.data (f event) env) )
+    env events

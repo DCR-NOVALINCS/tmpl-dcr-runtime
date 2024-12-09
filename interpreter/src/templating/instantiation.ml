@@ -100,110 +100,6 @@ and replace_template_inst inst (expr_env, event_env) =
     args
   >>= fun args -> return {inst with data= {inst.data with args}}
 
-module EventAnnotationEvaluator = struct
-  type t = event list
-
-  let when_annotation ~body ~none expr (expr_env, _, _) =
-    eval_expr expr expr_env
-    >>= fun value ->
-    match value.data with
-    | True -> return body
-    | False -> return none
-    | _ -> type_mismatch ~loc:value.loc [BoolTy] []
-
-  let foreach_annotation ~body id expr (expr_env, _, _) =
-    eval_expr expr expr_env
-    >>= fun value ->
-    match value.data with
-    | List lst ->
-        return (begin_scope expr_env)
-        >>= fun expr_env ->
-        map
-          (fun item ->
-            eval_expr item expr_env
-            >>= fun item_value ->
-            return (bind id.data item_value expr_env)
-            >>= fun expr_env ->
-            fold_left
-              (fun result event ->
-                update_event_value event expr_env
-                >>= fun event ->
-                return (fresh_event event)
-                >>= fun event -> return (event :: result) )
-              [] body )
-          lst
-        >>= fun events -> return (List.flatten events)
-    | _ -> type_mismatch ~loc:value.loc [ListTy UnitTy] []
-end
-
-module InstantiationAnnotationEvaluator = struct
-  type t = template_instance list
-
-  let when_annotation ~body ~none expr (expr_env, _, _) =
-    eval_expr expr expr_env
-    >>= fun value ->
-    match value.data with
-    | True -> return body
-    | False -> return none
-    | _ -> type_mismatch ~loc:value.loc [BoolTy] []
-
-  let foreach_annotation ~body id expr (expr_env, event_env, _) =
-    eval_expr expr expr_env
-    >>= fun value ->
-    match value.data with
-    | List lst ->
-        return (begin_scope expr_env)
-        >>= fun expr_env ->
-        map
-          (fun item ->
-            eval_expr item expr_env
-            >>= fun item_value ->
-            return (bind id.data item_value expr_env)
-            >>= fun expr_env ->
-            fold_left
-              (fun result inst ->
-                replace_template_inst inst (expr_env, event_env)
-                >>= fun inst -> return (inst :: result) )
-              [] body )
-          lst
-        >>= fun insts -> return (List.flatten insts)
-    | _ -> type_mismatch ~loc:value.loc [ListTy UnitTy] []
-end
-
-module RelationAnnotationEvaluator = struct
-  type t = relation list
-
-  let when_annotation ~body ~none expr (expr_env, _, _) =
-    eval_expr expr expr_env
-    >>= fun value ->
-    match value.data with
-    | True -> return body
-    | False -> return none
-    | _ -> type_mismatch ~loc:value.loc [BoolTy] []
-
-  let foreach_annotation ~body id expr (expr_env, event_env, _) =
-    eval_expr expr expr_env
-    >>= fun value ->
-    match value.data with
-    | List lst ->
-        return (begin_scope expr_env)
-        >>= fun expr_env ->
-        map
-          (fun item ->
-            eval_expr item expr_env
-            >>= fun item_value ->
-            return (bind id.data item_value expr_env)
-            >>= fun expr_env ->
-            fold_left
-              (fun result relation ->
-                replace_relation relation (expr_env, event_env)
-                >>= fun relation -> return (relation :: result) )
-              [] body )
-          lst
-        >>= fun relations -> return (List.flatten relations)
-    | _ -> type_mismatch ~loc:value.loc [ListTy UnitTy] []
-end
-
 type context = expr env * event env * template_def env
 
 (* =============================================================================
@@ -333,10 +229,10 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       let events_ti, insts_ti, relations_ti = graph in
       let result_events, _, result_relations = result_program in
       (* Evaluate template annotations *)
-      evaluate_annotations_of_subprogram
-        (events_ti, insts_ti, relations_ti)
-        (expr_env, event_env, tmpl_env)
-      >>= fun (events_ti, insts_ti, relations_ti) ->
+      (* evaluate_annotations_of_subprogram
+           (events_ti, insts_ti, relations_ti)
+           (expr_env, event_env, tmpl_env)
+         >>= fun (events_ti, insts_ti, relations_ti) -> *)
       (* Replace the expression inside of the instantiations of [q_ti] *)
       map (fun inst -> instantiate_inst inst (expr_env, event_env)) insts_ti
       >>= fun insts_ti ->
@@ -451,122 +347,7 @@ and export_map_events x export (events, relations) =
    Annotation Evaluation
    ========================================================================== *)
 
-and evaluate_annotations_of_subprogram (events, insts, relations)
-    (expr_env, event_env, tmpl_env) =
-  evaluate_annotations_of_events events (expr_env, event_env, tmpl_env)
-  >>= fun events ->
-  evaluate_annotations_of_instantiations insts (expr_env, event_env, tmpl_env)
-  >>= fun insts ->
-  evaluate_annotations_of_relations relations (expr_env, event_env, tmpl_env)
-  >>= fun relations -> return (events, insts, relations)
-
-and evaluate_annotations_of_events events (expr_env, event_env, tmpl_env) =
-  map
-    (fun event ->
-      evaluate_event_annotation event (expr_env, event_env, tmpl_env) )
-    events
-  >>= fun deannotated_events -> return @@ List.flatten deannotated_events
-
-and evaluate_event_annotation event (expr_env, event_env, tmpl_env) =
-  let {annotations; _} = event.data in
-  let pop_annotation event =
-    let {annotations; _} = event.data in
-    {event with data= {event.data with annotations= List.tl annotations}}
-  in
-  if List.length annotations = 0 then return [event]
-  else
-    fold_left
-      (fun result_events annotation ->
-        match annotation with
-        | When expr ->
-            EventAnnotationEvaluator.when_annotation
-              ~body:[pop_annotation event]
-              ~none:[] expr
-              (expr_env, event_env, tmpl_env)
-            >>= fun events -> return (List.flatten [result_events; events])
-        | Foreach (id, expr) ->
-            EventAnnotationEvaluator.foreach_annotation
-              ~body:[pop_annotation event]
-              id expr
-              (expr_env, event_env, tmpl_env)
-            >>= fun events -> return (List.flatten [result_events; events]) )
-      [] annotations
-
-and evaluate_annotations_of_instantiations insts (expr_env, event_env, tmpl_env)
-    =
-  map
-    (fun inst -> evaluate_inst_annotation inst (expr_env, event_env, tmpl_env))
-    insts
-  >>= fun deannotated_insts -> return @@ List.flatten deannotated_insts
-
-and evaluate_inst_annotation inst (expr_env, event_env, tmpl_env) =
-  let {tmpl_annotations= annotations; _} = inst.data in
-  let pop_annotation inst =
-    let {tmpl_annotations= annotations; _} = inst.data in
-    {inst with data= {inst.data with tmpl_annotations= List.tl annotations}}
-  in
-  if List.length annotations = 0 then return [inst]
-  else
-    fold_left
-      (fun result_insts annotation ->
-        match annotation with
-        | When expr ->
-            InstantiationAnnotationEvaluator.when_annotation
-              ~body:[pop_annotation inst]
-              ~none:[] expr
-              (expr_env, event_env, tmpl_env)
-            >>= fun insts -> return (List.flatten [result_insts; insts])
-        | Foreach (id, expr) ->
-            InstantiationAnnotationEvaluator.foreach_annotation
-              ~body:[pop_annotation inst]
-              id expr
-              (expr_env, event_env, tmpl_env)
-            >>= fun insts -> return (List.flatten [result_insts; insts]) )
-      [] annotations
-
-and evaluate_annotations_of_relations relations (expr_env, event_env, tmpl_env)
-    =
-  map
-    (fun relation ->
-      evaluate_relation_annotation relation (expr_env, event_env, tmpl_env) )
-    relations
-  >>= fun deannotated_relations -> return @@ List.flatten deannotated_relations
-
-and evaluate_relation_annotation relation (expr_env, event_env, tmpl_env) =
-  let annotations =
-    match relation.data with
-    | ControlRelation (_, _, _, _, annotations) -> annotations
-    | SpawnRelation (_, _, _, annotations) -> annotations
-  in
-  let pop_annotation relation =
-    match relation.data with
-    | ControlRelation (from, guard, dest, t, annotations) ->
-        { relation with
-          data= ControlRelation (from, guard, dest, t, List.tl annotations) }
-    | SpawnRelation (from, guard, subprogram, annotations) ->
-        { relation with
-          data= SpawnRelation (from, guard, subprogram, List.tl annotations) }
-  in
-  if List.length annotations = 0 then return [relation]
-  else
-    fold_left
-      (fun result_relations annotation ->
-        match annotation with
-        | When expr ->
-            RelationAnnotationEvaluator.when_annotation
-              ~body:[pop_annotation relation]
-              ~none:[] expr
-              (expr_env, event_env, tmpl_env)
-            >>= fun relations ->
-            return (List.flatten [result_relations; relations])
-        | Foreach (id, expr) ->
-            RelationAnnotationEvaluator.foreach_annotation
-              ~body:[pop_annotation relation]
-              id expr
-              (expr_env, event_env, tmpl_env)
-            >>= fun relations ->
-            return (List.flatten [result_relations; relations]) )
-      [] annotations
+(* TODO *)
 
 (* =============================================================================
    Entrypoint
@@ -578,14 +359,14 @@ let instantiate ?(expr_env = empty_env) ?(event_env = empty_env) program =
   bind_tmpls template_decls (expr_env, event_env, empty_env)
   >>= fun (expr_env, event_env, tmpl_env) ->
   (* Evaluate template annotations from [root] program *)
-  let events, insts, relations =
-    (program.events, program.template_insts, program.relations)
-  in
-  evaluate_annotations_of_subprogram (events, insts, relations)
-    (expr_env, event_env, tmpl_env)
-  >>= fun (events, template_insts, relations) ->
-  return {program with events; template_insts; relations}
-  >>= fun program ->
+  (* let events, insts, relations =
+       (program.events, program.template_insts, program.relations)
+     in
+     evaluate_annotations_of_subprogram (events, insts, relations)
+       (expr_env, event_env, tmpl_env)
+     >>= fun (events, template_insts, relations) ->
+     return {program with events; template_insts; relations}
+     >>= fun program -> *)
   (* Instantiate all the instantiations of the program *)
   let insts = program.template_insts in
   instantiate_tmpls insts (expr_env, event_env, tmpl_env)
