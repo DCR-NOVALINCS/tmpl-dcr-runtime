@@ -40,6 +40,9 @@ else
 
 # Alternative syntax 2
 
+%(a: A)[0]
+%(b: B)[?]
+
 {% if a.value > 1 %}
     {% foreach i in 0...3 %}
         (c: C)[?: Number]
@@ -59,12 +62,15 @@ else
 
 # Alternative syntax 3
 
+%(a: A)[0]
+%(b: B)[?]
+
 {!if a.value > 1}
     {!foreach i in 0...3}
         (c: C)[?: Number]
         c -->% a
         c -->+ b
-    {!foreach}
+    {/foreach}
 {:else if a.value > 0}
     (e: E)[?: Boolean]
     e --><> e

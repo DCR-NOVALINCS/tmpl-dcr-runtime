@@ -27,6 +27,8 @@ let mk_program_from_top_level_input =
 // value literals
 %token TRUE FALSE
 %token <string> ID
+// list maker
+%token RANGE
 // primitive types
 %token STRTY INTTY BOOLTY LISTTY
 // delimiters
@@ -383,7 +385,7 @@ plain_fact:
 | expr = fact; PROP_DEREF; prop = id;                               { PropDeref(expr, prop) }
 | expr = delimited(LPAR, plain_expr, RPAR)                                { expr }
 | list = delimited(LBRACKET, separated_list(COMMA, expr), RBRACKET)                        { List(list) }
-// | LBRACKET; start_expr= expr; PROP_DEREF;PROP_DEREF; end_expr=expr; RBRACKET; { Range(start_expr, end_expr) }
+| RANGE; LPAR; start_expr = expr; COMMA; end_expr = expr; RPAR { Range(start_expr, end_expr) }
 ;
 
 bool: mark_loc_ty(plain_bool) { $1 }

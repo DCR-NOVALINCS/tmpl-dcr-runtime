@@ -258,6 +258,13 @@ and reference_of_event expr =
   | _ ->
       should_not_happen ~module_path:"evaluation.ml" "Invalid event reference"
 
+and reference_of_expr expr =
+  match expr.data with
+  | Ref expr_ref -> return expr_ref
+  | _ ->
+      should_not_happen ~module_path:"evaluation.ml"
+        "Invalid expression reference"
+
 (* =============================================================================
    Expression Partial Evaluation functions
    ============================================================================= *)

@@ -303,7 +303,7 @@ and lexing_error ?(errors = []) lexbuf message =
             ( lexbuf.lex_start_p
             , lexbuf.lex_curr_p
             , Some lexbuf.lex_curr_p.pos_fname )
-      ; message= "Lexing fail : " ^ message
+      ; message= "lexing error, " ^ message
       ; hint=
           Some
             "Check the syntax near the location. Ensure all tokens are valid."

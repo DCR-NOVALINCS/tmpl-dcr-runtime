@@ -106,7 +106,7 @@ and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
   (* map (fun event -> update_event_value event expr_env) events >>= fun events
      -> *)
   (* Add all events as value into event environment *)
-  fold_right
+  fold_left
     (fun (event_env, expr_env) event ->
       let id, _ = event.data.info in
       return

@@ -59,8 +59,6 @@ open Cmdliner
 
 type options = {logger_level: string}
 
-(* let default_options = {logger_level= "debug"} *)
-
 let rec interpret_command tokens runtime_state =
   match tokens with
   | [] -> return runtime_state
@@ -141,9 +139,6 @@ let runtime_cmd =
   Cmd.v info input_program_main
 
 let _ =
-  (* Logger Settings *)
-  Logger.enable () ;
-  Logger.set_logger_level Debug ;
   match Cmd.eval_value runtime_cmd with
   | Ok (`Ok result) -> result |> print_output |> ignore
   | Error _ -> ()

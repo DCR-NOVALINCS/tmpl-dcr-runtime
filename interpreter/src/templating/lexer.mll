@@ -1,7 +1,6 @@
 {
 open Parser
 open Syntax
-open Unparser
 
 exception UnknownToken of string
 exception Error of string
@@ -9,12 +8,7 @@ exception Error of string
 let sprintf  = Printf.sprintf
 let ksprintf = Printf.ksprintf
 
-(* This functions dont belongs here! *)
-let char_to_string (c:char) = String.make 1 c
-
-let error lexbuf fmt = 
-    ksprintf (fun msg -> 
-        raise (Error ((PlainUnparser.unparse_pos lexbuf.Lexing.lex_curr_p)^" "^msg))) fmt
+let error msg = raise (Error (msg))
 }
 
 let digit = ['0'-'9']
@@ -32,7 +26,6 @@ rule read_token = parse
 	| newline			{ Lexing.new_line lexbuf; read_token lexbuf }
 	| "###"				{ read_comment_block lexbuf }
     | "#"               { read_line_comment lexbuf }
-	(* | ";;"             	{ EOL } *)
 	| "true"         	{ TRUE } 
 	| "false"           { FALSE } 
   (* dcr (unguarded) relations*)
@@ -90,8 +83,10 @@ rule read_token = parse
 	| "List" 			{ LISTTY }
 	| "tmpl" | "template" | "process" { TEMPLATE }
 	| "when" 			{ WHEN }
+	(* | "if" 				{ IF } *)
 	| "foreach"  		{ FOREACH }
 	| "in"				{ IN }
+	| "range"			{ RANGE }
 	| "executed"		{ ID "executed" }
 	| "included"		{ ID "included" }
 	| "pending"			{ ID "pending" }
@@ -99,7 +94,7 @@ rule read_token = parse
 	| int         		{ INT (int_of_string @@ Lexing.lexeme lexbuf) }
 	| id 				{ ID (Lexing.lexeme lexbuf) }
 	| eof 				{ EOL }
-	| _ as tk 			{ error lexbuf "unknown token '%s'" @@ char_to_string tk}
+	| _ as tk 			{ error (sprintf "unknown token '%c'" tk)}
 	(* | eof 					    { raise End_of_file } *)
 
 
@@ -120,12 +115,12 @@ and read_string buffer 	= parse
 								; read_string buffer lexbuf } *)
 	(* | '\\'                  { Buffer.add_char buffer '\\'
 								; read_string buffer lexbuf } *)
-	| eof                   { error lexbuf "end of input inside of a string" }
-	| _                     { error lexbuf "found '%s' - don't know how to handle" @@ Lexing.lexeme lexbuf }
+	| eof                   { error "end of input inside of a string" }
+	| _                     { error (sprintf "found '%s' - don't know how to handle" @@ Lexing.lexeme lexbuf) }
 
 and read_comment_block = parse
 	| "###"					{ read_token lexbuf }
-	| eof 					{ error lexbuf "end of input inside of a comment" }
+	| eof 					{ error "end of input inside of a comment" }
 	| _ 					{ read_comment_block lexbuf }
 
 and read_line_comment = parse
