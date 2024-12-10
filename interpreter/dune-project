@@ -31,7 +31,8 @@
   (menhir
    (>= 3.0))
   yojson
-  cmdliner)
+  cmdliner
+  (alcotest :with-test))
  (tags
   (dcr templates interpreter runtime tdcr)))
 
