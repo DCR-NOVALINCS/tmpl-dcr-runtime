@@ -193,7 +193,7 @@ module PlainUnparser = struct
     in
     let unparse_event ?(indent = "") ?(abbreviated = true)
         ?(buffer = Buffer.create 100) event =
-      let {info; io; marking; annotations} = event.data in
+      let {info; io; marking} = event.data in
       Buffer.add_string buffer @@ indent ;
       unparse_marking ~abbreviated ~buffer marking ;
       unparse_info ~buffer info ;
@@ -202,7 +202,7 @@ module PlainUnparser = struct
         Buffer.add_string buffer @@ " -> " ;
         unparse_expr ~buffer !(marking.data.value) |> ignore ) ;
       (* Buffer.add_string buffer @@ " - "; *)
-      unparse_annotations ~buffer annotations |> ignore ;
+      (* unparse_annotations ~buffer annotations |> ignore ; *)
       ()
     in
     unparse_list ~buffer ~separator:"\n"
@@ -222,7 +222,7 @@ module PlainUnparser = struct
       | EventArg label -> Buffer.add_string buffer @@ label.data
     in
     let unparse_inst ?(indent = "") ?(buffer = Buffer.create 100) inst =
-      let {tmpl_id; args; x; tmpl_annotations} = inst in
+      let {tmpl_id; args; x} = inst in
       Buffer.add_string buffer @@ indent ;
       Buffer.add_string buffer @@ tmpl_id.data ;
       Buffer.add_string buffer @@ "(" ;
@@ -238,7 +238,7 @@ module PlainUnparser = struct
         (fun ~buffer x -> Buffer.add_string buffer @@ x.data)
         x ;
       (* Buffer.add_string buffer @@ " - "; *)
-      unparse_annotations ~indent ~buffer tmpl_annotations |> ignore ;
+      (* unparse_annotations ~indent ~buffer tmpl_annotations |> ignore ; *)
       ()
     in
     unparse_list ~buffer ~separator:"\n"
@@ -319,30 +319,30 @@ module PlainUnparser = struct
       relations ;
     Buffer.contents buffer
 
-  and unparse_annotations ?(indent = "") ?(buffer = Buffer.create 100)
-      annotations =
-    let unparse_annotation ?(indent = "") ?(buffer = Buffer.create 100)
-        annotation =
-      match annotation with
-      | When expr ->
-          let expr_buffer = Buffer.create 100 in
-          Buffer.add_string buffer @@ "when " ;
-          unparse_expr ~indent ~buffer:expr_buffer expr |> ignore ;
-          Buffer.add_buffer buffer expr_buffer ;
-          ()
-      | Foreach (x, l) ->
-          let l_buffer = Buffer.create 100 in
-          Buffer.add_string buffer @@ "foreach " ;
-          Buffer.add_string buffer @@ x.data ;
-          Buffer.add_string buffer @@ " in " ;
-          unparse_expr ~indent ~buffer:l_buffer l |> ignore ;
-          Buffer.add_buffer buffer l_buffer ;
-          ()
-    in
-    unparse_list ~buffer ~initial:" - " ~separator:" | "
-      (fun ~buffer annotation -> unparse_annotation ~indent ~buffer annotation)
-      annotations ;
-    Buffer.contents buffer
+  (* and unparse_annotations ?(indent = "") ?(buffer = Buffer.create 100)
+       annotations =
+     let unparse_annotation ?(indent = "") ?(buffer = Buffer.create 100)
+         annotation =
+       match annotation with
+       | When expr ->
+           let expr_buffer = Buffer.create 100 in
+           Buffer.add_string buffer @@ "when " ;
+           unparse_expr ~indent ~buffer:expr_buffer expr |> ignore ;
+           Buffer.add_buffer buffer expr_buffer ;
+           ()
+       | Foreach (x, l) ->
+           let l_buffer = Buffer.create 100 in
+           Buffer.add_string buffer @@ "foreach " ;
+           Buffer.add_string buffer @@ x.data ;
+           Buffer.add_string buffer @@ " in " ;
+           unparse_expr ~indent ~buffer:l_buffer l |> ignore ;
+           Buffer.add_buffer buffer l_buffer ;
+           ()
+     in
+     unparse_list ~buffer ~initial:" - " ~separator:" | "
+       (fun ~buffer annotation -> unparse_annotation ~indent ~buffer annotation)
+       annotations ;
+     Buffer.contents buffer *)
 
   and unparse_ty ?(indent = "") ?(buffer = Buffer.create 100) ty =
     ( match ty with
@@ -439,6 +439,9 @@ module PlainUnparser = struct
             unparse_expr ~indent ~buffer e |> ignore )
           fields ;
         Buffer.add_string buffer @@ " }"
+    | EventRef event_ref ->
+        Buffer.add_string buffer "ref " ;
+        unparse_events ~indent ~buffer [!event_ref] |> ignore
     | _ -> Buffer.add_string buffer @@ "..." ) ;
     Buffer.contents buffer
 

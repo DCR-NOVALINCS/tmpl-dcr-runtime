@@ -113,7 +113,8 @@ and program =
   { template_decls: template_def list
   ; events: event list
   ; template_insts: template_instance list
-  ; relations: relation list }
+  ; relations: relation list
+  ; annotations: template_annotation' list }
 [@@deriving yojson]
 
 and subprogram = event list * template_instance list * relation list
@@ -154,7 +155,7 @@ and template_instance' =
   { args: template_arg list
   ; x: event_id list
   ; tmpl_id: string annotated
-  ; tmpl_annotations: template_annotation' list }
+        (* ; tmpl_annotations: template_annotation' list  *) }
 [@@deriving yojson]
 
 (* =============================================================================
@@ -162,7 +163,10 @@ and template_instance' =
    ============================================================================= *)
 and template_annotation = template_annotation' annotated [@@deriving yojson]
 
-and template_annotation' = When of expr | Foreach of string annotated * expr
+and template_annotation' =
+  | IfElse of
+      {condition: expr; then_branch: subprogram; else_branch: subprogram option}
+  | Foreach of string annotated * expr * subprogram
 [@@deriving yojson]
 
 (* =============================================================================
@@ -173,8 +177,7 @@ and event = event' annotated [@@deriving yojson]
 and event' =
   { info: event_info'
   ; io: event_io
-  ; marking: event_marking
-  ; annotations: template_annotation' list }
+  ; marking: event_marking (* ; annotations: template_annotation' list  *) }
 [@@deriving yojson]
 
 and event_id = string annotated [@@deriving yojson]
@@ -241,8 +244,8 @@ let default_marking_pend = mk_marking ~pending:true ()
 
 let default_marking_pend_excl = mk_marking ~pending:true ~included:false ()
 
-let mk_event ?(marking = default_marking) ?(annotations = []) info io =
-  annotate {info; io; marking= annotate marking; annotations}
+let mk_event ?(marking = default_marking) info io =
+  annotate {info; io; marking= annotate marking}
 
 let mk_ctrl_relation ~from ?(guard = annotate True) ~dest t =
   annotate @@ ControlRelation (from, guard, dest, t)
@@ -263,7 +266,7 @@ let mk_spawn_relations left_ids expr prog =
 
 let mk_program ?(template_decls = []) ?(events = []) ?(template_insts = [])
     ?(relations = []) _ =
-  {template_decls; events; template_insts; relations}
+  {template_decls; events; template_insts; relations; annotations= []}
 
 let mk_subprogram ?(events = []) ?(template_insts = []) ?(relations = []) _ =
   (events, template_insts, relations)

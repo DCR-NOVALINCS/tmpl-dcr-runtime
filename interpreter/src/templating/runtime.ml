@@ -69,7 +69,7 @@ and check_guard guard expr_env =
     | Some ty -> type_mismatch ~loc:guard_value.loc [BoolTy] [ty]
     | _ ->
         should_not_happen ~module_path:"runtime.ml"
-          "The type of the guard is missing" )
+          "Expecting boolean in the guard expression" )
 
 (* =============================================================================
    Effect propagation functions
@@ -108,11 +108,9 @@ and propagate_effect relation event (event_env, expr_env) program =
           (* Begin new env scope and bind trigger_id *)
           return (begin_scope event_env, begin_scope expr_env)
           >>= fun (event_env, expr_env) ->
-          eval_expr (event_as_expr event) expr_env
-          >>= fun event_expr ->
           return
             ( bind trigger_id event event_env
-            , bind trigger_id event_expr expr_env )
+            , bind trigger_id (event_as_expr event) expr_env )
           >>= fun (event_env, expr_env) ->
           (* Update event values *)
           map (fun e -> update_event_value e expr_env) spawn_events
@@ -124,11 +122,6 @@ and propagate_effect relation event (event_env, expr_env) program =
                (expr_env, event_env, empty_env)
              >>= fun (spawn_events, spawn_insts, spawn_relations) -> *)
           (* Instantiate template instances present in the spawn *)
-          (* FIXME: Maybe use instantiate_tmpls instead of this function *)
-          (* { template_decls= program.template_decls
-             ; events= []
-             ; template_insts= spawn_insts
-             ; relations= [] } *)
           mk_program ~template_decls:program.template_decls
             ~template_insts:spawn_insts ()
           |> instantiate ~expr_env ~event_env

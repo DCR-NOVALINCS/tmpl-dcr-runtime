@@ -33,7 +33,8 @@ watch:
 
 check:
 	make pre-build
-	dune runtest -f
+	make build
+	dune runtest --force
 
 install:
 	make pre-build

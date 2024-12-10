@@ -9,7 +9,6 @@ open Misc
 open Monads.ResultMonad
 open Env
 open Printing
-(* open Input *)
 
 (* =============================================================================
    Available functions

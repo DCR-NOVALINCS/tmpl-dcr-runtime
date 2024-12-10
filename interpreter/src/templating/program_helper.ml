@@ -1,5 +1,6 @@
 open Syntax
 open Evaluation
+open Errors
 open Misc
 open Monads.ResultMonad
 open Env
@@ -135,6 +136,11 @@ and get_event ?(filter = fun _ -> true) program =
 
 and has_event ?(filter = fun _ -> true) program =
   Option.is_some @@ get_event ~filter program
+
+and find_event id event_env =
+  match find_flat id.data event_env with
+  | Some event -> return event
+  | None -> id_not_found id
 
 and same_id id e =
   let id', _ = e.data.info in

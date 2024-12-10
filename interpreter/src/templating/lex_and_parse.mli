@@ -1,3 +1,8 @@
+(** {1 Lexing and Parsing}
+
+    This module provides functions to parse a lexbuf into a valid program or
+    expression. *)
+
 open Errors
 open Syntax
 

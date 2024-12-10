@@ -1,0 +1,28 @@
+
+tmpl f(e: A): B {
+    (b: B)[?]
+    e -->* b
+} => b
+
+foreach i in range(0, 5):
+    foreach j in range(0, 5):
+        (n: N)[i + j]
+
+        if i == 0:
+            (b: B)[true]
+        /if
+
+    /foreach
+
+    if i == 0:
+        (b: B)[true]
+    else: 
+        if i == 1:
+            (b: B)[false]
+        else: 
+            (b: B)[true AND 1 + 1 > 0]
+        /if
+    /if
+/foreach
+
+(a: A)[?]

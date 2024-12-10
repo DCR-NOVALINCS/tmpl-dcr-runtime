@@ -318,7 +318,7 @@ and export_map_events x export (events, relations) =
         let replace_id id =
           match List.assoc_opt id.data export_mapping with
           | None -> return id
-          | Some new_id -> return @@ annotate ~loc:id.loc new_id
+          | Some new_id -> return {id with data= new_id}
         in
         match relation.data with
         | SpawnRelation (from, guard, subprogram) ->
@@ -342,6 +342,57 @@ and export_map_events x export (events, relations) =
    ========================================================================== *)
 
 (* TODO *)
+
+let evaluate_annotation annotation (event_env, expr_env, _tmpl_env) =
+  match annotation with
+  | IfElse {condition; then_branch; else_branch} -> (
+      eval_expr condition expr_env
+      >>= fun value ->
+      match value.data with
+      | True -> return (then_branch, event_env, expr_env)
+      | False -> (
+        match else_branch with
+        | None -> return (empty_subprogram, event_env, expr_env)
+        | Some branch -> return (branch, event_env, expr_env) )
+      | _ ->
+          fixme
+            "In annotation evaluation, didn't get a boolean expression on the condition"
+      )
+  | Foreach (id, expr, body) ->
+      let events, insts, relations = body in
+      eval_expr expr expr_env
+      >>= fun value ->
+      ( match value.data with
+      | List elems -> return elems
+      | _ -> fixme "Expecting a list of elements" )
+      >>= fun elems ->
+      fold_left
+        (fun result elem ->
+          return (begin_scope event_env, begin_scope expr_env)
+          >>= fun (event_env, expr_env) ->
+          return (bind id.data elem expr_env)
+          >>= fun expr_env ->
+          (* Re-evaluate the expressions inside of [body] *)
+          map (fun event -> replace_event event expr_env) events
+          >>= fun events ->
+          map
+            (fun inst -> replace_template_inst inst (expr_env, event_env))
+            insts
+          >>= fun insts ->
+          map
+            (fun relation -> replace_relation relation (expr_env, event_env))
+            relations
+          >>= fun relations ->
+          (* TODO: Fresh event'ids *)
+          (* Accumulate the result *)
+          let result_events, result_insts, result_relations = result in
+          return
+            ( List.append result_events events
+            , List.append result_insts insts
+            , List.append result_relations relations ) )
+        empty_subprogram elems
+      (* Put new events in the envs *)
+      >>= fun result -> return (result, event_env, expr_env)
 
 (* =============================================================================
    Entrypoint

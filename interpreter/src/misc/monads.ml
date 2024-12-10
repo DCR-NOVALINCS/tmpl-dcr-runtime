@@ -61,59 +61,6 @@ module ResultMonad = struct
   let partition_map f l = List.partition_map f l |> return
 end
 
-module ProgramState = struct
-  type ('a, 'e) result_program = {value: 'a; errors: 'e list}
-
-  let return ?(errors = []) x = {value= x; errors}
-
-  let fail ?(value = ()) e = {value= Obj.magic value; errors= [e]}
-
-  let bind {value= v; errors= e} f =
-    let {value= v'; errors= e'} = f v in
-    {value= v'; errors= List.append e e'}
-
-  let ( >>= ) = bind
-
-  let apply {value= v; errors= e} f = {value= f v; errors= e}
-
-  let ( >>| ) = apply
-
-  let apply_error {value= v; errors= e} f = {value= v; errors= f e}
-
-  let ( >>! ) = apply_error
-
-  let fold_left f acc l =
-    List.fold_left (fun m x -> m >>= fun acc -> f acc x) (return acc) l
-
-  let map f l =
-    List.fold_right
-      (fun x {value= acc; errors= e} ->
-        let {value= x'; errors= e'} = f x in
-        return ~errors:(List.append e e') (x' :: acc) )
-      l (return [])
-
-  let filter_map f l =
-    List.fold_right
-      (fun x {value= acc; errors} ->
-        match f x with
-        | {value; errors= e} -> (
-          match value with
-          | Some v -> return ~errors:(List.append errors e) (v :: acc)
-          | None -> return ~errors:(List.append errors e) acc ) )
-      l (return [])
-
-  let iter f l =
-    List.fold_left
-      (fun {errors= e; _} x ->
-        let {errors= e'; _} = f x in
-        return ~errors:(List.append e e') () )
-      (return ()) l
-
-  let partition f l = return @@ List.partition f l
-
-  let partition_map f l = return @@ List.partition_map f l
-end
-
 module OptionMonad = struct
   let return x = Some x
 

@@ -37,7 +37,8 @@ and find_flat x env =
     | None -> find_flat x sl
     | _ as value -> value )
 
-and get x env = Option.get (find_flat x env)
+and get x env =
+  match find_flat x env with None -> raise (Not_found x) | Some v -> v
 
 and flatten env =
   let rec flatten' env acc =

@@ -82,10 +82,11 @@ rule read_token = parse
 	| "Boolean" 		{ BOOLTY }
 	| "List" 			{ LISTTY }
 	| "tmpl" | "template" | "process" { TEMPLATE }
-	| "when" 			{ WHEN }
-	| "if" 				{ IF }
+	| "if" | "when"     { IF }
+	| "/if" 			{ ENDIF }
 	| "else" 			{ ELSE }
 	| "foreach"  		{ FOREACH }
+	| "/foreach" 		{ ENDFOREACH }
 	| "in"				{ IN }
 	| "range"			{ RANGE }
 	| "executed"		{ ID "executed" }

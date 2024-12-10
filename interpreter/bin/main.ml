@@ -77,7 +77,7 @@ let rec interpret_command tokens runtime_state =
         | _ -> return runtime_state ) )
 
 and prompt runtime_state =
-  CPrinter.cprint ~color:BrightGreen "> " ;
+  CPrinter.cprint ~color:BrightGreen ~format:Bold "> " ;
   flush stdout ;
   (* Get command from input *)
   match input_line stdin with

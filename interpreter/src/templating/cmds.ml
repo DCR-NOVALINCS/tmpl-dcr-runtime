@@ -4,8 +4,7 @@ open Errors
 open Misc
 open Monads.ResultMonad
 open Printing
-
-(* open Env *)
+open Env
 open Cmdliner
 
 (* =============================================================================
@@ -176,6 +175,43 @@ and export_term =
   in
   Term.(const export_cmd $ filenames $ modes)
 
+and debug_term =
+  let view_envs =
+    Arg.(
+      value & flag
+      & info ["e"; "envs"] ~docv:"ENVS" ~doc:"View the current environments" )
+  and debug_cmd view_envs state =
+    let {ty_env; event_env; expr_env; _} = state in
+    let buffer = Buffer.create 100 in
+    Buffer.add_string buffer "\n" ;
+    let _ =
+      match view_envs with
+      | false -> ()
+      | true ->
+          Buffer.add_string buffer
+            (CString.colorize ~color:Magenta ~format:Bold "Type Environment:\n") ;
+          Buffer.add_string buffer
+            (string_of_env Unparser.PlainUnparser.unparse_ty ty_env) ;
+          Buffer.add_string buffer
+            (CString.colorize ~color:Magenta ~format:Bold
+               "\n\nEvent Environment:\n" ) ;
+          Buffer.add_string buffer
+            (string_of_env
+               (fun e -> Unparser.PlainUnparser.unparse_events [e])
+               event_env ) ;
+          Buffer.add_string buffer
+            (CString.colorize ~color:Magenta ~format:Bold
+               "\n\nExpression Environment:\n" ) ;
+          Buffer.add_string buffer
+            (string_of_env
+               (fun e -> Unparser.PlainUnparser.unparse_expr e)
+               expr_env )
+    in
+    let output = Buffer.contents buffer in
+    return {state with output}
+  in
+  Term.(const debug_cmd $ view_envs)
+
 let cmds =
   let available_cmds =
     create_cmd ("exit", [], "Exit the program.") quit_term []
@@ -194,6 +230,9 @@ let cmds =
          , "Creates a file named FILENAME with a textual representation of the current state of the graph."
          )
          export_term
+    |> create_cmd
+         ("debug", [], "Shows any debug information available.")
+         debug_term
   in
   create_cmd
     ("help", [], "Displays this message")

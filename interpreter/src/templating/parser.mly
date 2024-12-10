@@ -6,6 +6,7 @@ type top_level_input =
   | Event of event
   | TemplateInst of template_instance
   | Relations of relation list
+  | AnnotatedSubprogram of template_annotation' 
 
 let mk_program_from_top_level_input =
   List.fold_left (fun program x -> match x with
@@ -13,6 +14,7 @@ let mk_program_from_top_level_input =
     | Event event -> { program with events = event :: program.events }
     | TemplateInst inst -> { program with template_insts = inst :: program.template_insts }
     | Relations relations -> { program with relations = List.append relations program.relations }
+    | AnnotatedSubprogram annotation -> { program with annotations = annotation :: program.annotations }
   ) empty_program
 
 %}
@@ -52,7 +54,10 @@ let mk_program_from_top_level_input =
 // %token FLOWS TOP BOT
 // templates
 %token TEMPLATE
-%token FOREACH WHEN IF ELSE IN
+// conditional annotations
+%token IF ENDIF ELSE
+// loop annotations
+%token FOREACH ENDFOREACH IN
 // misc
 %token QUESTION PROP_DEREF BOLDARROW ARROW
 
@@ -81,12 +86,7 @@ plain_program:
     spawn_prog = plain_program_spawn;
     { 
       let (events, template_insts, relations) = spawn_prog in
-      {
-        template_decls
-        ; events
-        ; template_insts
-        ; relations
-      } 
+      mk_program ~template_decls ~events ~template_insts ~relations ()
     }
 ;
 
@@ -115,6 +115,7 @@ plain_top_input:
   | event_decl                                                                  { Event($1) }
   | template_inst                                                               { TemplateInst($1) }
   | plain_ctrl_relation_decl_list                                               { Relations($1) }
+  | plain_template_annotation                                                   { AnnotatedSubprogram($1) }
 
 // =====
 // ===== template declaration 
@@ -138,13 +139,13 @@ plain_template_inst:
   | tmpl_id = id;
     args = delimited(LPAR, separated_list(COMMA, plain_arg_pair), RPAR);
     x = preceded(BOLDARROW, separated_nonempty_list(COMMA, id))?;
-    tmpl_annotations = preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+    // tmpl_annotations = preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
     {
       {
         tmpl_id
         ; args
         ; x = Option.value ~default:[] x
-        ; tmpl_annotations = Option.value ~default:[] tmpl_annotations
+        (*; tmpl_annotations = Option.value ~default:[] tmpl_annotations*)
       }
     }
 
@@ -154,8 +155,18 @@ plain_arg_pair:
 
 // template annotations 
 plain_template_annotation:
-  | WHEN; expr = expr                                                           { When(expr) }
-  | FOREACH; id=id; IN; l=expr                                                  { Foreach (id, l) }
+  // | WHEN; expr = expr                                                           { When(expr) }
+  // Loop annotation 
+  | FOREACH; id=id; IN; l=expr COLON;                                                 
+    graph = plain_program_spawn;
+    ENDFOREACH;
+  { Foreach (id, l, graph) }
+  // Conditional annotation
+  | IF; condition = expr; COLON;
+    then_branch = plain_program_spawn;
+    else_branch = preceded(ELSE, preceded(COLON, plain_program_spawn))?;
+    ENDIF;
+  { IfElse { condition; then_branch; else_branch = else_branch } }
 
 // =====
 // ===== event declarations
@@ -169,24 +180,24 @@ plain_event_decl:
   | marking = marking_prefix?;
     info = delimited(LPAR, plain_event_info, RPAR); 
     io = delimited(LBRACKET, event_io, RBRACKET);
-    annotations = preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+    // annotations = preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
     { 
       { marking = (Option.value ~default:(annotate default_marking) marking)
       ; info
       ; io
-      ; annotations = Option.value ~default:[] annotations
+      (*; annotations = Option.value ~default:[] annotations*)
       } 
     }
   // (optionally) event has marking after the input/output expression
   | info = delimited(LPAR, plain_event_info, RPAR); 
     io = delimited(LBRACKET, event_io, RBRACKET);
     marking = delimited(LBRACE, node_marking, RBRACE)?;
-    annotations = preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
+    // annotations = preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
     { 
       { marking = (Option.value ~default:(annotate default_marking) marking)
       ; info
       ; io
-      ; annotations = Option.value ~default:[] annotations
+      (*; annotations = Option.value ~default:[] annotations*)
       } 
     }
 ;

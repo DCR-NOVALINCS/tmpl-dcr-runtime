@@ -105,6 +105,8 @@ let rec typecheck ?(event_env = empty_env) program =
   typecheck_subprogram (events, insts, relations)
     (ty_env, event_env, tmpl_ty_env, label_types)
   >>| fun (ty_env, event_env, label_types) ->
+  Logger.debug @@ "Event Env after typechecking program:\n"
+  ^ string_of_env (fun e -> Unparser.PlainUnparser.unparse_events [e]) event_env ;
   EventTypes.reset label_types ;
   (ty_env, event_env)
 
@@ -127,13 +129,13 @@ and typecheck_template_decl template_decl
     template_decl
   and typecheck_params params (ty_env, event_env) =
     fold_left
-      (fun (ty_env, event_env) (id, param_type) ->
+      (fun (ty_env, event_env, remaining) (id, param_type) ->
         match param_type with
         | ExprParam (ty, _) ->
             Logger.debug "Binding expr: " ;
             Logger.debug @@ Unparser.PlainUnparser.unparse_ty ty.data ;
             return (bind id.data ty.data ty_env)
-            >>= fun ty_env -> return (ty_env, event_env)
+            >>= fun ty_env -> return (ty_env, event_env, remaining)
         | EventParam label ->
             Logger.debug "Binding event: " ;
             Logger.debug label.data ;
@@ -145,21 +147,23 @@ and typecheck_template_decl template_decl
                      ( EventTypes.to_list label_types
                      |> List.map (fun (x, _) -> annotate x) )
                    label *)
-                return (Input (annotate UnitTy), label_types)
+                return (Input (annotate UnitTy), label_types, label :: remaining)
             | Some (value_ty, event_type) -> (
               match event_type with
-              | InputType -> return (Input (annotate value_ty), label_types)
+              | InputType ->
+                  return (Input (annotate value_ty), label_types, remaining)
               | OutputType ->
                   return
                     ( Output
                         (annotate ~ty:(Some value_ty) (default_value value_ty))
-                    , label_types )
+                    , label_types
+                    , remaining )
                   (* FIXME: Get a value of the output event *) ) )
-            >>= fun (event_io, _label_types) ->
+            >>= fun (event_io, _label_types, remaining) ->
             let event = mk_event (id, label) (annotate event_io) in
             return (bind id.data event event_env)
-            >>= fun event_env -> return (ty_env, event_env) )
-      (ty_env, event_env) params
+            >>= fun event_env -> return (ty_env, event_env, remaining) )
+      (ty_env, event_env, []) params
   in
   Logger.info
     ("Typechecking template: " ^ CString.colorize ~color:Yellow id.data) ;
@@ -168,7 +172,10 @@ and typecheck_template_decl template_decl
   >>= fun (ty_env, event_env) ->
   (* Typecheck the parameters *)
   typecheck_params params (ty_env, event_env)
-  >>= fun (ty_env, event_env) ->
+  >>= fun (ty_env, event_env, remaining) ->
+  (*DEBUG: get remaining *)
+  Logger.debug "Remaining labels: " ;
+  Logger.debug @@ String.concat ", " (List.map (fun x -> x.data) remaining) ;
   (* Bind the events from the template into the env's *)
   (* bind_events ~f:(fun event -> event_as_ty event) events ty_env
      >>= fun ty_env -> *)
@@ -235,8 +242,6 @@ and typecheck_subprogram (events, insts, relations)
   >>= fun (ty_env, event_env, label_types) ->
   typecheck_relations relations (ty_env, event_env, tmpl_ty_env, label_types)
   >>= fun (ty_env, event_env, label_types) ->
-  Logger.debug @@ "Event Env after typechecking subprogram:\n"
-  ^ string_of_env (fun e -> Unparser.PlainUnparser.unparse_events [e]) event_env ;
   return (ty_env, event_env, label_types)
 
 (* =============================================================================
@@ -403,15 +408,62 @@ and typecheck_relation relation (ty_env, event_env, tmpl_ty_env, label_types) =
       check_guard_expr guard
       >>= fun _ ->
       return (begin_scope event_env, begin_scope ty_env)
-      >>= fun (event_env, ty_env) ->
+      >>= fun (spawn_event_env, spawn_ty_env) ->
       return
-        ( bind trigger_id from_event event_env
-        , bind trigger_id (event_as_ty from_event) ty_env )
-      >>= fun (event_env, ty_env) ->
+        ( bind trigger_id from_event spawn_event_env
+        , bind trigger_id (event_as_ty from_event) spawn_ty_env )
+      >>= fun (spawn_event_env, spawn_ty_env) ->
       typecheck_subprogram subprogram
-        (ty_env, event_env, tmpl_ty_env, label_types)
-      >>= fun (ty_env, event_env, label_types) ->
-      return (end_scope ty_env, end_scope event_env, label_types)
+        (spawn_ty_env, spawn_event_env, tmpl_ty_env, label_types)
+      >>= fun (_, _, label_types) -> return (ty_env, event_env, label_types)
+
+(* =============================================================================
+   Typechecking of template annotations
+   ============================================================================= *)
+
+and typecheck_template_annotations annotations
+    (ty_env, event_env, tmpl_ty_env, label_types) =
+  fold_left
+    (fun (ty_env, event_env, label_types) annotation ->
+      typecheck_template_annotation annotation
+        (ty_env, event_env, tmpl_ty_env, label_types) )
+    (ty_env, event_env, label_types)
+    annotations
+
+and typecheck_template_annotation annotation
+    (ty_env, event_env, tmpl_ty_env, label_types) =
+  match annotation with
+  | IfElse {condition; then_branch; else_branch} ->
+      typecheck_expr ~ty_env condition
+      >>= fun condition_ty ->
+      ( match condition_ty with
+      | BoolTy -> return ()
+      | _ -> type_mismatch ~loc:condition.loc [BoolTy] [condition_ty] )
+      >>= fun _ ->
+      return (begin_scope ty_env, begin_scope event_env)
+      >>= fun (branch_ty_env, branch_event_env) ->
+      typecheck_subprogram then_branch
+        (branch_ty_env, branch_event_env, tmpl_ty_env, label_types)
+      >>= fun (_, _, label_types) ->
+      ( match else_branch with
+      | None -> return (branch_ty_env, branch_event_env, label_types)
+      | Some else_body ->
+          typecheck_subprogram else_body
+            (branch_ty_env, branch_event_env, tmpl_ty_env, label_types) )
+      >>= fun (_, _, label_types) -> return (ty_env, event_env, label_types)
+  | Foreach (id, expr, body) ->
+      typecheck_expr expr ~ty_env
+      >>= fun expr_ty ->
+      ( match expr_ty with
+      | ListTy elem_ty ->
+          return (begin_scope ty_env, begin_scope event_env)
+          >>= fun (ty_env, event_env) ->
+          return (bind id.data elem_ty ty_env, event_env, label_types)
+      | _ -> type_mismatch ~loc:expr.loc [ListTy UnitTy] [expr_ty] )
+      >>= fun (annot_ty_env, annot_event_env, label_types) ->
+      typecheck_subprogram body
+        (annot_ty_env, annot_event_env, tmpl_ty_env, label_types)
+      >>= fun (_, _, label_types) -> return (ty_env, event_env, label_types)
 
 (* =============================================================================
    Typechecking of expressions
