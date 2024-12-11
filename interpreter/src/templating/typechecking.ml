@@ -266,9 +266,10 @@ and typecheck_event event (ty_env, event_env, label_types) =
   ( match EventTypes.find label.data label_types with
   | None ->
       Logger.debug
-      @@ Printf.sprintf "%s -> %s(%s)" label.data
-           (show_event_type' got_event_type)
-           (Unparser.PlainUnparser.unparse_ty got_value_ty) ;
+      @@ Printf.sprintf "%s -> %s" label.data
+           (show_event_type'
+              (Unparser.PlainUnparser.unparse_ty got_value_ty)
+              got_event_type ) ;
       return
         (EventTypes.add
            (label.data, (got_value_ty, got_event_type))

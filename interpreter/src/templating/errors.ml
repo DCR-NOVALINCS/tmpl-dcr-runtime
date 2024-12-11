@@ -427,10 +427,11 @@ and event_type_mismatch ?(errors = []) ?(loc = Nowhere) ?(available = [])
           (string_of_event_type_pair (event_label, event_type, ty))
           (string_tys tys)
   and string_of_event_type_pair (event_label, event_type, ty) =
-    Printf.sprintf "%s as %s event with type %s"
+    Printf.sprintf "%s%s"
       (CString.colorize ~color:Yellow event_label)
-      (CString.colorize ~color:Yellow (show_event_type' event_type))
-      (CString.colorize ~color:Yellow (unparse_ty ty))
+      (CString.colorize ~color:Yellow
+         (show_event_type' (Unparser.PlainUnparser.unparse_ty ty) event_type) )
+    (* (CString.colorize ~color:Yellow ) *)
   in
   fail
     ( { location= loc
@@ -445,9 +446,10 @@ and event_type_mismatch ?(errors = []) ?(loc = Nowhere) ?(available = [])
                (String.concat "\n"
                   (List.map
                      (fun (event_label, (ty, event_type)) ->
-                       Printf.sprintf "- %s: %s(%s)" event_label
-                         (show_event_type' event_type)
-                         (Unparser.PlainUnparser.unparse_ty ty) )
+                       Printf.sprintf "- %s: %s" event_label
+                         (show_event_type'
+                            (Unparser.PlainUnparser.unparse_ty ty)
+                            event_type ) )
                      available ) ) ) }
     :: errors )
 

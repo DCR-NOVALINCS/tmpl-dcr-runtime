@@ -288,7 +288,13 @@ let get_event_type io =
    Program Section: Pretty Printers
    ============================================================================= *)
 
-let show_event_type' = function InputType -> "Input" | OutputType -> "Output"
+let show_event_type' value_type event_type =
+  let fmt =
+    match event_type with
+    | InputType -> Printf.sprintf "[?: %s]"
+    | OutputType -> Printf.sprintf "[%s]"
+  in
+  fmt value_type
 
 (* =============================================================================
    Program Section: Constants

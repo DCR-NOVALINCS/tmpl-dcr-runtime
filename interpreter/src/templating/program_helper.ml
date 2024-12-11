@@ -142,9 +142,40 @@ and find_event id event_env =
   | Some event -> return event
   | None -> id_not_found id
 
+and find_all_events ?(filter = fun _ -> true) program =
+  let events = program.events in
+  List.filter filter events
+
 and same_id id e =
   let id', _ = e.data.info in
   id'.data |> String.split_on_char '_' |> List.hd = id
+
+and is_executed id program =
+  let event = get_event ~filter:(same_id id) program in
+  match event with
+  | None -> raise (Invalid_argument "Event not found")
+  | Some event ->
+      let {marking; _} = event.data in
+      let {executed; _} = marking.data in
+      executed.data
+
+and is_pending id program =
+  let event = get_event ~filter:(same_id id) program in
+  match event with
+  | None -> raise (Invalid_argument "Event not found")
+  | Some event ->
+      let {marking; _} = event.data in
+      let {pending; _} = marking.data in
+      pending.data
+
+and is_included id program =
+  let event = get_event ~filter:(same_id id) program in
+  match event with
+  | None -> raise (Invalid_argument "Event not found")
+  | Some event ->
+      let {marking; _} = event.data in
+      let {included; _} = marking.data in
+      included.data
 
 and get_relation ?(filter = fun _ -> true) id program =
   let relations = program.relations in
@@ -163,6 +194,16 @@ and is_ctrl op r =
 
 and has_relation ?(filter = fun _ -> true) id program =
   Option.is_some @@ get_relation ~filter id program
+
+and find_all_relations ?(filter = fun _ -> true) id program =
+  let relations = program.relations in
+  List.filter
+    (fun r ->
+      match r.data with
+      | ControlRelation (from, _, dest, _) ->
+          (from.data = id || dest.data = id) && filter r
+      | SpawnRelation (from, _, _) -> from.data = id && filter r )
+    relations
 
 and is_event_present_on_relation id relation =
   match relation.data with

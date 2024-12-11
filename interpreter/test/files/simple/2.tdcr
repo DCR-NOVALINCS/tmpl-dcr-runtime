@@ -7,10 +7,10 @@ tmpl g (n: Number, e: A) {
 
 a -->> {
   (b: B)[0]
-  g(n = 0, e = a)
+  g(n = 0, e -> a)
 }
 
 a -->> {
   (b: B)[1]
-  g(n = 1, e = a)
+  g(n = 1, e -> a)
 }
