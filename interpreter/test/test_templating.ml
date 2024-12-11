@@ -119,6 +119,58 @@ let test_suite =
             let bs = find_all_events ~filter:(same_id "b") program in
             check_int "Expecting 4 events with sub-id 'b'" 4 (List.length bs) ;
             return program )
+          expecting_ok
+      ; make_test "3.tdcr" (file "3.tdcr")
+          (fun program (event_env, expr_env) ->
+            check_int "Expected 1 event" 1 (List.length program.events) ;
+            check_int "Expected 0 template instantiation" 0
+              (List.length program.template_insts) ;
+            check_int "Expected 1 relation" 1 (List.length program.relations) ;
+            let spawn_relations =
+              find_all_relations ~filter:is_spawn "c" program
+            in
+            check_int "Expecting one spawn relation from 'c'" 1
+              (List.length spawn_relations) ;
+            let spawn_relation = List.hd spawn_relations in
+            let spawn_events, spawn_insts, spawn_relations =
+              match spawn_relation.data with
+              | SpawnRelation (_, _, graph) -> graph
+              | _ -> failwith "Expected spawn relation"
+            in
+            check_int "Not expecting any events in the spawn relation" 0
+              (List.length spawn_events) ;
+            check_int "Not expecting any relations in the spawn relation" 0
+              (List.length spawn_relations) ;
+            check_int "Expecting 2 template instantiations" 2
+              (List.length spawn_insts) ;
+            execute ~event_id:"c" ~expr:(IntLit 0) ~expr_env ~event_env program
+            >>= fun (program, event_env, expr_env) ->
+            check_int "Expected 3 events" 3 (List.length program.events) ;
+            check_int "Expected 1 relation" 1 (List.length program.relations) ;
+            check_int "Not expecting instantiations to be done." 0
+              (List.length program.template_insts) ;
+            let os = find_all_events ~filter:(same_id "o") program in
+            check_int "Expecting 2 events with sub-id 'o'" 2 (List.length os) ;
+            let all_contain_false_value =
+              List.for_all
+                (fun o ->
+                  let {io; _} = o.data in
+                  match io.data with
+                  | Output value -> value.data = False
+                  | _ -> false )
+                os
+            in
+            check_true "Expecting all instantiated 'o' to have value False"
+              all_contain_false_value ;
+            execute ~event_id:"c" ~expr:(IntLit 1) ~expr_env ~event_env program
+            >>= fun (program, _event_env, _expr_env) ->
+            check_int "Expected 5 events" 5 (List.length program.events) ;
+            check_int "Expected 1 relations" 1 (List.length program.relations) ;
+            check_int "Not expecting instantiations to be done." 0
+              (List.length program.template_insts) ;
+            let os = find_all_events ~filter:(same_id "o") program in
+            check_int "Expecting 4 events with sub-id 'o'" 4 (List.length os) ;
+            return program )
           expecting_ok ] ) ]
 
 let _ = run ~verbose:false "templating" test_suite
