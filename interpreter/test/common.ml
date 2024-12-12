@@ -19,7 +19,7 @@ let build_program filename =
   (* TODO: *)
   return (program, event_env, expr_env)
 
-let make_test name filename f expecting =
+let make_test name filename ?(speed = `Slow) f expecting =
   let test f _ =
     let result =
       build_program (fullpath filename)
@@ -27,7 +27,7 @@ let make_test name filename f expecting =
     in
     expecting result
   in
-  test_case name `Slow (test f)
+  test_case name speed (test f)
 
 let check_bool msg b = Alcotest.(check bool) msg b
 

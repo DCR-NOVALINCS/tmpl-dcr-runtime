@@ -221,6 +221,15 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       (* Bind params with respective args in the envs *)
       bind_params params args (expr_env, event_env, tmpl_env)
       >>= fun (expr_env, event_env, tmpl_env) ->
+      (* DEBUG: Expr_env *)
+      Logger.debug @@ "Expr Env before instantiation:" ;
+      Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
+      (* DEBUG: Event_env *)
+      Logger.debug @@ "Event Env before instantiation:" ;
+      Logger.debug
+      @@ string_of_env
+           (fun e -> Unparser.PlainUnparser.unparse_events [e])
+           event_env ;
       (* Get events, instantiations and relations from the template *)
       let events_ti, insts_ti, relations_ti = graph in
       let result_events, _, result_relations = result_program in

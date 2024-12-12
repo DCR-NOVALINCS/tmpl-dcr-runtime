@@ -22,12 +22,18 @@ and bind x v env =
   | Empty -> raise Empty_env
   | Scope (binds, sl) ->
       if List.mem_assoc x binds then
-        let _ =
-          Logger.error (Printf.sprintf "Duplicate binding for %s" x)
-          (* Logger.error (Printf.sprintf "Size: %d" (List.length binds)) *)
-        in
+        let _ = Logger.error (Printf.sprintf "Duplicate binding for %s" x) in
         Scope ((x, v) :: binds, sl) (* raise (Duplicate_binding x) *)
       else Scope ((x, v) :: binds, sl)
+
+and bind_at_depth x v n env =
+  let rec bind_at_depth' x v n i env =
+    match (env, i) with
+    | Empty, _ -> raise Empty_env
+    | scope, i when i = n -> bind x v scope
+    | Scope (binds, sl), i -> Scope (binds, bind_at_depth' x v n (i + 1) sl)
+  in
+  bind_at_depth' x v n 0 env
 
 and find_flat x env =
   match env with

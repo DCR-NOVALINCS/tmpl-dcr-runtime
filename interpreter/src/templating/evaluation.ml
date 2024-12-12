@@ -45,9 +45,14 @@ let rec eval_expr expr env =
           | Some v -> return (annotate ~loc:v.loc v.data) )
       | EventRef event_ref -> (
           let event = !event_ref in
-          let {marking; _} = event.data in
+          let {marking; io; _} = event.data in
           match p.data with
-          | "value" -> eval_expr {expr with data= Ref marking.data.value} env
+          | "value" ->
+              ( match io.data with
+              | Output expr ->
+                  eval_expr expr env >>= fun value -> return (Ref (ref value))
+              | _ -> return (Ref marking.data.value) )
+              >>= fun value -> eval_expr {expr with data= value} env
           | _ -> property_not_found p v )
       | _ ->
           should_not_happen ~module_path:"evaluation.ml"

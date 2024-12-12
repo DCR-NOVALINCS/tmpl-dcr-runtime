@@ -37,6 +37,15 @@ val bind : string -> 'a -> 'a env -> 'a env
     @param env the environment to bind the value to the key
     @return the environment with the value bound to the key *)
 
+val bind_at_depth : string -> 'a -> int -> 'a env -> 'a env
+(** [bind_at_depth x v n env] binds the value [v] to the key [x] in the [n]th
+    scope of the environment [env]
+    @param x the key to bind the value to
+    @param v the value to bind to the key
+    @param n the depth of the scope to bind the value in
+    @param env the environment to bind the value to the key
+    @return the environment with the value bound to the key *)
+
 val find_flat : string -> 'a env -> 'a option
 (** [find_flat x env] returns the value bound to the key [x] in the environment
     [env]
