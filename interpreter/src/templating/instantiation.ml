@@ -186,7 +186,7 @@ and bind_prop prop (expr_env, event_env, tmpl_env) =
    ============================================================================= *)
 
 and instantiate_tmpls tmpl_insts (expr_env, event_env, tmpl_env) =
-  fold_left
+  fold_right
     (fun (program, event_env, expr_env) inst ->
       instantiate_tmpl program inst (expr_env, event_env, tmpl_env)
       (* Bind newly instantiated events into the envs *)
@@ -259,7 +259,7 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       export_map_events x export (events_ti, relations_ti)
       >>= fun (events_ti, relations_ti) ->
       (* Fresh identifiers *)
-      fresh_event_ids events_ti relations_ti []
+      fresh_event_ids ~exclude:(deannotate_list x) events_ti relations_ti
       >>= fun (events_ti, relations_ti) ->
       (* Put it all together *)
       Logger.debug
@@ -310,25 +310,28 @@ and export_map_events x export (events, relations) =
            (List.map
               (fun (x, exp) -> Printf.sprintf "%s -> %s" x exp)
               export_mapping ) ) ; *)
+    let replace_id id =
+      match List.assoc_opt id.data export_mapping with
+      | None -> return id
+      | Some new_id -> return {id with data= new_id}
+    in
     map
       (fun event ->
-        let id, label = event.data.info in
-        match List.assoc_opt id.data export_mapping with
-        | None -> return event
-        | Some new_id ->
-            return
-              { event with
-                data= {event.data with info= ({id with data= new_id}, label)} }
+        let id, _ = event.data.info in
+        replace_id id >>= fun new_id -> set_info ~id:new_id.data event
+        (* return
+           (change_info_event ~new_id:new_id.data ~new_label:label.data event) *)
+        (* match List.assoc_opt id.data export_mapping with
+           | None -> return event
+           | Some new_id ->
+               return
+                 { event with
+                   data= {event.data with info= ({id with data= new_id}, label)} } *)
         )
       events
     >>= fun events ->
     map
       (fun relation ->
-        let replace_id id =
-          match List.assoc_opt id.data export_mapping with
-          | None -> return id
-          | Some new_id -> return {id with data= new_id}
-        in
         match relation.data with
         | SpawnRelation (from, guard, subprogram) ->
             replace_id from

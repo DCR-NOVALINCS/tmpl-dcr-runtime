@@ -1,4 +1,3 @@
-(r: R)[{ n: n0.value - 1, s: s.value, b: b.value AND false }]
 (i0: I)[?: Number]
 (i1: I2)[?: { id: Number, isActivated: Boolean }]
 (n0: N)[0]
@@ -6,6 +5,7 @@
 (s: S)['a']
 (b: B)[true]
 (l: L)[[0, 1, 2]]
+(r: R)[{ n: n0.value - 1, s: s.value, b: b.value AND false }]
 
 i0 -[n1.value > n0.value]->% s, b
 i1 -[s.value == 'b']->+ i0, s, b

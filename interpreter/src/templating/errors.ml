@@ -227,6 +227,16 @@ and invalid_guard_value ?(errors = []) value =
       ; hint= Some "Ensure the guard value is a boolean expression." }
     :: errors )
 
+and value_from_input_event ?(errors = []) event =
+  let id, _ = event.data.info in
+  fail
+    ( { location= event.loc
+      ; message=
+          Printf.sprintf "Value from input event %s is not allowed"
+            (CString.colorize ~color:Yellow id.data)
+      ; hint= Some "Input events cannot have values. Check the event type." }
+    :: errors )
+
 (* ┌──────────────────────────────────────────────────────────────────────────┐
    │ Event errors                                                             │
    └──────────────────────────────────────────────────────────────────────────┘ *)

@@ -21,7 +21,7 @@ let rec update_event event program =
       (fun e ->
         let id, _ = e.data.info in
         let id', _ = event.data.info in
-        if id = id' then event else e )
+        if id.data = id'.data then event else e )
       program.events
   in
   {program with events}
@@ -68,12 +68,14 @@ and update_event_io event expr_env =
       return
         {event with data= {event.data with io= {io with data= Output value}}}
 
-and change_info_event ~new_id ~new_label event =
-  let id, label = event.data.info in
-  { event with
-    data=
-      { event.data with
-        info= ({id with data= new_id}, {label with data= new_label}) } }
+and set_info ?id ?label event =
+  let e_id, e_label = event.data.info in
+  return
+    ( Option.value ~default:e_id.data id
+    , Option.value ~default:e_label.data label )
+  >>= fun (id', label') ->
+  let info = ({e_id with data= id'}, {e_label with data= label'}) in
+  return {event with data= {event.data with info}}
 
 and update_event_env program event_env =
   let events = program.events in
@@ -262,37 +264,97 @@ and nanoid ?(length = 12) _ =
 and fresh ?(id_fn = counter) name = Printf.sprintf "%s_%s" name (id_fn ())
 
 and fresh_event event =
-  let id, label = event.data.info in
-  change_info_event ~new_id:(fresh id.data) ~new_label:label.data event
+  let id, _ = event.data.info in
+  set_info ~id:(fresh id.data) event
 
-and fresh_event_ids events relations exports_mapping =
+and fresh_event_ids ?(exclude = []) events relations =
+  (* map
+       (fun event ->
+         let id, _ = event.data.info in
+         let fresh_id = {id with data= fresh id.data} in
+         let* fresh_event =
+           (* change_info_event ~new_id:fresh_id.data ~new_label:label.data event *)
+           set_info ~id:fresh_id.data event
+         in
+         return (id, fresh_id, fresh_event) )
+       events
+     >>= fun events_mapping ->
+     map
+       (fun relation ->
+         (* Debug: relations  *)
+         let open Printing in
+         Logger.debug
+           (Printf.sprintf "Replacing relation %s"
+              (Unparser.PlainUnparser.unparse_relations [relation]) ) ;
+         fold_left
+           (fun relation (old_id, new_id, _) ->
+             if is_event_present_on_relation old_id relation then
+               return (change_relation old_id new_id relation)
+             else return relation )
+           relation events_mapping )
+       relations
+     >>= fun fresh_relations ->
+     let fresh_events = List.map (fun (_, _, e) -> e) events_mapping in
+     return (fresh_events, fresh_relations) *)
+  let open Printing in
+  let id_env = empty_env in
+  fold_left
+    (fun id_env event ->
+      let id, _ = event.data.info in
+      let fresh_id = fresh id.data in
+      return (bind id.data fresh_id id_env) )
+    id_env events
+  >>= fun id_env ->
+  (* Debug Id Env: *)
+  Logger.debug (Printf.sprintf "Id Env: %s" (string_of_env (fun x -> x) id_env)) ;
+  (* Exclude all unwanted events *)
+  let module StringSet = Set.Make (String) in
+  let exclude = StringSet.of_list exclude in
+  let event_ids =
+    List.map
+      (fun e ->
+        let id, _ = e.data.info in
+        id.data )
+      events
+  in
+  let event_ids_set = StringSet.of_list event_ids in
+  let included = StringSet.diff event_ids_set exclude in
+  (* Alpha rename all the events *)
   map
     (fun event ->
-      let id, label = event.data.info in
-      let export_id =
-        match List.assoc_opt id.data exports_mapping with
-        | None -> id
-        | Some new_id -> new_id
-      in
-      let fresh_id = {id with data= fresh export_id.data} in
-      let fresh_event =
-        change_info_event ~new_id:fresh_id.data ~new_label:label.data event
-      in
-      return (id, fresh_id, fresh_event) )
+      let id, _ = event.data.info in
+      match (find_flat id.data id_env, StringSet.mem id.data included) with
+      | Some fresh_id, true -> set_info ~id:fresh_id event
+      | _ -> return event )
     events
-  >>= fun events_mapping ->
+  >>= fun events ->
+  (* Alpha rename all the relations *)
   map
     (fun relation ->
-      fold_left
-        (fun relation (old_id, new_id, _) ->
-          if is_event_present_on_relation old_id relation then
-            return (change_relation old_id new_id relation)
-          else return relation )
-        relation events_mapping )
+      (* Debug: relations  *)
+      let replace_id id =
+        match (find_flat id.data id_env, StringSet.mem id.data included) with
+        | Some fresh_id, true -> return {id with data= fresh_id}
+        | _ -> return id
+      in
+      Logger.debug
+        (Printf.sprintf "Replacing relation %s"
+           (Unparser.PlainUnparser.unparse_relations [relation]) ) ;
+      match relation.data with
+      | SpawnRelation (from_id, guard, subprogram) ->
+          replace_id from_id
+          >>= fun from_id ->
+          return {relation with data= SpawnRelation (from_id, guard, subprogram)}
+      | ControlRelation (from_id, guard, dest_id, op) ->
+          replace_id from_id
+          >>= fun from_id ->
+          replace_id dest_id
+          >>= fun dest_id ->
+          return
+            {relation with data= ControlRelation (from_id, guard, dest_id, op)}
+      )
     relations
-  >>= fun fresh_relations ->
-  let fresh_events = List.map (fun (_, _, e) -> e) events_mapping in
-  return (fresh_events, fresh_relations)
+  >>= fun relations -> return (events, relations)
 
 (* =============================================================================
    Binding functions

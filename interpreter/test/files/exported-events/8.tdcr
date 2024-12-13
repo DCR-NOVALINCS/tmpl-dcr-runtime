@@ -1,0 +1,20 @@
+tmpl megamon(name: String, type: String): Megamon {
+    (m: Megamon)[{ name: name, type: type }]
+} => m
+
+(cm: createMegamon)[?: { name: String, type: String }]
+(b: Battle)[?: { megamon1: { name: String, type: String }, megamon2: { name: String, type: String } }]
+
+cm -->> {
+    megamon(name = @trigger.value.name, type = @trigger.value.type) => megamon
+
+    megamon *--> megamon
+}
+
+b -->> {
+    megamon(name = @trigger.value.megamon1.name, type = @trigger.value.megamon1.type) => megamon1
+    megamon(name = @trigger.value.megamon2.name, type = @trigger.value.megamon2.type) => megamon2
+
+    megamon1 -->% megamon2
+    megamon2 -->% megamon1
+}

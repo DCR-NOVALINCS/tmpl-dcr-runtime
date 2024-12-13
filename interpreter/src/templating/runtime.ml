@@ -101,10 +101,6 @@ and propagate_effect relation event (event_env, expr_env) program =
         if not is_guard_true then return (program, event_env, expr_env)
         else
           let spawn_events, spawn_insts, spawn_relations = spawn_prog in
-          (* Rename the event ids to new ones, to prevent id clashing *)
-          (* FIXME: Change alpha renaming position!!! *)
-          fresh_event_ids spawn_events spawn_relations []
-          >>= fun (spawn_events, spawn_relations) ->
           (* Begin new env scope and bind trigger_id *)
           return (begin_scope event_env, begin_scope expr_env)
           >>= fun (event_env, expr_env) ->
@@ -130,6 +126,14 @@ and propagate_effect relation event (event_env, expr_env) program =
                     ; _ }
                   , event_env
                   , expr_env ) ->
+          (* Rename the event ids to new ones, to prevent id clashing *)
+          (* FIXME: Change alpha renaming position!!! *)
+          let spawn_events, spawn_relations =
+            ( List.flatten [inst_spawn_events; spawn_events]
+            , List.flatten [inst_spawn_relations; spawn_relations] )
+          in
+          fresh_event_ids spawn_events spawn_relations
+          >>= fun (spawn_events, spawn_relations) ->
           (* Logger.debug "Instantiated events from spawn:" ; Logger.debug @@
              Unparser.PlainUnparser.unparse_events inst_spawn_events ;
              Logger.debug "Instantiated relations from spawn:" ; Logger.debug @@
@@ -137,13 +141,9 @@ and propagate_effect relation event (event_env, expr_env) program =
           (* Put it all together *)
           return
             ( { program with
-                events=
-                  List.flatten [inst_spawn_events; spawn_events; program.events]
+                events= List.flatten [spawn_events; program.events]
               ; template_insts= []
-              ; relations=
-                  List.flatten
-                    [inst_spawn_relations; spawn_relations; program.relations]
-              }
+              ; relations= List.flatten [spawn_relations; program.relations] }
             , end_scope event_env
             , end_scope expr_env )
   | ControlRelation (from, guard, dest, op) ->

@@ -1,4 +1,4 @@
-tmpl g (n: Number, e: A) {
+tmpl g(n: Number, e: A) {
   (b: B)[n]
   e -->* b
 }

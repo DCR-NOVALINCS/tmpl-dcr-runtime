@@ -22,7 +22,7 @@ and bind x v env =
   | Empty -> raise Empty_env
   | Scope (binds, sl) ->
       if List.mem_assoc x binds then
-        let _ = Logger.error (Printf.sprintf "Duplicate binding for %s" x) in
+        let _ = Logger.warn (Printf.sprintf "Duplicate binding for %s" x) in
         Scope ((x, v) :: binds, sl) (* raise (Duplicate_binding x) *)
       else Scope ((x, v) :: binds, sl)
 

@@ -1,19 +1,13 @@
-tmpl g (n: Number, e: A) {
-    (b: B)[n]
-    h(e -> e) => b2
-    e -->* b, b2
-}
-
-tmpl h(e: A): B {
-  (b: B)[0]
-  e -->% b
-} => b
+tmpl f(n: Number = 0): A {
+  (a: A)[?]
+  (b: B)[n+1]
+} => a
 
 (a: A)[?]
-# g(n = 1, e -> a)
+f(n = 1) => a2
+f(n = 2) => a3
 
-a -->> {
-  h(e -> a) => b2
-
-  b2 -->% b2
+a2 -->> {
+  f(n = 3) => a
+  a -->% a2, a3
 }

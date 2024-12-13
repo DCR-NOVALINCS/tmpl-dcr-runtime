@@ -116,7 +116,7 @@ let rec typecheck ?(event_env = empty_env) program =
 
 and typecheck_template_decls template_decls ?(tmpl_ty_env = empty_env)
     (ty_env, event_env, label_types) =
-  fold_left
+  fold_right
     (fun (ty_env, event_env, tmpl_ty_env, label_types) template_decl ->
       typecheck_template_decl template_decl
         (ty_env, event_env, tmpl_ty_env, label_types) )
@@ -128,7 +128,7 @@ and typecheck_template_decl template_decl
   let {graph= events, insts, relations; export; export_types; params; id; _} =
     template_decl
   and typecheck_params params (ty_env, event_env) =
-    fold_left
+    fold_right
       (fun (ty_env, event_env, remaining) (id, param_type) ->
         match param_type with
         | ExprParam (ty, _) ->
@@ -161,8 +161,11 @@ and typecheck_template_decl template_decl
                   (* FIXME: Get a value of the output event *) ) )
             >>= fun (event_io, _label_types, remaining) ->
             let event = mk_event (id, label) (annotate event_io) in
-            return (bind id.data event event_env)
-            >>= fun event_env -> return (ty_env, event_env, remaining) )
+            return
+              ( bind id.data event event_env
+              , bind id.data (event_as_ty event) ty_env )
+            >>= fun (event_env, ty_env) -> return (ty_env, event_env, remaining)
+        )
       (ty_env, event_env, []) params
   in
   Logger.info
@@ -242,6 +245,11 @@ and typecheck_subprogram (events, insts, relations)
   >>= fun (ty_env, event_env, label_types) ->
   typecheck_relations relations (ty_env, event_env, tmpl_ty_env, label_types)
   >>= fun (ty_env, event_env, label_types) ->
+  (* Debug envs *)
+  Logger.debug @@ "Type env after typechecking subprogram:\n"
+  ^ string_of_env Unparser.PlainUnparser.unparse_ty ty_env ;
+  Logger.debug @@ "Event env after typechecking subprogram:\n"
+  ^ string_of_env (fun e -> Unparser.PlainUnparser.unparse_events [e]) event_env ;
   return (ty_env, event_env, label_types)
 
 (* =============================================================================
@@ -249,7 +257,7 @@ and typecheck_subprogram (events, insts, relations)
    ============================================================================= *)
 
 and typecheck_events events (ty_env, event_env, label_types) =
-  fold_left
+  fold_right
     (fun (ty_env, event_env, label_types) event ->
       typecheck_event event (ty_env, event_env, label_types) )
     (ty_env, event_env, label_types)
@@ -297,7 +305,7 @@ and typecheck_event event (ty_env, event_env, label_types) =
    ============================================================================= *)
 
 and typecheck_insts insts (ty_env, event_env, tmpl_ty_env, label_types) =
-  fold_left
+  fold_right
     (fun (ty_env, event_env, label_types) inst ->
       typecheck_inst inst (ty_env, event_env, tmpl_ty_env, label_types) )
     (ty_env, event_env, label_types)
@@ -373,7 +381,7 @@ and typecheck_inst inst (ty_env, event_env, tmpl_ty_env, label_types) =
 
 and typecheck_relations relations (ty_env, event_env, tmpl_ty_env, label_types)
     =
-  fold_left
+  fold_right
     (fun (ty_env, event_env, label_types) relation ->
       typecheck_relation relation (ty_env, event_env, tmpl_ty_env, label_types)
       )
@@ -470,7 +478,8 @@ and typecheck_template_annotation annotation
    Typechecking of expressions
    ============================================================================= *)
 
-and typecheck_expr ?(ty_env = empty_env) expr =
+and typecheck_expr ?(ty_env = empty_env) ?(label_types = EventTypes.empty) expr
+    =
   (* Typechecking a binary operation, e.g +, *, etc. *)
   let typecheck_binop l_ty r_ty op =
     ( match op with
@@ -561,6 +570,10 @@ and typecheck_expr ?(ty_env = empty_env) expr =
         return (ListTy IntTy)
       else type_mismatch ~loc:expr.loc [IntTy; IntTy] [s_ty; e_ty]
   | Record fields -> typecheck_record fields ty_env
+  | EventRef event_ref ->
+      let event = !event_ref in
+      typecheck_event event (ty_env, empty_env, label_types)
+      >>= fun _ -> return (event_as_ty event)
   | _ ->
       fixme
         "forgot some expression type to validate in [typecheck_expr] function"

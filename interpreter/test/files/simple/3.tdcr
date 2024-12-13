@@ -9,6 +9,6 @@ tmpl is_negative(n: Number = 0): Output {
 (c: C)[?: Number]
 
 c -->> {
+    is_negative(n = @trigger.value) => negative
     is_positive(n = @trigger.value) => positive
-    is_negative(n = positive.value) => negative
 }
