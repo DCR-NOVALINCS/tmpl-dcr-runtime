@@ -1,82 +1,13 @@
-# Notes: 
-# - 0...3 returns a list with 4 elements: [0, 1, 2, 3]
-
-# Previous syntax
-
 %(a: A)[0]
 %(b: B)[?]
-(c: C)[?: Number] - when a.value > 1 | foreach i in 0...3 
-(d: D)[?: String] - when a.value <= 1 AND a.value > 0
-(e: E)[?: Boolean] - when a.value > 0 
+(c: C)[?: Number] - if a.value > 1 | foreach i in range(0, 3) 
+(d: D)[?: String] - if a.value <= 1 AND a.value > 0 
+(e: E)[?: Boolean] - if a.value > 0 
 
-c -->% a - when a.value > 1 | foreach i in 0...3
-c -->+ b - when a.value > 1 | foreach i in 0...3
+c -->% a - if a.value > 1 | foreach i in range(0, 3) 
+c -->+ b - if a.value > 1 | foreach i in range(0, 3) 
 
-d -->+ a - when a.value <= 1 AND a.value > 0
-d -->% b - when a.value <= 1 AND a.value > 0
+d -->+ a - if a.value <= 1 AND a.value > 0 
+d -->% b - if a.value <= 1 AND a.value > 0 
 
-e --><> e - when a.value > 0
-
-# Alternative syntax 1
-
-%(a: A)[0]
-%(b: B)[?]
-
-if (a.value > 1) 
-    foreach i in 0...3
-        (c: C)[?: Number]
-        c -->% a
-        c -->+ b
-    /foreach
-else if (a.value > 0)
-    (e: E)[?: Boolean]
-    e --><> e
-else 
-    (d: D)[?: String]
-    
-    d -->+ a
-    d -->% b
-/if
-
-# Alternative syntax 2
-
-%(a: A)[0]
-%(b: B)[?]
-
-{% if a.value > 1 %}
-    {% foreach i in 0...3 %}
-        (c: C)[?: Number]
-        c -->% a
-        c -->+ b
-    {% endforeach %}
-{% else if a.value > 0 %}
-    (e: E)[?: Boolean]
-    e --><> e
-{% else %}
-    (d: D)[?: String]
-    
-    d -->+ a
-    d -->% b
-{% endif %}
-
-
-# Alternative syntax 3
-
-%(a: A)[0]
-%(b: B)[?]
-
-{!if a.value > 1}
-    {!foreach i in 0...3}
-        (c: C)[?: Number]
-        c -->% a
-        c -->+ b
-    {/foreach}
-{:else if a.value > 0}
-    (e: E)[?: Boolean]
-    e --><> e
-{:else}
-    (d: D)[?: String]
-    
-    d -->+ a
-    d -->% b
-{/if}
+e --><> e - if a.value > 0 

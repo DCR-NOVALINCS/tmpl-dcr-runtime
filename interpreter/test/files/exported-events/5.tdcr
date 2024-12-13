@@ -1,9 +1,11 @@
-tmpl f(e: A): B {
-    (b: B)[?: Number]
-    e -->% b
+tmpl g(n: Number): A {
+    (a: A)[{n : n, s: 'Hello world!'}]
+} => a
+
+tmpl h(n: Number): B {
+    (b: B)[n]
 } => b
 
-(a: A)[?]
-f(e -> a) => b0
-
-b0 --><> a
+g(n = 0) => a1
+h(n = a1.value.n + 1) => b1
+g(n = b1.value + 1) => a2

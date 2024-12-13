@@ -228,7 +228,13 @@ let typecheck_set =
 
 let export_events_set =
   (* Note: assuming that the following programs are typed correctly *)
-  [ make_test "6.tdcr"
+  [ make_test "3.tdcr"
+      (file "exported-events/3.tdcr")
+      (fun program (event_env, expr_env) ->
+        typecheck ~event_env program
+        >>= fun _ -> return (program, event_env, expr_env) )
+      expecting_error
+  ; make_test "6.tdcr"
       (file "exported-events/6.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
