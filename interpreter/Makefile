@@ -6,9 +6,6 @@ OUTPUT_DOC_PATH := docs
 OUTPUT_JS_PATH := ../server/src/runtime
 # OUTPUT_JS_PATH := .
 
-# Targets
-.SILENT: pre-build build watch clean js
-
 default:
 	cd $(INTERPRETER_PATH)
 	opam update
@@ -34,7 +31,7 @@ watch:
 check:
 	make pre-build
 	make build
-	dune runtest --force
+	dune runtest --force -w
 
 install:
 	make pre-build
@@ -61,3 +58,5 @@ doc:
 	mkdir -p $(OUTPUT_DOC_PATH) 
 	cp -r _build/default/_doc/_html/* $(OUTPUT_DOC_PATH)
 
+# Targets
+.SILENT: pre-build build watch clean

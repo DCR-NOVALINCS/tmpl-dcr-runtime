@@ -1,94 +1,208 @@
-> [!WARNING] This project is still under development.
 
-# Table of Content
-- [Table of Content](#table-of-content)
-- [Requirements](#requirements)
-- [Running the interpreter](#running-the-interpreter)
-  - [How to compile](#how-to-compile)
-  - [How to run](#how-to-run)
-    - [Available Commands](#available-commands)
-      - [Help (h)](#help-h)
-      - [View (v)](#view-v)
-      - [Debug (d)](#debug-d)
-      - [Exec (e)](#exec-e)
-      - [Exit (q)](#exit-q)
+<div align="center">
+  <h1>t-dcr</h1>
+  <p>
+    <strong>Templates in Dynamic Conditional Response Graphs </strong>
+  </p>
+</div> 
 
-# Requirements
+<!-- TODO: Put a gif here to demonstrate the cli -->
 
-In order to run this tool, you need the following tools:
-- OCaml
+![documentation](https://img.shields.io/badge/documentation-unavailable-red)
+![license](https://img.shields.io/badge/license-CC%20BY%204.0-blue)
 
-This project is being developed with the version of the `ocaml-base-compiler`: `5.1.1`
+> [!WARNING]
+> This project is still in early development and may stay in this state... ~~forever?~~ 😅
 
-# Running the interpreter 
+# Table of Contents
 
-## How to compile 
+- [Table of Contents](#table-of-contents)
+- [About](#about)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Usage](#usage)
+- [Additional Information](#additional-information)
+  - [Authors](#authors)
+  - [License](#license)
 
-To compile this project, you need to execute the following command:
+# About 
 
-```bash
-dune build
+**t-dcr** is a cli runtime to create and execute [DCR graphs]() with templates in a simple and easy way. 
+
+This project is a part of a master thesis of one of the authors in order to abstract and reuse parts of the DCR graph that are common and repetitive.
+
+<!-- TODO: Put a complex-ish example -->
+
+Here is a quick sneak peek of how to express a DCR graph with templates in this project.
+
+```
+tmpl add(n: Number, m: Number): Result {
+  (r: Result)[n + m]
+} => r
+
+tmpl sub(n: Number, m: Number): Result {
+  (r: Result)[n - m]
+} => r
+
+tmpl max(r1: Result, r2: Result): Result {
+  r1 *--> r1
+  r2 *--> r2
+  r1 -[r1.value > r2.value]->% r2
+  r2 -[r2.value > r1.value]->% r1
+}
+
+(i: Input)[?: { l: Number, r: Number }]
+
+i -->> {
+  add(n = l, m = r) => result0
+  sub(n = l, m = r) => result1
+  max(r1 -> result0, r2 -> result1)
+}
 ```
 
-## How to run
+>[!NOTE] 
+> This syntax may change in the future, so be aware of that. 😅
 
-To run the interpreter, you need to execute the following command:
+Here is a list of the features that are available in this project.
 
-```bash
-dune exec tmpl_dcr
-```
+|                              |     |
+| ---------------------------- | --- |
+| Basic Semantic of DCR Graphs | ✅   |
+| Templates in DCR Graphs      | ✅   |
+| CLI Interface                | ✅   |
+| Export to JSON               | ✅   |
+| Export back to `.tdcr`       | ✅   |
+| Export to `.dot`             | ❌   |
+| Reactive data values         | ❌   |
 
-### Available Commands
+Any feature that is not checked is not implemented yet, but it is planned to be implemented in the future.
 
-#### Help (h)
+If you have any suggestions or want to contribute to this project, feel free to open an issue or a pull request. 🙂
 
-This command will show the available commands and their descriptions.
+# Getting Started
 
-```bash
-> h
-Commands: 
-- view (v): View the current program
-- debug (d): View the current program with relations
-- exec (e) <event_id> <expr>: Execute an event with an expression
-- exit (q): Exit the program
-- help (h): Display this message
-```
+## Prerequisites
 
-#### View (v)
+In order to run this project you need to have the following installed:
 
-This command will show the current program.
+- [OCaml](https://ocaml.org/docs/install.html) (5.1.1 or newer)
+- [Opam](https://opam.ocaml.org/doc/Install.html) (2.1.2 or newer)
 
-```bash
-> v
-a: A[?: Number] -> ()
-b: B[0] -> 0
-```
+This are the minimum versions that are guaranteed to work and worked during development and tested with. 
 
-#### Debug (d)
+## Installation
 
-This command will show the current program with relations.
+To install the project you need to clone the repository and install the dependencies. 
 
 ```bash
-> d
-a: A[?: Number] -> ()
-b: B[0] -> 0
-;
-a -->% b
+git clone https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime.git
 ```
 
-#### Exec (e)
-
-This command will execute an event with an expression.
+After cloning the repository, make sure to install all the dependencies by running the following command in the `interpreter` directory of the project, where the `Makefile` and the `.opam` file are located.
 
 ```bash
-> v 
-a: A[?: Number] -> ()
-b: B[0] -> 0
-> e a 1
-a: A[?: Number] -> 1
-b: B[0] -> 0
+make
 ```
 
-#### Exit (q)
+If you don't trust some strange `Makefile` you can run the following command to install the dependencies manually.
 
-This command will exit the program.
+```bash
+opam install . --deps-only
+``` 
+
+For some reason you don't have the `tmpl_dcr.opam` file, you can run the following command to install the dependencies.
+
+```bash
+opam install ocaml dune odoc menhir yojson cmdliner alcotest
+```
+
+And finally, you can build the project by running the following command.
+
+```bash
+make build
+```
+
+Or `dune build`.
+And you should be ready to go. 😁 
+
+## Usage
+
+To run the program, you can run the following command in the `interpreter` directory of the project.
+
+```bash
+dune exec tmpl_dcr -- <filename.tdcr>
+```
+
+Where `<filename>` is the name of the file that contains the DCR graph with templates.
+
+You can see some examples in the [`examples`](/examples/) directory of the project to see how to write a DCR graph with templates.
+
+>[!IMPORTANT] 
+> The file extension must be `.tdcr` in order to be recognized by the program.
+
+> [!NOTE]
+> You can also run the program with the `--help` flag to see the available options or the `--log <level>` to see the debug information. 
+
+---
+
+After running the command, you should see the following prompt.
+
+```
+> 
+```
+
+From this prompt, you can run the following commands:
+<!-- TODO: for each command, show a gif to illustrate to command -->
+
+- **help**: Print the help message.
+  ```
+  > help
+  Available Commands:
+  - debug : Shows any debug information available.
+  - export <FILENAME>: Creates a file named FILENAME with a textual representation of the current state of the graph.
+  - execute <EVENT_ID> <EXPR_STRING>: Executes the event <EVENT_ID> with the expression <EXPR_STRING>, if needed.
+  - view : Views the current state of the graph.
+  - exit : Exit the program.
+  ```
+
+- **exit**: Exit the program and close the CLI.
+  ```
+  > exit
+  ```
+
+- **view**: View the current state of the program, i.e., only the events that are enabled in the program.
+  ```
+  > view [-a | --all]
+  ```
+  **Flags:**
+  - `-a` or `--all`: View all events, including those that are not enabled.
+
+- **execute**: Execute the event with the given `event_id` and the given `expr` as the input.
+  ```
+  > execute <event_id> <expr>
+  ```
+
+- **export**: Export the current state of the program in any of the available modes to the file with the given `name`.
+  ```
+  > export [-m <mode> | --mode <mode>] <name1> <name2> ... <nameN>
+  ```
+  **Flags:**
+  - `-m <mode>` or `--mode <mode>`: Export the program in the given mode `<mode>`. Available modes are:
+    - `tdcr` (default)
+    <!-- - `dot` -->
+    - `json`
+
+# Additional Information
+
+## Authors
+
+- [**Bruno Braga**](https://github.com/bfibraga), main contributor and author of this project.
+
+## License
+
+This project is licensed under the **Creative Commons Attribution 4.0 International License**.
+
+See [LICENSE](LICENSE) for more information.
+
+<!-- TODO: Add acknowledgements and references.  -->

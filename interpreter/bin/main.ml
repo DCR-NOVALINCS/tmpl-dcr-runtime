@@ -136,7 +136,7 @@ let runtime_cmd =
   and options =
     let logger_level =
       let doc = "The level of logging to be used" in
-      Arg.(value & opt string "" & info ["l"; "logger-level"] ~doc)
+      Arg.(value & opt string "" & info ["l"; "log"] ~doc)
     in
     Term.(const (fun logger_level -> {logger_level}) $ logger_level)
   and input_filename =
