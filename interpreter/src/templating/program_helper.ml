@@ -103,9 +103,9 @@ and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
   >>= fun (event_env, expr_env) -> return (event_env, expr_env, program)
 
 and preprocess_subprogram ?(expr_env = empty_env) ?(event_env = empty_env)
-    (events, insts, relations) =
+    (events, template_insts, relations) =
   preprocess_program ~expr_env ~event_env
-    {empty_program with events; template_insts= insts; relations}
+    {empty_program with events; template_insts; relations}
   >>= fun (event_env, expr_env, program) ->
   return
     ( event_env
@@ -183,15 +183,14 @@ and is_ctrl op r =
 and has_relation ?(filter = fun _ -> true) id program =
   Option.is_some @@ get_relation ~filter id program
 
-and find_all_relations ?(filter = fun _ -> true) id program =
+and find_all_relations ?(filter = fun _ _ _ -> true) program =
   let relations = program.relations in
   return
   @@ List.filter
        (fun r ->
          match r.data with
-         | ControlRelation (from, _, dest, _) ->
-             (from.data = id || dest.data = id) && filter r
-         | SpawnRelation (from, _, _) -> from.data = id && filter r )
+         | ControlRelation (from, _, dest, _) -> filter r from dest
+         | SpawnRelation (from, _, _) -> filter r from (annotate "") )
        relations
 
 and is_event_present_on_relation id relation =

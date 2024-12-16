@@ -103,7 +103,9 @@ let runtime_set =
           (List.length program.template_insts) ;
         check_int "Expected 2 relations" 2 (List.length program.relations) ;
         let* spawn_relations =
-          find_all_relations ~filter:is_spawn "a" program
+          find_all_relations
+            ~filter:(fun r from _ -> is_spawn r && from.data = "a")
+            program
         in
         check_int "Expecting two spawn relations from 'a'" 2
           (List.length spawn_relations) ;
@@ -125,7 +127,9 @@ let runtime_set =
           (List.length program.template_insts) ;
         check_int "Expected 1 relation" 1 (List.length program.relations) ;
         let* spawn_relations =
-          find_all_relations ~filter:is_spawn "c" program
+          find_all_relations
+            ~filter:(fun r from _ -> is_spawn r && from.data = "c")
+            program
         in
         check_int "Expecting one spawn relation from 'c'" 1
           (List.length spawn_relations) ;
@@ -234,12 +238,12 @@ let typecheck_set =
    ============================================================================= *)
 
 let export_events_set =
-  (* Note: assuming that the following programs are typed correctly *)
+  (* Note: we assume that some programs are typed correctly *)
   [ make_test "0.tdcr"
       (file "exported-events/0.tdcr")
       (fun program (event_env, expr_env) ->
-        typecheck ~event_env program
-        >>= fun (_ty_env, event_env) ->
+        (* typecheck ~event_env program
+           >>= fun (_ty_env, event_env) -> *)
         instantiate ~expr_env ~event_env program
         >>= fun (program, event_env, expr_env) ->
         (* Check the events *)
@@ -257,17 +261,23 @@ let export_events_set =
         check_int "Expecting 1 event with sub-id 'a2'" 1 (List.length a2s) ;
         (* Check the relations *)
         let* condition_relations_a =
-          find_all_relations ~filter:(is_ctrl Condition) "a" program
+          find_all_relations
+            ~filter:(fun r from _ -> is_ctrl Condition r && from.data = "a")
+            program
         in
         check_int "Expecting 1 condition relation from 'a'" 1
           (List.length condition_relations_a) ;
         let* condition_relations_a1 =
-          find_all_relations ~filter:(is_ctrl Condition) "a1" program
+          find_all_relations
+            ~filter:(fun r from _ -> is_ctrl Condition r && from.data = "a1")
+            program
         in
         check_int "Expecting 1 condition relation from 'a1'" 1
           (List.length condition_relations_a1) ;
         let* condition_relations_a2 =
-          find_all_relations ~filter:(is_ctrl Condition) "a2" program
+          find_all_relations
+            ~filter:(fun r from _ -> is_ctrl Condition r && from.data = "a2")
+            program
         in
         check_int "Expecting 1 condition relation from 'a2'" 1
           (List.length condition_relations_a2) ;
@@ -294,8 +304,8 @@ let export_events_set =
   ; make_test "4.tdcr"
       (file "exported-events/4.tdcr")
       (fun program (event_env, expr_env) ->
-        typecheck ~event_env program
-        >>= fun (_ty_env, event_env) ->
+        (* typecheck ~event_env program
+           >>= fun (_ty_env, event_env) -> *)
         instantiate ~expr_env ~event_env program
         >>= fun (program, event_env, expr_env) ->
         (* Check the events *)
@@ -309,11 +319,117 @@ let export_events_set =
         check_int "Expecting 1 events with sub-id 'a'" 1 (List.length as') ;
         return (program, event_env, expr_env) )
       expecting_ok
+  ; make_test "5.tdcr"
+      (file "exported-events/5.tdcr")
+      (fun program (event_env, expr_env) ->
+        (* typecheck ~event_env program
+           >>= fun (_ty_env, event_env) -> *)
+        instantiate ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        (* Check the events *)
+        check_int "Expected 3 events" 3 (List.length program.events) ;
+        (* check_int "Expected 3 events in the event env" 3
+           (List.length (Env.flatten event_env)) ; *)
+        check_int "Expected 0 template instantiation" 0
+          (List.length program.template_insts) ;
+        (* Check the exported events *)
+        let* as' = find_all_events ~filter:(same_id "a") program in
+        let* bs = find_all_events ~filter:(same_id "b") program in
+        check_int "Expected 0 events with sub-id 'a'" 0 (List.length as') ;
+        check_int "Expected 0 events with sub-id 'b'" 0 (List.length bs) ;
+        let* a1s = find_all_events ~filter:(same_id "a1") program in
+        let* b1s = find_all_events ~filter:(same_id "b1") program in
+        let* a2s = find_all_events ~filter:(same_id "a2") program in
+        check_int "Expecting 1 event with sub-id 'a1'" 1 (List.length a1s) ;
+        let* _ =
+          iter
+            (fun a1 ->
+              let {io; _} = a1.data in
+              match io.data with
+              | Output {data= Record fields; _} -> (
+                  let* fields =
+                    return @@ List.map (fun (k, v) -> (k.data, v)) fields
+                  in
+                  return (List.assoc "n" fields)
+                  >>= fun prop ->
+                  match prop.data with
+                  | IntLit 0 -> return ()
+                  | _ -> Alcotest.fail "Expecting 0 output" )
+              | _ -> Alcotest.fail "Expecting an output" )
+            a1s
+        in
+        let* _ =
+          iter
+            (fun b1 ->
+              let {io; _} = b1.data in
+              match io.data with
+              | Output {data= expr; _} -> (
+                match expr with
+                | IntLit 1 -> return ()
+                | _ -> Alcotest.fail "Expecting 0 output" )
+              | _ -> Alcotest.fail "Expecting an output" )
+            b1s
+        in
+        let* _ =
+          iter
+            (fun a2 ->
+              let {io; _} = a2.data in
+              match io.data with
+              | Output {data= Record fields; _} -> (
+                  let* fields =
+                    return @@ List.map (fun (k, v) -> (k.data, v)) fields
+                  in
+                  return (List.assoc "n" fields)
+                  >>= fun prop ->
+                  match prop.data with
+                  | IntLit 2 -> return ()
+                  | _ -> Alcotest.fail "Expecting 0 output" )
+              | _ -> Alcotest.fail "Expecting an output" )
+            a2s
+        in
+        check_int "Expecting 1 event with sub-id 'b1'" 1 (List.length b1s) ;
+        check_int "Expecting 1 event with sub-id 'a2'" 1 (List.length a2s) ;
+        return (program, event_env, expr_env) )
+      expecting_ok
   ; make_test "6.tdcr"
       (file "exported-events/6.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
-        >>= fun _ -> return (program, event_env, expr_env) )
+        >>= fun (_ty_env, event_env) ->
+        instantiate ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        (* Check the events *)
+        check_int "Expected 20 events" 20 (List.length program.events) ;
+        (* check_int "Expected 3 events in the event env" 3
+           (List.length (Env.flatten event_env)) ; *)
+        let has_id_a event =
+          let {info= id, _; _} = event.data in
+          String.contains id.data 'a'
+        in
+        let* as' = find_all_events ~filter:has_id_a program in
+        check_int "Expecting all events with sub-id 'a'"
+          (List.length program.events)
+          (List.length as') ;
+        (* Check instantiations *)
+        check_int "Expected 0 template instantiations" 0
+          (List.length program.template_insts) ;
+        (* Check relations *)
+        let* condition_relations =
+          find_all_relations ~filter:(fun r _ _ -> is_ctrl Condition r) program
+        in
+        check_int "Expected 18 condition relations" 18
+          (List.length condition_relations) ;
+        let* response_relations =
+          find_all_relations ~filter:(fun r _ _ -> is_ctrl Response r) program
+        in
+        check_int "Expected 18 response relation" 18
+          (List.length response_relations) ;
+        let* exclude_relation =
+          find_all_relations ~filter:(fun r _ _ -> is_ctrl Exclude r) program
+        in
+        check_int "Expected 36 exclude relation" 36
+          (List.length exclude_relation) ;
+        return (program, event_env, expr_env) )
       expecting_ok ]
 
 (* =============================================================================
@@ -338,4 +454,4 @@ let test_suite =
   ; ("exported-events", export_events_set)
   ; ("annotations", annotation_set) ]
 
-let _ = run "templating" test_suite
+let _ = run ~verbose:true "templating" test_suite

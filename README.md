@@ -1,6 +1,6 @@
 
 <div align="center">
-  <h1>t-dcr</h1>
+  <h1>tmpl-dcr-runtime</h1>
   <p>
     Templates in Dynamic Conditional Response Graphs.
   </p>
@@ -20,6 +20,7 @@
 
 - [Table of Contents](#table-of-contents)
 - [About](#about)
+  - [Features](#features)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
@@ -62,6 +63,9 @@ i -->> {
 >[!NOTE] 
 > This syntax may change in the future, so be aware of that. 😅
 
+
+## Features
+
 Here is a list of the features that are available in this project.
 
 | Features                     | Done? |
@@ -73,8 +77,6 @@ Here is a list of the features that are available in this project.
 | Export back to `.tdcr`       | ✅     |
 | Export to `.dot`             | ❌     |
 | Reactive data values         | ❌     |
-
-Any feature that is not checked is not implemented yet, but it is planned to be implemented in the future.
 
 If you have any suggestions or want to contribute to this project, feel free to open an issue or a pull request. 🙂
 
