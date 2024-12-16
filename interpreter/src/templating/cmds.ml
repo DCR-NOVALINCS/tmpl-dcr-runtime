@@ -112,9 +112,8 @@ and execute_term =
       ; expr_env
       ; output=
           Printf.sprintf "Executed event %s with expression %s\n"
-            (CString.colorize ~color:Yellow event_id)
-            (CString.colorize ~color:Yellow
-               (Unparser.PlainUnparser.unparse_expr expr) ) }
+            (keyword event_id)
+            (keyword (Unparser.PlainUnparser.unparse_expr expr)) }
   in
   Term.(const execute_cmd $ event_id $ expr)
 
@@ -170,8 +169,7 @@ and export_term =
       { state with
         output=
           Printf.sprintf "Exported program to file(s): %s"
-            (String.concat ", "
-               (List.map (CString.colorize ~color:Yellow) filenames) ) }
+            (String.concat ", " (List.map keyword filenames)) }
   in
   Term.(const export_cmd $ filenames $ modes)
 

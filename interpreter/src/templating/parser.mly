@@ -153,6 +153,9 @@ plain_arg_pair:
   | id=id; ARROW; event_id=id { (id, EventArg event_id) }
   | id=id; ASSIGN; expr=expr { (id, ExprArg expr) }
 
+template_annotations: 
+  | annotations = separated_list(PIPE, plain_template_annotation) { annotations }
+
 // template annotations 
 plain_template_annotation:
   // | WHEN; expr = expr                                                           { When(expr) }
@@ -349,68 +352,83 @@ plain_type_expr:
 
 expr: mark_loc_ty(plain_expr) { $1 }
 plain_expr:
-|  plain_orop                                       { $1 }
+| plain_range                                                                         { $1 }
+| plain_orop                                                                    { $1 }
 ;
+
+// range: mark_loc_ty(plain_range) { $1 }
+plain_range:
+| RANGE; LPAR; start_expr = arith; COMMA; end_expr = arith; RPAR;                    { Range(start_expr, end_expr) }
 
 orop: mark_loc_ty(plain_orop) { $1 }
 plain_orop:
-| orop OR andop                                     { BinaryOp($1,$3, Or) }
-| plain_andop                                       { $1 }
+| orop OR andop                                                                 { BinaryOp($1, $3, Or) }
+| plain_andop                                                                   { $1 }
 ;
 
 andop: mark_loc_ty(plain_andop) { $1 }
 plain_andop:
-| andop AND compareop                               { BinaryOp($1,$3,And) }
-| plain_compareop                                   { $1 }
+| andop AND compareop                                                           { BinaryOp($1, $3, And) }
+| plain_compareop                                                               { $1 }
 ;
 
 compareop: mark_loc_ty(plain_compareop) { $1 }
 plain_compareop:
-| compareop EQ arith                                                            { BinaryOp($1,$3,Eq) }
-| compareop NEQ arith                                                           { BinaryOp($1,$3,NotEq) }
-| compareop GREATERTHAN arith                                                   { BinaryOp($1,$3,GreaterThan) }
-| compareop GREATEREQTHAN arith                                                 { BinaryOp($1,$3,GreaterOrEqual) }
-| compareop LESSTHAN arith                                                      { BinaryOp($1,$3,LessThan) }
-| compareop LESSEQTHAN arith                                                    { BinaryOp($1,$3,LessOrEqual) }
+| compareop EQ arith                                                            { BinaryOp($1, $3, Eq) }
+| compareop NEQ arith                                                           { BinaryOp($1, $3, NotEq) }
+| compareop GREATERTHAN arith                                                   { BinaryOp($1, $3, GreaterThan) }
+| compareop GREATEREQTHAN arith                                                 { BinaryOp($1, $3, GreaterOrEqual) }
+| compareop LESSTHAN arith                                                      { BinaryOp($1, $3, LessThan) }
+| compareop LESSEQTHAN arith                                                    { BinaryOp($1, $3, LessOrEqual) }
 | plain_arith                                                                   { $1 } 
 ;
 
 arith: mark_loc_ty(plain_arith) { $1 }
 plain_arith: 
-| arith PLUS term                                                               { BinaryOp($1,$3,Add) }
-| arith MINUS term                                                              { BinaryOp($1,$3,Sub) }
+| arith PLUS term                                                               { BinaryOp($1, $3, Add) }
+| arith MINUS term                                                              { BinaryOp($1, $3, Sub) }
 | plain_term                                                                    { $1          }
 ;
 
 term: mark_loc_ty(plain_term) { $1 }
 plain_term: 
-| term MULT fact                                                                { BinaryOp($1,$3,Mult) }
-| term DIV fact                                                                 { BinaryOp($1,$3,Div) }
+| term MULT fact                                                                { BinaryOp($1, $3, Mult) }
+| term DIV fact                                                                 { BinaryOp($1, $3, Div) }
 | plain_fact                                                                    { $1 }
 ;
 
 fact: mark_loc_ty(plain_fact) { $1 }
 plain_fact:
+| plain_property_deref                                                          { $1 }
 | TRUE                                                                          { True }
 | FALSE                                                                         { False }
-| INT                                                                           { IntLit($1) }
+| plain_integer                                                                 { IntLit($1) }
 | STR                                                                           { StringLit($1) }
 | id                                                                            { Identifier($1) } 
 | TRIGGER                                                                       { Trigger }
-| v = plain_record                                                              { Record(v) }
-| expr = preceded(NEG, fact)                                                    { UnaryOp(expr,Negation) }
-| MINUS fact                                                                    { UnaryOp($2, Minus) }
-| expr = fact; PROP_DEREF; prop = id;                                           { PropDeref(expr, prop) }
+| plain_record                                                                  { Record($1) }
+| NEG fact                                                                      { UnaryOp($2, Negation) }
+// | MINUS fact                                                                    { UnaryOp($2, Minus) }
+// | expr = fact; PROP_DEREF; prop = id;                                           { PropDeref(expr, prop) }
 | expr = delimited(LPAR, expr, RPAR)                                            { Parenthesized(expr) }
 | list = delimited(LBRACKET, separated_list(COMMA, expr), RBRACKET)             { List(list) }
-| RANGE; LPAR; start_expr = expr; COMMA; end_expr = expr; RPAR                  { Range(start_expr, end_expr) }
+// | RANGE; LPAR; start_expr = expr; COMMA; end_expr = expr; RPAR                  { Range(start_expr, end_expr) }
 ;
+
+property_deref: mark_loc_ty(plain_property_deref) { $1 }
+plain_property_deref:
+| r=fact PROP_DEREF p=id                                                       { PropDeref(r, p) }
 
 bool: mark_loc_ty(plain_bool) { $1 }
 plain_bool:
   | TRUE        { true }
   | FALSE       { false }
 ;
+
+integer: mark_loc_ty(plain_integer) { $1 }
+plain_integer:
+| INT                                                                           { $1 }
+| MINUS INT                                                                     { -$2 }
 
 
 // ============== records

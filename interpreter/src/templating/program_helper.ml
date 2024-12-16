@@ -26,20 +26,6 @@ let rec update_event event program =
   in
   {program with events}
 
-and update_event_value event expr_env =
-  (* let {marking; io; _} = event.data in *)
-  (* ( match io.data with
-     | Input ty ->
-         eval_expr !(marking.data.value) expr_env
-         >>= fun value -> return ({io with data= Input ty}, value)
-     | Output expr ->
-         eval_expr expr expr_env
-         >>= fun value -> return ({io with data= Output value}, value) ) *)
-  update_event_io event expr_env
-(* >>= fun (io, value) ->
-   set_marking ~value event *)
-(* >>= fun event -> return {event with data= {event.data with io}} *)
-
 and set_marking ?included ?pending ?executed ?value event =
   let {marking; _} = event.data in
   let {included= i; pending= p; executed= e; value= v} = marking.data in
@@ -54,14 +40,14 @@ and set_marking ?included ?pending ?executed ?value event =
     { event with
       data= {event.data with marking= {marking with data= new_marking}} }
 
-and update_event_io event expr_env =
+and update_event_io ?(eval = eval_expr) event expr_env =
   let {marking; io; _} = event.data in
   match io.data with
   | Input _ ->
-      eval_expr !(marking.data.value) expr_env
+      eval !(marking.data.value) expr_env
       >>= fun value -> set_marking ~value event
   | Output expr ->
-      eval_expr expr expr_env
+      eval expr expr_env
       >>= fun value ->
       set_marking ~value event
       >>= fun event ->

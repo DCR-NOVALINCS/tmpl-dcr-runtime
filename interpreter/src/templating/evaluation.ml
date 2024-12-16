@@ -56,7 +56,7 @@ let rec eval_expr expr env =
           | _ -> property_not_found p v )
       | _ ->
           should_not_happen ~module_path:"evaluation.ml"
-            ( "Tried to dereference a non-record value"
+            ( "Tried to dereference a non-record value "
             ^ Unparser.PlainUnparser.unparse_expr v ) )
   | List elems ->
       map (fun elem -> eval_expr elem env) elems
@@ -284,6 +284,12 @@ and reference_of_expr expr =
 
 (* See more: https://link.springer.com/chapter/10.1007/3-540-11980-9_13 *)
 and partial_eval_expr expr expr_env =
+  let partial_eval_record_fields fields expr_env =
+    map
+      (fun (name, expr) ->
+        partial_eval_expr expr expr_env >>= fun v -> return (name, v) )
+      fields
+  in
   match expr.data with
   | Parenthesized e ->
       partial_eval_expr e expr_env
@@ -297,5 +303,30 @@ and partial_eval_expr expr expr_env =
       partial_eval_expr e expr_env
       >>= fun v -> return {expr with data= UnaryOp (v, op)}
   | Identifier id -> find_id id expr_env
+  | Trigger -> find_id {expr with data= trigger_id} expr_env
+  | PropDeref (e, p) ->
+      partial_eval_expr e expr_env
+      >>= fun v -> return {expr with data= PropDeref (v, p)}
+  | List elems ->
+      map (fun elem -> partial_eval_expr elem expr_env) elems
+      >>| fun elems -> {expr with data= List elems}
+  | Range (s, e) ->
+      partial_eval_expr s expr_env
+      >>= fun start_value ->
+      partial_eval_expr e expr_env
+      >>= fun end_value ->
+      return {expr with data= Range (start_value, end_value)}
+  | Record fields ->
+      partial_eval_record_fields fields expr_env
+      >>| fun fields -> {expr with data= Record fields}
+  | EventRef event_ref ->
+      let event = !event_ref in
+      let {io; _} = event.data in
+      ( match io.data with
+      | Output expr -> partial_eval_expr expr expr_env
+      | Input _ -> value_from_input_event event )
+      >>= fun value ->
+      let fields = [(annotate "value", value)] in
+      return {expr with data= Record fields}
   (* TODO: Put more cases *)
   | _ -> return expr

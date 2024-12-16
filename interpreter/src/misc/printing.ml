@@ -151,6 +151,18 @@ struct
     in
     Printf.sprintf "%s%s%s%s%s" color_start format_start text color_end
       format_end
+
+  (* let bold text = colorize ~format:F.Bold text
+
+     let underline text = colorize ~format:F.Underline text
+
+     let italic text = colorize ~format:F.Italic text
+
+     let strikethrough text = colorize ~format:F.StrikeThrough text
+
+     let inverse text = colorize ~format:F.Inverse text
+
+     let hidden text = colorize ~format:F.Hidden text *)
 end
 
 module NoColoredString : ColoredString = struct
@@ -326,3 +338,5 @@ module CPrinter = MakePrinter (ASNIColor) (ASNIFormat)
 module Printer = MakePrinter (NoColor) (NoFormat)
 module CString = ASNIString (ASNIColor) (ASNIFormat)
 module Logger = MakeLogger (ASNIColor) (ASNIFormat)
+
+let keyword = CString.colorize ~color:Magenta ~format:Bold

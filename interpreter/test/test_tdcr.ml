@@ -216,10 +216,13 @@ let typecheck_set =
   ; make_test "2.tdcr" (file "typechecker/2.tdcr") fun_to_test expecting_ok
   ; make_test "3.tdcr" (file "typechecker/3.tdcr") fun_to_test expecting_error
   ; make_test "4.tdcr" (file "typechecker/4.tdcr") fun_to_test expecting_error
-    (* ; make_test "5.tdcr" (file "typechecker/5.tdcr") fun_to_test expecting_ok *)
+  ; make_test "5.tdcr" (file "typechecker/5.tdcr") fun_to_test expecting_ok
   ; make_test "6.tdcr" (file "typechecker/6.tdcr") fun_to_test expecting_error
-    (* ; make_test "7.tdcr" (file "typechecker/7.tdcr") fun_to_test expecting_ok *)
-    (* ; make_test "8.tdcr" (file "typechecker/8.tdcr") fun_to_test expecting_ok  *)
+  ; make_test "7.tdcr" (file "typechecker/7.tdcr") fun_to_test expecting_ok
+  ; make_test "8.tdcr" (file "typechecker/8.tdcr") fun_to_test expecting_ok
+  ; make_test "9.tdcr" (file "typechecker/9.tdcr") fun_to_test expecting_ok
+  ; make_test "10.tdcr" (file "typechecker/10.tdcr") fun_to_test expecting_ok
+  ; make_test "11.tdcr" (file "typechecker/11.tdcr") fun_to_test expecting_error
   ]
 
 (* =============================================================================

@@ -20,10 +20,7 @@ let property_not_found ?(errors = []) p e =
   fail
     ( { location= e.loc
       ; message=
-          "Property "
-          ^ CString.colorize ~color:Yellow p.data
-          ^ " not found in "
-          ^ CString.colorize ~color:Yellow
+          "Property " ^ keyword p.data ^ " not found in " ^ keyword
           @@ unparse_expr e
       ; hint=
           Some "Ensure the property is declared and in scope. Check for typos."
@@ -34,10 +31,7 @@ let rec property_not_found_type ?(errors = []) ?(loc = Nowhere) p ty =
   fail
     ( { location= loc
       ; message=
-          "Property "
-          ^ CString.colorize ~color:Yellow p.data
-          ^ " not found in "
-          ^ CString.colorize ~color:Yellow
+          "Property " ^ keyword p.data ^ " not found in " ^ keyword
           @@ unparse_ty ty
       ; hint=
           Some "Ensure the property is declared and in scope. Check for typos."
@@ -47,8 +41,7 @@ let rec property_not_found_type ?(errors = []) ?(loc = Nowhere) p ty =
 and id_not_found ?(errors = []) id =
   fail
     ( { location= id.loc
-      ; message=
-          "Identifier " ^ CString.colorize ~color:Yellow id.data ^ " not found"
+      ; message= "Identifier " ^ keyword id.data ^ " not found"
       ; hint=
           Some
             "Ensure the identifier is declared and in scope. Check for typos."
@@ -57,16 +50,12 @@ and id_not_found ?(errors = []) id =
 
 and tmpl_not_found ?(errors = []) ?(available = []) id =
   let available_tmpls =
-    List.map
-      (fun tmpl_id ->
-        Printf.sprintf " - %s" (CString.colorize ~color:Yellow tmpl_id) )
-      available
+    List.map (fun tmpl_id -> Printf.sprintf " - %s" (keyword tmpl_id)) available
     |> String.concat "\n"
   in
   fail
     ( { location= id.loc
-      ; message=
-          "Template " ^ CString.colorize ~color:Yellow id.data ^ " not found"
+      ; message= "Template " ^ keyword id.data ^ " not found"
       ; hint=
           ( match available with
           | [] -> Some "Check for typos in the template name."
@@ -78,45 +67,36 @@ and tmpl_not_found ?(errors = []) ?(available = []) id =
 and duplicate_tmpl ?(errors = []) id =
   fail
     ( { location= id.loc
-      ; message= "Duplicate template " ^ CString.colorize ~color:Yellow id.data
+      ; message= "Duplicate template " ^ keyword id.data
       ; hint= Some "Ensure the template is not declared more than once." }
     :: errors )
 
-and duplicate_event ?(errors = []) id event =
+and duplicate_event ?(errors = []) id =
   let line =
-    match event.loc with Location (start, _, _) -> start.pos_lnum | _ -> 0
+    match id.loc with Location (start, _, _) -> start.pos_lnum | _ -> 0
   in
   fail
     ( { location= id.loc
-      ; message=
-          Printf.sprintf "Duplicate event %s"
-            (CString.colorize ~color:Yellow id.data)
+      ; message= Printf.sprintf "Duplicate event %s" (keyword id.data)
       ; hint=
           Some
             (Printf.sprintf "Event %s is already declared at line %s"
-               (CString.colorize ~color:Yellow id.data)
-               (CString.colorize ~color:Yellow (string_of_int line)) ) }
+               (keyword id.data)
+               (keyword (string_of_int line)) ) }
     :: errors )
 
 and file_not_exists ?(errors = []) filename =
   fail
     ( { location= Nowhere
-      ; message=
-          Printf.sprintf "File %s does not exist"
-            (CString.colorize ~color:Yellow filename)
+      ; message= Printf.sprintf "File %s does not exist" (keyword filename)
       ; hint= None }
     :: errors )
 
 and invalid_file_extension ?(errors = []) ~supported ?(got = "") () =
   fail
     ( { location= Nowhere
-      ; message=
-          Printf.sprintf "Invalid file extension %s"
-            (CString.colorize ~color:Yellow got)
-      ; hint=
-          Some
-            ( "Supported extensions are "
-            ^ CString.colorize ~color:Yellow supported ) }
+      ; message= Printf.sprintf "Invalid file extension %s" (keyword got)
+      ; hint= Some ("Supported extensions are " ^ keyword supported) }
     :: errors )
 
 and excessive_exported_events ?(errors = []) ?(loc = Nowhere) x events =
@@ -145,13 +125,12 @@ and is_not_type ?(errors = []) expected expr =
   fail
     ( { location= expr.loc
       ; message=
-          Printf.sprintf "Expected type %s, but got %s"
-            (CString.colorize ~color:Yellow expected)
-            (CString.colorize ~color:Yellow @@ unparse_expr expr)
+          Printf.sprintf "Expected type %s, but got %s" (keyword expected)
+            (keyword @@ unparse_expr expr)
       ; hint=
           Some
             ( "Verify the type of the expression "
-            ^ (CString.colorize ~color:Yellow @@ unparse_expr expr)
+            ^ (keyword @@ unparse_expr expr)
             ^ ". Check for type mismatches or any typos." ) }
     :: errors )
 
@@ -160,8 +139,8 @@ and invalid_annotation_value ?(errors = []) value ty =
     ( { location= value.loc
       ; message=
           Printf.sprintf "Invalid annotation value %s for type %s"
-            (CString.colorize ~color:Yellow @@ unparse_expr value)
-            (CString.colorize ~color:Yellow @@ unparse_ty ty)
+            (keyword @@ unparse_expr value)
+            (keyword @@ unparse_ty ty)
       ; hint=
           Some
             "Verify the annotation value matches the expected type. Check for type mismatches or any typos."
@@ -187,9 +166,8 @@ and invalid_number_of_args ?(errors = []) ?(loc = Nowhere)
   let string_missing =
     missing_params
     |> List.map (fun (param, ty) ->
-           Printf.sprintf "%s of type %s"
-             (CString.colorize ~color:Yellow param.data)
-             (CString.colorize ~color:Yellow @@ unparse_ty ty) )
+           Printf.sprintf "%s of type %s" (keyword param.data)
+             (keyword @@ unparse_ty ty) )
     |> String.concat ", "
   in
   fail
@@ -207,10 +185,8 @@ and invalid_number_of_exported_events ?(errors = []) ?(loc = Nowhere) xs
       ; message=
           Printf.sprintf
             "Invalid number of exported events. Expected %s, but got %s"
-            (CString.colorize ~color:Yellow
-               (Printf.sprintf "%d" @@ List.length exported) )
-            (CString.colorize ~color:Yellow
-               (Printf.sprintf "%d" @@ List.length xs) )
+            (keyword (Printf.sprintf "%d" @@ List.length exported))
+            (keyword (Printf.sprintf "%d" @@ List.length xs))
       ; hint=
           Some
             "Ensure the number of exported events matches the number of events in the program."
@@ -223,7 +199,7 @@ and invalid_guard_value ?(errors = []) value =
       ; message=
           Printf.sprintf
             "Invalid guard value. Expecting boolean expression, got %s"
-            (CString.colorize ~color:Yellow @@ unparse_expr value)
+            (keyword @@ unparse_expr value)
       ; hint= Some "Ensure the guard value is a boolean expression." }
     :: errors )
 
@@ -233,7 +209,7 @@ and value_from_input_event ?(errors = []) event =
     ( { location= event.loc
       ; message=
           Printf.sprintf "Value from input event %s is not allowed"
-            (CString.colorize ~color:Yellow id.data)
+            (keyword id.data)
       ; hint= Some "Input events cannot have values. Check the event type." }
     :: errors )
 
@@ -244,18 +220,14 @@ and value_from_input_event ?(errors = []) event =
 and event_not_found ?(errors = []) ?(loc = Nowhere) id =
   fail
     ( { location= loc
-      ; message=
-          Printf.sprintf "Event %s not found"
-            (CString.colorize ~color:Yellow id)
+      ; message= Printf.sprintf "Event %s not found" (keyword id)
       ; hint= Some "Ensure the event is declared and in scope. Check for typos."
       }
     :: errors )
 
 and events_not_found ?(errors = []) ?(loc = Nowhere) ids =
   let string_ids =
-    ids
-    |> List.map (fun id -> CString.colorize ~color:Yellow id.data)
-    |> String.concat ", "
+    ids |> List.map (fun id -> keyword id.data) |> String.concat ", "
   in
   fail
     ( { location= loc
@@ -269,9 +241,7 @@ and event_not_enabled ?(errors = []) event =
   let id, _ = event.data.info in
   fail
     ( { location= event.loc
-      ; message=
-          Printf.sprintf "Event %s is not enabled"
-            (CString.colorize ~color:Yellow id.data)
+      ; message= Printf.sprintf "Event %s is not enabled" (keyword id.data)
       ; hint=
           Some
             "Check any relations or conditions that might be blocking this event."
@@ -293,8 +263,7 @@ and invalid_command ?(errors = []) ?nearest ?(distance = -1) cmd =
   fail
     ( { location= Nowhere
       ; message=
-          Printf.sprintf "Invalid command %s"
-            (String.concat " " cmd |> CString.colorize ~color:Yellow)
+          Printf.sprintf "Invalid command %s" (String.concat " " cmd |> keyword)
       ; hint=
           Some
             ( guess ^ " Type "
@@ -375,9 +344,7 @@ and something_went_wrong ?(loc = Nowhere) message = fixme ~loc message
 and invalid_logger_level level =
   fail
     [ { location= Nowhere
-      ; message=
-          Printf.sprintf "Invalid logger level %s"
-            (CString.colorize ~color:Yellow level)
+      ; message= Printf.sprintf "Invalid logger level %s" (keyword level)
       ; hint= None } ]
 
 and todo ?(loc = Nowhere) message =
@@ -389,8 +356,7 @@ and todo ?(loc = Nowhere) message =
 and fixme ?(loc = Nowhere) message =
   fail
     [ { location= loc
-      ; message=
-          CString.colorize ~color:Yellow ~format:Bold "[fixme] " ^ message
+      ; message= CString.colorize ~color:Red ~format:Bold "[fixme] " ^ message
       ; hint= None } ]
 
 (* ┌──────────────────────────────────────────────────────────────────────────┐
@@ -400,14 +366,11 @@ and fixme ?(loc = Nowhere) message =
 and type_mismatch ?(errors = []) ?(loc = Nowhere) expected_tys got_tys =
   (* let string_expected = unparse_ty expected in *)
   let rec string_tys = function
-    | [] -> CString.colorize ~color:Yellow "?"
-    | [ty1] -> CString.colorize ~color:Yellow (unparse_ty ty1)
+    | [] -> keyword "?"
+    | [ty1] -> keyword (unparse_ty ty1)
     | ty1 :: [last] ->
-        CString.colorize ~color:Yellow (unparse_ty ty1)
-        ^ " and "
-        ^ CString.colorize ~color:Yellow (unparse_ty last)
-    | ty :: tys ->
-        CString.colorize ~color:Yellow (unparse_ty ty) ^ ", " ^ string_tys tys
+        keyword (unparse_ty ty1) ^ " and " ^ keyword (unparse_ty last)
+    | ty :: tys -> keyword (unparse_ty ty) ^ ", " ^ string_tys tys
   in
   fail
     ( { location= loc
@@ -423,7 +386,7 @@ and type_mismatch ?(errors = []) ?(loc = Nowhere) expected_tys got_tys =
 and event_type_mismatch ?(errors = []) ?(loc = Nowhere) ?(available = [])
     expected_ty got_ty =
   let rec string_tys = function
-    | [] -> CString.colorize ~color:Yellow "?"
+    | [] -> keyword "?"
     | [(event_label, event_type, ty)] ->
         string_of_event_type_pair (event_label, event_type, ty)
     | (event_label, event_type, ty)
@@ -437,18 +400,17 @@ and event_type_mismatch ?(errors = []) ?(loc = Nowhere) ?(available = [])
           (string_of_event_type_pair (event_label, event_type, ty))
           (string_tys tys)
   and string_of_event_type_pair (event_label, event_type, ty) =
-    Printf.sprintf "%s%s"
-      (CString.colorize ~color:Yellow event_label)
-      (CString.colorize ~color:Yellow
+    Printf.sprintf "%s%s" (keyword event_label)
+      (keyword
          (show_event_type' (Unparser.PlainUnparser.unparse_ty ty) event_type) )
-    (* (CString.colorize ~color:Yellow ) *)
+    (* (keyword ) *)
   in
   fail
     ( { location= loc
       ; message=
           Printf.sprintf "Event type mismatch. Expected %s, but got %s"
-            (CString.colorize ~color:Yellow @@ string_tys expected_ty)
-            (CString.colorize ~color:Yellow @@ string_tys got_ty)
+            (keyword @@ string_tys expected_ty)
+            (keyword @@ string_tys got_ty)
       ; hint=
           Some
             (Printf.sprintf
@@ -466,9 +428,7 @@ and event_type_mismatch ?(errors = []) ?(loc = Nowhere) ?(available = [])
 and missing_label ?(errors = []) ?(available_labels = []) label =
   fail
     ( { location= label.loc
-      ; message=
-          Printf.sprintf "Missing label %s"
-            (CString.colorize ~color:Yellow label.data)
+      ; message= Printf.sprintf "Missing label %s" (keyword label.data)
       ; hint=
           Some
             ( "Ensure the label is declared and in scope. Check for typos."
@@ -478,9 +438,7 @@ and missing_label ?(errors = []) ?(available_labels = []) label =
             | _ ->
                 let available_labels_str =
                   List.map
-                    (fun label ->
-                      Printf.sprintf " - %s"
-                        (CString.colorize ~color:Yellow label.data) )
+                    (fun label -> Printf.sprintf " - %s" (keyword label.data))
                     available_labels
                   |> String.concat "\n"
                 in
@@ -493,13 +451,20 @@ and missing_label ?(errors = []) ?(available_labels = []) label =
 
 let get_line_content filepath line =
   let file = open_in filepath in
+  let rec trim_prefix str indent =
+    match (str, indent) with
+    | "", i -> ("", i)
+    | str, i when str.[0] = ' ' ->
+        trim_prefix (String.sub str 1 (String.length str - 1)) (i + 1)
+    | str -> str
+  in
   let rec read_line n =
     match input_line file with
     | content when n = line -> content
     | _ -> read_line (n + 1)
   in
   let line_content = read_line 1 in
-  close_in file ; line_content
+  close_in file ; trim_prefix line_content 0
 
 let extract_location_info loc =
   match loc with
@@ -516,25 +481,48 @@ let pretty_string_error detailed_error =
   let {location; message; hint} = detailed_error in
   let message_header =
     CString.colorize ~format:Bold ~color:Red "error: " ^ message ^ "\n"
+  and blue_text = CString.colorize ~color:Blue
+  and highlight_section (s, e) ~fmt text =
+    let prefix = String.sub text 0 s in
+    let highlight = String.sub text s (e - s) in
+    let suffix = String.sub text e (String.length text - e) in
+    Printf.sprintf "%s%s%s" prefix (fmt highlight) suffix
   in
   let message_file_section =
     let filepath, line, start_char, end_char = extract_location_info location in
     let line_size = String.length (string_of_int line) in
     let line_margin = String.make line_size ' ' in
-    let marker =
+    let marker ?(indent = 0) _ =
       String.concat ""
-        [ String.make start_char ' '
+        [ String.make (start_char + indent) ' '
         ; CString.colorize ~color:Red ~format:Bold
             (String.make (end_char - start_char) error_pointer) ]
     in
     match filepath with
     | None -> ""
     | Some filepath when Sys.file_exists filepath ->
-        let line_content = get_line_content filepath line in
-        Printf.sprintf " %s:%d:%d\n%s │\n%d │ %s\n%s │ %s\n" filepath line
-          (start_char + 1) line_margin line line_content line_margin marker
+        let file_header =
+          CString.colorize ~format:Bold
+          @@ Printf.sprintf "%s:%d:%d" filepath line (start_char + 1)
+        and file_gutter ?number content =
+          let number_str =
+            if Option.is_none number then line_margin
+            else Option.get number |> string_of_int
+          in
+          blue_text ~format:Bold (Printf.sprintf " %s | " number_str) ^ content
+        in
+        let line_content, indent = get_line_content filepath line in
+        let line_content =
+          highlight_section (start_char, end_char)
+            ~fmt:(CString.colorize ~format:Bold)
+            line_content
+        in
+        Printf.sprintf "%s\n%s\n%s\n%s\n\n" file_header (file_gutter "")
+          (file_gutter ~number:line line_content)
+          (file_gutter (marker ~indent:(-indent) ()))
     | Some filepath ->
-        Printf.sprintf "at %s:%d:%d\n" filepath line (start_char + 1)
+        blue_text
+        @@ Printf.sprintf "at %s:%d:%d\n\n" filepath line (start_char + 1)
   in
   let message_hint =
     match hint with
@@ -542,7 +530,7 @@ let pretty_string_error detailed_error =
     | Some message ->
         CString.colorize ~format:Bold ~color:Cyan "hint: " ^ message ^ "\n"
   in
-  message_header ^ message_file_section ^ message_hint
+  Printf.sprintf "%s%s%s" message_header message_file_section message_hint
 
 let pretty_string_errors errors =
   List.map pretty_string_error errors |> String.concat "\n"
@@ -551,35 +539,5 @@ let pretty_string_errors errors =
 let print_error detailed_error =
   let result = pretty_string_error detailed_error in
   print_endline result
-(* let {location; message; hint} = detailed_error in
-   let message_header = CPrinter.eprint "error: " ; CPrinter.cprintln message in
-   let message_file_section =
-     let filepath, line, start_char, end_char = extract_location_info location in
-     let line_size = String.length (string_of_int line) in
-     let line_margin = String.make line_size ' ' in
-     let marker =
-       String.concat ""
-         [ String.make start_char ' '
-         ; CString.colorize ~color:Red
-             (String.make (end_char - start_char) error_pointer) ]
-     in
-     match filepath with
-     | None -> ()
-     | Some filepath ->
-         let line_content = get_line_content filepath line in
-         CPrinter.cprintf " %s:%d:%d\n" filepath line (start_char + 1) ;
-         CPrinter.cprintf " %s│\n" line_margin ;
-         CPrinter.cprintf "%d │ %s\n" line line_content ;
-         CPrinter.cprintf " %s│ %s" line_margin marker ;
-         CPrinter.cprintln ""
-   in
-   let message_hint =
-     match hint with
-     | None -> ()
-     | Some message ->
-         CPrinter.cprint ~color:Cyan "hint: " ;
-         CPrinter.cprintln message
-   in
-   message_header ; message_file_section ; message_hint *)
 
 let print_errors errors = List.iter print_error errors

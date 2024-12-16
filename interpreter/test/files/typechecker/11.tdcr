@@ -1,0 +1,8 @@
+tmpl f(): B {
+    (a: A)[?: Number]
+} => a
+
+(b: B)[1]
+f() => a
+
+a -[a.value > 0]->% b

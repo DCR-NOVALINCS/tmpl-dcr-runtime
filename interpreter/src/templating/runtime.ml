@@ -108,9 +108,6 @@ and propagate_effect relation event (event_env, expr_env) program =
             ( bind trigger_id event event_env
             , bind trigger_id (event_as_expr event) expr_env )
           >>= fun (event_env, expr_env) ->
-          (* Update event values *)
-          map (fun e -> update_event_value e expr_env) spawn_events
-          >>= fun spawn_events ->
           (* Evaluate annotations from spawned elements *)
           let open Instantiation in
           (* evaluate_annotations_of_subprogram
@@ -134,10 +131,9 @@ and propagate_effect relation event (event_env, expr_env) program =
           in
           fresh_event_ids spawn_events spawn_relations
           >>= fun (spawn_events, spawn_relations) ->
-          (* Logger.debug "Instantiated events from spawn:" ; Logger.debug @@
-             Unparser.PlainUnparser.unparse_events inst_spawn_events ;
-             Logger.debug "Instantiated relations from spawn:" ; Logger.debug @@
-             Unparser.PlainUnparser.unparse_relations inst_spawn_relations ; *)
+          (* Update event values *)
+          map (fun e -> update_event_io ~eval:eval_expr e expr_env) spawn_events
+          >>= fun spawn_events ->
           (* Put it all together *)
           return
             ( { program with

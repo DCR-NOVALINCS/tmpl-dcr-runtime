@@ -15,12 +15,12 @@ open Input
    Aux functions
    ============================================================================= *)
 
-let rec start_header =
-  "To get started, type "
-  ^ CString.colorize ~color:Green "help"
-  ^ " to see the available commands.\n"
+(* let rec start_header =
+   "To get started, type "
+   ^ CString.colorize ~color:Green "help"
+   ^ " to see the available commands.\n" *)
 
-and get_file_extension filename =
+let rec get_file_extension filename =
   let parts = String.split_on_char '.' filename in
   List.nth parts (List.length parts - 1)
 
@@ -119,9 +119,7 @@ let runtime options filename =
     ^ string_of_env
         (fun e -> Unparser.PlainUnparser.unparse_events [e])
         event_env ;
-    let runtime_state =
-      mk_runtime_state ~ty_env ~expr_env ~event_env ~output:start_header program
-    in
+    let runtime_state = mk_runtime_state ~ty_env ~expr_env ~event_env program in
     prompt runtime_state
   with Duplicate_binding id ->
     Logger.error @@ "Duplicate binding: " ^ id ;

@@ -9,4 +9,4 @@ tmpl g(n: Number): A, B {
 } => a, b
 
 (a: A)[?: Number]
-g(n = 0, e -> a) => a, b
+g(n = 0, e -> a) => a2, b

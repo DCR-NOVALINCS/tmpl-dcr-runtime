@@ -10,9 +10,10 @@ open Program_helper
    Modules & Types
    ============================================================================= *)
 
-let rec replace_event event expr_env = update_event_value event expr_env
+let rec replace_event event expr_env =
+  update_event_io ~eval:partial_eval_expr event expr_env
 
-and replace_relation relation (expr_env, event_env) =
+and replace_relation relation (expr_env, event_env, tmpl_env) =
   let replace_id id =
     match find_flat id.data event_env with
     | None -> id_not_found id
@@ -36,10 +37,13 @@ and replace_relation relation (expr_env, event_env) =
       >>= fun (expr_env, event_env) ->
       map (fun event -> replace_event event expr_env) events
       >>= fun events ->
-      map (fun inst -> replace_template_inst inst (expr_env, event_env)) insts
+      map
+        (fun inst -> replace_template_inst inst (expr_env, event_env, tmpl_env))
+        insts
       >>= fun insts ->
       map
-        (fun relation -> replace_relation relation (expr_env, event_env))
+        (fun relation ->
+          replace_relation relation (expr_env, event_env, tmpl_env) )
         relations
       >>= fun relations ->
       return (events, insts, relations)
@@ -54,39 +58,14 @@ and replace_relation relation (expr_env, event_env) =
       >>= fun guard ->
       return {relation with data= ControlRelation (from_id, guard, dest_id, t)}
 
-and replace_template_inst inst (expr_env, event_env) =
-  let {args; _} = inst.data in
-  (* Logger.debug "Args: " ;
-     Logger.debug "Expr based args: " ;
-     Logger.debug
-     @@ ( List.map
-            (fun (id, _) -> id.data)
-            (List.filter
-               (fun (_, arg_ty) ->
-                 match arg_ty with ExprArg _ -> true | _ -> false )
-               args )
-        |> String.concat ", " ) ;
-     Logger.debug "Event based args: " ;
-     Logger.debug
-     @@ ( List.map
-            (fun (id, _) -> id.data)
-            (List.filter
-               (fun (_, arg_ty) ->
-                 match arg_ty with EventArg _ -> true | _ -> false )
-               args )
-        |> String.concat ", " ) ;
-     Logger.debug "Expr env: " ;
-     Logger.debug @@ string_of_env Unparser.PlainUnparser.unparse_expr expr_env ;
-     Logger.debug "Event env: " ;
-     Logger.debug
-     @@ string_of_env
-          (fun event -> Unparser.PlainUnparser.unparse_events [event])
-          event_env ; *)
+and replace_template_inst ?(eval = partial_eval_expr) inst
+    (expr_env, event_env, tmpl_env) =
+  let {args; x= _; tmpl_id; _} = inst.data in
   map
     (fun (arg_id, arg_tmpl_ty) ->
       match arg_tmpl_ty with
       | ExprArg expr ->
-          eval_expr expr expr_env >>= fun value -> return (arg_id, ExprArg value)
+          eval expr expr_env >>= fun value -> return (arg_id, ExprArg value)
       | EventArg event_id -> (
         match find_flat event_id.data event_env with
         | None -> event_not_found ~loc:event_id.loc event_id.data
@@ -94,7 +73,13 @@ and replace_template_inst inst (expr_env, event_env) =
             let event_id, _ = event.data.info in
             return (arg_id, EventArg event_id) ) )
     args
-  >>= fun args -> return {inst with data= {inst.data with args}}
+  >>= fun args ->
+  ( match find_flat tmpl_id.data tmpl_env with
+  | None -> tmpl_not_found ~available:(flatten tmpl_env |> List.map fst) tmpl_id
+  | Some tmpl -> return tmpl )
+  >>= fun _tmpl ->
+  (* TODO: "Create" the events that are exported *)
+  return {inst with data= {inst.data with args}}
 
 type context = expr env * event env * template_def env
 
@@ -111,9 +96,7 @@ let rec bind_tmpls tmpls (expr_env, event_env, tmpl_env) =
 
 and bind_tmpl tmpl (expr_env, event_env, tmpl_env) =
   let id = tmpl.id in
-  Logger.info
-  @@ Printf.sprintf "Binding template %s"
-       (CString.colorize ~color:Yellow ~format:Bold id.data) ;
+  Logger.info @@ Printf.sprintf "Binding template %s" (keyword id.data) ;
   return (bind id.data tmpl tmpl_env)
   >>= fun tmpl_env -> return (expr_env, event_env, tmpl_env)
 
@@ -176,10 +159,11 @@ and bind_prop prop (expr_env, event_env, tmpl_env) =
         Logger.error @@ Printf.sprintf "Event %s not found" event_id.data ;
         event_not_found ~loc:event_id.loc event_id.data
     | Some event ->
-        return (bind prop_id.data event event_env)
-        >>= fun event_env ->
-        return (bind prop_id.data (event_as_expr event) expr_env)
-        >>= fun expr_env -> return (expr_env, event_env, tmpl_env) )
+        return
+          ( bind prop_id.data event event_env
+          , bind prop_id.data (event_as_expr event) expr_env )
+        >>= fun (event_env, expr_env) -> return (expr_env, event_env, tmpl_env)
+    )
 
 (* =============================================================================
    Instantiation
@@ -210,8 +194,7 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
   | None -> tmpl_not_found ~available:(flatten tmpl_env |> List.map fst) id
   | Some tmpl ->
       Logger.info
-      @@ Printf.sprintf "Instantiating template %s"
-           (CString.colorize ~color:Yellow ~format:Bold id.data) ;
+      @@ Printf.sprintf "Instantiating template %s" (keyword id.data) ;
       let {export; params; export_types= _; graph; _} = tmpl in
       (* Begin new scope for the template instantiation *)
       return (begin_scope expr_env, begin_scope event_env)
@@ -239,7 +222,9 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
            (expr_env, event_env, tmpl_env)
          >>= fun (events_ti, insts_ti, relations_ti) -> *)
       (* Replace the expression inside of the instantiations of [q_ti] *)
-      map (fun inst -> instantiate_inst inst (expr_env, event_env)) insts_ti
+      map
+        (fun inst -> instantiate_inst inst (expr_env, event_env, tmpl_env))
+        insts_ti
       >>= fun insts_ti ->
       (* Instantiate inside instantiations *)
       instantiate_tmpls insts_ti (expr_env, event_env, tmpl_env)
@@ -249,7 +234,8 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       >>= fun events_ti ->
       (* Instantiate relations *)
       map
-        (fun relation -> instantiate_relation relation (expr_env, event_env))
+        (fun relation ->
+          instantiate_relation relation (expr_env, event_env, tmpl_env) )
         relations_ti
       >>= fun relations_ti ->
       (* Append what got so far *)
@@ -287,11 +273,11 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
 and instantiate_event target_event expr_env =
   replace_event target_event expr_env
 
-and instantiate_inst target_inst (expr_env, event_env) =
-  replace_template_inst target_inst (expr_env, event_env)
+and instantiate_inst target_inst (expr_env, event_env, tmpl_env) =
+  replace_template_inst target_inst (expr_env, event_env, tmpl_env)
 
-and instantiate_relation target_relation (expr_env, event_env) =
-  replace_relation target_relation (expr_env, event_env)
+and instantiate_relation target_relation (expr_env, event_env, tmpl_env) =
+  replace_relation target_relation (expr_env, event_env, tmpl_env)
 
 and export_map_events x export (events, relations) =
   if not (List.length x = List.length export) then
@@ -355,7 +341,7 @@ and export_map_events x export (events, relations) =
 
 (* TODO *)
 
-let evaluate_annotation annotation (event_env, expr_env, _tmpl_env) =
+let evaluate_annotation annotation (event_env, expr_env, tmpl_env) =
   match annotation with
   | IfElse {condition; then_branch; else_branch} -> (
       eval_expr condition expr_env
@@ -388,11 +374,13 @@ let evaluate_annotation annotation (event_env, expr_env, _tmpl_env) =
           map (fun event -> replace_event event expr_env) events
           >>= fun events ->
           map
-            (fun inst -> replace_template_inst inst (expr_env, event_env))
+            (fun inst ->
+              replace_template_inst inst (expr_env, event_env, tmpl_env) )
             insts
           >>= fun insts ->
           map
-            (fun relation -> replace_relation relation (expr_env, event_env))
+            (fun relation ->
+              replace_relation relation (expr_env, event_env, tmpl_env) )
             relations
           >>= fun relations ->
           (* TODO: Fresh event'ids *)

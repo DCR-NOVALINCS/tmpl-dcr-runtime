@@ -5,6 +5,7 @@
 (s: S)['a']
 (b: B)[true]
 (l: L)[[0, 1, 2]]
+(l1: L)[range(0, 10)]
 (r: R)[{ n: n0.value - 1, s: s.value, b: b.value AND false }]
 
 i0 -[n1.value > n0.value]->% s, b

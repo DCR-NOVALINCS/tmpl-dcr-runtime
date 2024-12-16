@@ -57,7 +57,7 @@ and execute_output_event event expr_env =
   | _ ->
       let id, _ = info in
       something_went_wrong ~loc:id.loc
-        ("Is not a output event" ^ CString.colorize ~color:Yellow id.data) )
+        ("Is not a output event" ^ keyword id.data) )
   >>= fun expr ->
   eval_expr expr expr_env >>= fun value -> set_marking ~value event
 
@@ -74,8 +74,7 @@ and execute_input_event event expr (ty_env, expr_env) =
       else set_marking ~value event
   | _ ->
       let id, _ = info in
-      something_went_wrong ~loc:id.loc
-        ("Is not a input event" ^ CString.colorize ~color:Yellow id.data)
+      something_went_wrong ~loc:id.loc ("Is not a input event" ^ keyword id.data)
 
 (* --- Parse --- *)
 
