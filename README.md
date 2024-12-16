@@ -2,14 +2,16 @@
 <div align="center">
   <h1>t-dcr</h1>
   <p>
-    <strong>Templates in Dynamic Conditional Response Graphs </strong>
+    Templates in Dynamic Conditional Response Graphs.
   </p>
+
+
+  [![documentation](https://img.shields.io/badge/documentation-unavailable-red)]("")
+  [![license](https://img.shields.io/badge/license-MIT-green)](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE)
+  
+  ![demo](assets/gifs/demo.gif)
 </div> 
 
-<!-- TODO: Put a gif here to demonstrate the cli -->
-
-![documentation](https://img.shields.io/badge/documentation-unavailable-red)
-![license](https://img.shields.io/badge/license-CC%20BY%204.0-blue)
 
 > [!WARNING]
 > This project is still in early development and may stay in this state... ~~forever?~~ 😅
@@ -22,15 +24,13 @@
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Usage](#usage)
-- [Additional Information](#additional-information)
-  - [Authors](#authors)
-  - [License](#license)
+- [License](#license)
 
 # About 
 
 **t-dcr** is a cli runtime to create and execute [DCR graphs]() with templates in a simple and easy way. 
 
-This project is a part of a master thesis of one of the authors in order to abstract and reuse parts of the DCR graph that are common and repetitive.
+This project is a part of a master thesis of one of the authors to study and implement a way to abstract and reuse parts of a DCR graph. 
 
 <!-- TODO: Put a complex-ish example -->
 
@@ -46,8 +46,6 @@ tmpl sub(n: Number, m: Number): Result {
 } => r
 
 tmpl max(r1: Result, r2: Result): Result {
-  r1 *--> r1
-  r2 *--> r2
   r1 -[r1.value > r2.value]->% r2
   r2 -[r2.value > r1.value]->% r1
 }
@@ -66,15 +64,15 @@ i -->> {
 
 Here is a list of the features that are available in this project.
 
-|                              |     |
-| ---------------------------- | --- |
-| Basic Semantic of DCR Graphs | ✅   |
-| Templates in DCR Graphs      | ✅   |
-| CLI Interface                | ✅   |
-| Export to JSON               | ✅   |
-| Export back to `.tdcr`       | ✅   |
-| Export to `.dot`             | ❌   |
-| Reactive data values         | ❌   |
+| Features                     | Done? |
+| ---------------------------- | ----- |
+| Basic Semantic of DCR Graphs | ✅     |
+| Templates in DCR Graphs      | ✅     |
+| CLI Interface                | ✅     |
+| Export to JSON               | ✅     |
+| Export back to `.tdcr`       | ✅     |
+| Export to `.dot`             | ❌     |
+| Reactive data values         | ❌     |
 
 Any feature that is not checked is not implemented yet, but it is planned to be implemented in the future.
 
@@ -193,16 +191,10 @@ From this prompt, you can run the following commands:
     <!-- - `dot` -->
     - `json`
 
-# Additional Information
+# License
 
-## Authors
+This project is licensed under the **MIT License**.
 
-- [**Bruno Braga**](https://github.com/bfibraga), main contributor and author of this project.
-
-## License
-
-This project is licensed under the **Creative Commons Attribution 4.0 International License**.
-
-See [LICENSE](LICENSE) for more information.
+See [LICENSE](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE) for more information.
 
 <!-- TODO: Add acknowledgements and references.  -->

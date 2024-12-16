@@ -1,9 +1,9 @@
-tmpl d(e: A, n: Number): A {
-    (e2: A)[n]
-    e -->* e2
-} => e2
+tmpl cond(e: A): A {
+    (a: A)[?]
+    e -->* a
+} => a
 
-(a: A)[0]
+(a: A)[?]
 
-d(e -> a, n = a.value) => a2
-d(e -> a2, n = a2.value) => a3
+cond(e -> a) => a1
+cond(e -> a1) => a2

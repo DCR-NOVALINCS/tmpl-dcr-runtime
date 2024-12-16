@@ -1,7 +1,7 @@
-tmpl d(e: A, n: Number): A {
+tmpl cond(e: A, n: Number): A {
     (e2: A)[n]
     e -->* e2
 } => e2
 
-d(e = a0, n = 0) => a1
-d(e = a1, n = a1.value) => a0
+cond(e = a0, n = 0) => a1
+cond(e = a1, n = a1.value) => a0

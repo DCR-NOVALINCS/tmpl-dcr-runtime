@@ -72,17 +72,10 @@ and duplicate_tmpl ?(errors = []) id =
     :: errors )
 
 and duplicate_event ?(errors = []) id =
-  let line =
-    match id.loc with Location (start, _, _) -> start.pos_lnum | _ -> 0
-  in
   fail
     ( { location= id.loc
       ; message= Printf.sprintf "Duplicate event %s" (keyword id.data)
-      ; hint=
-          Some
-            (Printf.sprintf "Event %s is already declared at line %s"
-               (keyword id.data)
-               (keyword (string_of_int line)) ) }
+      ; hint= Some "Ensure the event is not declared more than once." }
     :: errors )
 
 and file_not_exists ?(errors = []) filename =
@@ -481,12 +474,13 @@ let pretty_string_error detailed_error =
   let {location; message; hint} = detailed_error in
   let message_header =
     CString.colorize ~format:Bold ~color:Red "error: " ^ message ^ "\n"
-  and blue_text = CString.colorize ~color:Blue
-  and highlight_section (s, e) ~fmt text =
-    let prefix = String.sub text 0 s in
-    let highlight = String.sub text s (e - s) in
-    let suffix = String.sub text e (String.length text - e) in
-    Printf.sprintf "%s%s%s" prefix (fmt highlight) suffix
+  and blue_text =
+    CString.colorize ~color:Blue
+    (* and highlight_section (s, e) ~fmt text =
+       let prefix = String.sub text 0 s in
+       let highlight = String.sub text s (e - s) in
+       let suffix = String.sub text e (String.length text - e - 1) in
+       Printf.sprintf "%s%s%s" prefix (fmt highlight) suffix *)
   in
   let message_file_section =
     let filepath, line, start_char, end_char = extract_location_info location in
@@ -512,11 +506,12 @@ let pretty_string_error detailed_error =
           blue_text ~format:Bold (Printf.sprintf " %s | " number_str) ^ content
         in
         let line_content, indent = get_line_content filepath line in
-        let line_content =
-          highlight_section (start_char, end_char)
-            ~fmt:(CString.colorize ~format:Bold)
-            line_content
-        in
+        (* let line_content =
+             highlight_section
+               (start_char + 1, end_char)
+               ~fmt:(CString.colorize ~format:Bold)
+               line_content
+           in *)
         Printf.sprintf "%s\n%s\n%s\n%s\n\n" file_header (file_gutter "")
           (file_gutter ~number:line line_content)
           (file_gutter (marker ~indent:(-indent) ()))

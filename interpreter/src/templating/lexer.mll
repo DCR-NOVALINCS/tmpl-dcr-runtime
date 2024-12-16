@@ -88,7 +88,7 @@ rule read_token = parse
 	| "foreach"  		{ FOREACH }
 	| "/foreach" 		{ ENDFOREACH }
 	| "in"				{ IN }
-	| "range"			{ RANGE }
+	| "@range"			{ RANGE }
 	| "executed"		{ ID "executed" }
 	| "included"		{ ID "included" }
 	| "pending"			{ ID "pending" }

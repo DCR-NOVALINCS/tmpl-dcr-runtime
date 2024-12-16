@@ -132,7 +132,7 @@ and find_event id event_env =
 
 and find_all_events ?(filter = fun _ -> true) program =
   let events = program.events in
-  List.filter filter events
+  return @@ List.filter filter events
 
 and same_id id e =
   let id', _ = e.data.info in
@@ -185,13 +185,14 @@ and has_relation ?(filter = fun _ -> true) id program =
 
 and find_all_relations ?(filter = fun _ -> true) id program =
   let relations = program.relations in
-  List.filter
-    (fun r ->
-      match r.data with
-      | ControlRelation (from, _, dest, _) ->
-          (from.data = id || dest.data = id) && filter r
-      | SpawnRelation (from, _, _) -> from.data = id && filter r )
-    relations
+  return
+  @@ List.filter
+       (fun r ->
+         match r.data with
+         | ControlRelation (from, _, dest, _) ->
+             (from.data = id || dest.data = id) && filter r
+         | SpawnRelation (from, _, _) -> from.data = id && filter r )
+       relations
 
 and is_event_present_on_relation id relation =
   match relation.data with
