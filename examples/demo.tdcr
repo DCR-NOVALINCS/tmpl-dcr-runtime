@@ -1,0 +1,20 @@
+tmpl add(n: Number, m: Number): Result {
+  (r: Result)[n + m]
+} => r
+
+tmpl sub(n: Number, m: Number): Result {
+  (r: Result)[n - m]
+} => r
+
+tmpl max(r1: Result, r2: Result): Result {
+  r1 -[r1.value > r2.value]->% r2
+  r2 -[r2.value > r1.value]->% r1
+}
+
+(i: Input)[?: { l: Number, r: Number }]
+
+i -->> {
+  add(n = l, m = r) => result0
+  sub(n = l, m = r) => result1
+  max(r1 -> result0, r2 -> result1)
+}

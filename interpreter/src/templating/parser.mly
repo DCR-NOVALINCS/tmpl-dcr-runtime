@@ -9,13 +9,13 @@ type top_level_input =
   | AnnotatedSubprogram of template_annotation' 
 
 let mk_program_from_top_level_input =
-  List.fold_left (fun program x -> match x with
+  List.fold_left (fun (events, insts, relations, annotations) x -> match x with
     (* | TemplateDef x -> { program with template_decls = x :: program.template_decls }*)
-    | Event event -> { program with events = event :: program.events }
-    | TemplateInst inst -> { program with template_insts = inst :: program.template_insts }
-    | Relations relations -> { program with relations = List.append relations program.relations }
-    | AnnotatedSubprogram annotation -> { program with annotations = annotation :: program.annotations }
-  ) empty_program
+    | Event event -> (event :: events, insts, relations, annotations)
+    | TemplateInst inst -> (events, inst :: insts, relations, annotations)
+    | Relations relations' -> (events, insts, List.append relations' relations, annotations)
+    | AnnotatedSubprogram annotation -> (events, insts, relations, annotation :: annotations)
+  ) empty_subprogram
 
 %}
 
@@ -85,8 +85,8 @@ plain_program:
     template_decls = list(plain_template_decl);
     spawn_prog = plain_program_spawn;
     { 
-      let (events, template_insts, relations) = spawn_prog in
-      mk_program ~template_decls ~events ~template_insts ~relations ()
+      let (events, template_insts, relations, annotations) = spawn_prog in
+      mk_program ~template_decls ~events ~template_insts ~relations ~annotations ()
     }
 ;
 
@@ -105,8 +105,7 @@ plain_program:
 plain_program_spawn:
   | input = list(plain_top_input); 
     { 
-      let { events; template_insts; relations; _ } = mk_program_from_top_level_input input in
-      (events, template_insts, relations) 
+      mk_program_from_top_level_input input 
     }
 
 
@@ -153,8 +152,8 @@ plain_arg_pair:
   | id=id; ARROW; event_id=id { (id, EventArg event_id) }
   | id=id; ASSIGN; expr=expr { (id, ExprArg expr) }
 
-template_annotations: 
-  | annotations = separated_list(PIPE, plain_template_annotation) { annotations }
+// template_annotations: 
+//   | annotations = separated_list(PIPE, plain_template_annotation) { annotations }
 
 // template annotations 
 plain_template_annotation:

@@ -38,22 +38,9 @@ and help_term available_cmds =
                (CString.colorize ~color:Green name)
                (String.concat " "
                   (List.map
-                     (fun s ->
-                       CString.colorize ~color:Red (Printf.sprintf "<%s>" s) )
+                     (fun s -> keyword (Printf.sprintf "<%s>" s))
                      params ) )
                description )
-      (* [ ("exit (q)", [], "Quit the program")
-         ; ("help (h)", [], "Show this help message")
-         ; ("view (v)", [], "View the current program")
-         ; ( "execute (e)"
-           , ["<event_id>"; "<expr>"]
-           , "Execute an event with an expression" ) ] *)
-      (* |> List.map (fun (name, params, desc) ->
-             Printf.sprintf "- %s %-15s %s"
-               (CString.colorize ~color:Green name)
-               (String.concat " "
-                  (List.map (CString.colorize ~color:Red) params) )
-               desc ) *)
       |> String.concat "\n"
     in
     return {state with output= Printf.sprintf "%s\n%s" header cmds_section}
@@ -219,21 +206,24 @@ let cmds =
     |> create_cmd
          ( "execute"
          , ["EVENT_ID"; "EXPR_STRING"]
-         , "Executes the event <EVENT_ID> with the expression <EXPR_STRING>, if needed."
+         , "Executes the event " ^ keyword "<EVENT_ID>"
+           ^ " with the expression " ^ keyword "<EXPR_STRING>" ^ " if needed."
          )
          execute_term
     |> create_cmd
          ( "export"
          , ["FILENAME"]
-         , "Creates a file named FILENAME with a textual representation of the current state of the graph."
+         , "Creates a file named " ^ keyword "<FILENAME>"
+           ^ " with a textual representation of the current state of the graph."
          )
          export_term
-    |> create_cmd
-         ("debug", [], "Shows any debug information available.")
-         debug_term
   in
   create_cmd
     ("help", [], "Displays this message")
     (help_term available_cmds) available_cmds
+  (* "Invisible" commands, only for debugging and testing *)
+  |> create_cmd
+       ("debug", [], "Shows any debug information available.")
+       debug_term
 
 let cmds_bbk_tree = Misc.Bktree.create @@ List.map (fun (name, _) -> name) cmds

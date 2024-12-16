@@ -103,14 +103,14 @@ and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
   >>= fun (event_env, expr_env) -> return (event_env, expr_env, program)
 
 and preprocess_subprogram ?(expr_env = empty_env) ?(event_env = empty_env)
-    (events, template_insts, relations) =
+    (events, template_insts, relations, _) =
   preprocess_program ~expr_env ~event_env
     {empty_program with events; template_insts; relations}
   >>= fun (event_env, expr_env, program) ->
   return
     ( event_env
     , expr_env
-    , (program.events, program.template_insts, program.relations) )
+    , (program.events, program.template_insts, program.relations, []) )
 
 (* =============================================================================
    Getters
@@ -202,6 +202,19 @@ and is_event_present_on_relation id relation =
 (* =============================================================================
    Aux functions
    ============================================================================= *)
+
+and append_subprograms subprograms =
+  fold_right
+    (fun (events, template_insts, relations, annotations)
+         (events', template_insts', relations', annotations') ->
+      return
+      @@ mk_subprogram
+           ~events:(List.append events' events)
+           ~template_insts:(List.append template_insts' template_insts)
+           ~relations:(List.append relations' relations)
+           ~annotations:(List.append annotations' annotations)
+           () )
+    empty_subprogram subprograms
 
 and event_as_expr event =
   (* let {marking; _} = event.data in *)

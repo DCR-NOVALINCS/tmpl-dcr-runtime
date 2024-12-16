@@ -117,7 +117,11 @@ and program =
   ; annotations: template_annotation' list }
 [@@deriving yojson]
 
-and subprogram = event list * template_instance list * relation list
+and subprogram =
+  event list
+  * template_instance list
+  * relation list
+  * template_annotation' list
 [@@deriving yojson]
 
 (* =============================================================================
@@ -265,11 +269,12 @@ let mk_spawn_relations left_ids expr prog =
   List.map (fun id -> mk_spawn_relation ~from:id ~guard:expr prog) left_ids
 
 let mk_program ?(template_decls = []) ?(events = []) ?(template_insts = [])
-    ?(relations = []) _ =
-  {template_decls; events; template_insts; relations; annotations= []}
+    ?(relations = []) ?(annotations = []) _ =
+  {template_decls; events; template_insts; relations; annotations}
 
-let mk_subprogram ?(events = []) ?(template_insts = []) ?(relations = []) _ =
-  (events, template_insts, relations)
+let mk_subprogram ?(events = []) ?(template_insts = []) ?(relations = [])
+    ?(annotations = []) _ =
+  (events, template_insts, relations, annotations)
 
 let empty_program = mk_program ()
 

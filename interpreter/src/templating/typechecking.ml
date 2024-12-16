@@ -91,14 +91,19 @@ let mk_template_ty_from template_def =
 
 let rec typecheck ?(event_env = empty_env) program =
   let template_decls = program.template_decls in
-  let events, insts, relations =
-    (program.events, program.template_insts, program.relations)
+  let events, insts, relations, annotations =
+    ( program.events
+    , program.template_insts
+    , program.relations
+    , program.annotations )
   in
   let ty_env, label_types = (empty_env, EventTypes.empty) in
+  (* Don't know why, after creating a empty hashtable, needs to reset... *)
   EventTypes.reset label_types ;
   typecheck_template_decls template_decls (ty_env, event_env, label_types)
   >>= fun (ty_env, event_env, tmpl_ty_env, label_types) ->
-  typecheck_subprogram (events, insts, relations)
+  typecheck_subprogram
+    (events, insts, relations, annotations)
     (ty_env, event_env, tmpl_ty_env, label_types)
   >>= fun (ty_env, event_env, _) ->
   Logger.debug @@ "Event Env after typechecking program:\n"
@@ -120,7 +125,12 @@ and typecheck_template_decls template_decls ?(tmpl_ty_env = empty_env)
 
 and typecheck_template_decl template_decl
     (ty_env, event_env, tmpl_ty_env, label_types) =
-  let {graph= events, insts, relations; export; export_types; params; id; _} =
+  let { graph= events, insts, relations, annotations
+      ; export
+      ; export_types
+      ; params
+      ; id
+      ; _ } =
     template_decl
   and typecheck_params params (ty_env, event_env) =
     fold_right
@@ -185,7 +195,8 @@ and typecheck_template_decl template_decl
   bind_events ~f:(fun event -> event) events event_env
   >>= fun event_env ->
   (* Typecheck the graph of the template *)
-  typecheck_subprogram (events, insts, relations)
+  typecheck_subprogram
+    (events, insts, relations, annotations)
     (ty_env, event_env, tmpl_ty_env, label_types)
   >>= fun (_tmpl_ty_env, tmpl_event_env, label_types) ->
   (* Check the exported events and their typings *)
@@ -237,13 +248,20 @@ and typecheck_template_decl template_decl
    Typechecking of subprograms
    ============================================================================= *)
 
-and typecheck_subprogram (events, insts, relations)
+and typecheck_subprogram (events, insts, relations, annotations)
     (ty_env, event_env, tmpl_ty_env, label_types) =
+  (* Typecheck events *)
   typecheck_events events (ty_env, event_env, label_types)
   >>= fun (ty_env, event_env, label_types) ->
+  (* Typecheck template instantiations *)
   typecheck_insts insts (ty_env, event_env, tmpl_ty_env, label_types)
   >>= fun (ty_env, event_env, label_types) ->
+  (* Typecheck relations *)
   typecheck_relations relations (ty_env, event_env, tmpl_ty_env, label_types)
+  >>= fun (ty_env, event_env, label_types) ->
+  (* Typecheck template annotations *)
+  typecheck_template_annotations annotations
+    (ty_env, event_env, tmpl_ty_env, label_types)
   >>= fun (ty_env, event_env, label_types) ->
   (* Debug envs *)
   Logger.debug @@ "Type env after typechecking subprogram:\n"
@@ -449,20 +467,20 @@ and typecheck_relation relation (ty_env, event_env, tmpl_ty_env, label_types) =
    Typechecking of template annotations
    ============================================================================= *)
 
-and _typecheck_template_annotations annotations
+and typecheck_template_annotations annotations
     (ty_env, event_env, tmpl_ty_env, label_types) =
-  fold_left
+  fold_right
     (fun (ty_env, event_env, label_types) annotation ->
-      _typecheck_template_annotation annotation
+      typecheck_template_annotation annotation
         (ty_env, event_env, tmpl_ty_env, label_types) )
     (ty_env, event_env, label_types)
     annotations
 
-and _typecheck_template_annotation annotation
+and typecheck_template_annotation annotation
     (ty_env, event_env, tmpl_ty_env, label_types) =
   match annotation with
   | IfElse {condition; then_branch; else_branch} ->
-      typecheck_expr ~ty_env condition
+      typecheck_expr ~ty_env ~label_types condition
       >>= fun condition_ty ->
       ( match condition_ty with
       | BoolTy -> return ()

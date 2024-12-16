@@ -1,28 +1,16 @@
 
-tmpl f(e: A): B {
-    (b: B)[?]
-    e -->* b
-} => b
+tmpl f(e: A, m: Number = 5): C {
+    (c: C)[?]
 
-foreach i in @range(0, 5):
-    foreach j in @range(0, 5):
-        (n: N)[i + j]
-
-        if i == 0:
-            (b: B)[true]
+    foreach i in @range(0, m):
+        if i > 2: 
+            (n: N)[i]
+            c -->% n
         /if
-
     /foreach
 
-    if i == 0:
-        (b: B)[true]
-    else: 
-        if i == 1:
-            (b: B)[false]
-        else: 
-            (b: B)[true AND 1 + 1 > 0]
-        /if
-    /if
-/foreach
+    e -->* c
+} => c
 
 (a: A)[?]
+f(e -> a) => c

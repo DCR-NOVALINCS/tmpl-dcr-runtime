@@ -33,7 +33,7 @@ let runtime_set =
         check_true "Expected template g to be found" (Option.is_some g_tmpl) ;
         let g_tmpl = Option.get g_tmpl in
         check_int "Expected 2 parameters" 2 (List.length g_tmpl.params) ;
-        let g_events, g_insts, g_relations = g_tmpl.graph in
+        let g_events, g_insts, g_relations, _ = g_tmpl.graph in
         check_int "Expected 1 event" 1 (List.length g_events) ;
         check_int "Expected 0 template instantiation" 0 (List.length g_insts) ;
         check_int "Expected 1 relation" 1 (List.length g_relations) ;
@@ -134,7 +134,7 @@ let runtime_set =
         check_int "Expecting one spawn relation from 'c'" 1
           (List.length spawn_relations) ;
         let spawn_relation = List.hd spawn_relations in
-        let spawn_events, spawn_insts, spawn_relations =
+        let spawn_events, spawn_insts, spawn_relations, _ =
           match spawn_relation.data with
           | SpawnRelation (_, _, graph) -> graph
           | _ -> failwith "Expected spawn relation"

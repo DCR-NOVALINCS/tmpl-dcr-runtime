@@ -100,7 +100,7 @@ and propagate_effect relation event (event_env, expr_env) program =
         >>= fun is_guard_true ->
         if not is_guard_true then return (program, event_env, expr_env)
         else
-          let spawn_events, spawn_insts, spawn_relations = spawn_prog in
+          let spawn_events, spawn_insts, spawn_relations, _ = spawn_prog in
           (* Begin new env scope and bind trigger_id *)
           return (begin_scope event_env, begin_scope expr_env)
           >>= fun (event_env, expr_env) ->
