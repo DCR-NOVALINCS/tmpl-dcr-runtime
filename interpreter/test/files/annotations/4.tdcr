@@ -1,5 +1,13 @@
 (a: A)[?: Number]
 
-a -->> {
-    (b: B)[i + 1] - when i > 0
-} - foreach i in [0, 1, 2, 3]
+# a -->> {
+#     (b: B)[i + 1] - when i > 0
+# } - foreach i in [0, 1, 2, 3]
+
+foreach i in @range(0, 3):
+    a -->> {
+        if @trigger.value > 0:
+            (b: B)[i + @trigger.value]
+        /if
+    }
+/foreach

@@ -1,13 +1,35 @@
+# %(a: A)[0]
+# %(b: B)[?]
+# (c: C)[?: Number] - if a.value > 1 | foreach i in @range(0, 3) 
+# (d: D)[?: String] - if a.value <= 1 AND a.value > 0 
+# (e: E)[?: Boolean] - if a.value > 0 
+
+# c -->% a - if a.value > 1 | foreach i in @range(0, 3) 
+# c -->+ b - if a.value > 1 | foreach i in @range(0, 3) 
+
+# d -->+ a - if a.value <= 1 AND a.value > 0 
+# d -->% b - if a.value <= 1 AND a.value > 0 
+
+# e --><> e - if a.value > 0 
+
 %(a: A)[0]
 %(b: B)[?]
-(c: C)[?: Number] - if a.value > 1 | foreach i in @range(0, 3) 
-(d: D)[?: String] - if a.value <= 1 AND a.value > 0 
-(e: E)[?: Boolean] - if a.value > 0 
 
-c -->% a - if a.value > 1 | foreach i in @range(0, 3) 
-c -->+ b - if a.value > 1 | foreach i in @range(0, 3) 
+if a.value > 1:
+    foreach i in @range(0, 3):
+        (c: C)[?: Number]
+        c -->% a
+        c -->+ b
+    /foreach
+else: 
+    if a.value > 0:
+        (e: E)[?: Boolean]
+        e --><> e
+    /if
 
-d -->+ a - if a.value <= 1 AND a.value > 0 
-d -->% b - if a.value <= 1 AND a.value > 0 
-
-e --><> e - if a.value > 0 
+    if a.value <= 1 AND a.value > 0:
+        (d: D)[?: String]
+        d -->+ a
+        d -->% b
+    /if
+/if

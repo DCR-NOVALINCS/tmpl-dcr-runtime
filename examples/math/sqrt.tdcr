@@ -3,8 +3,11 @@ tmpl sqrt(n: Number): NumberHolder {
 } => r
 
 tmpl sqrt_aux(x: Number, n: Number): NumberHolder {
-    (r: NumberHolder)[x] - when x * x <= n
-    sqrt_aux(x = (x + n / x) / 2, n = n) => r - when x * x > n
+    if x * x <= n:
+        (r: NumberHolder)[x]
+    else:
+        sqrt_aux(x = (x + n / x) / 2, n = n) => r
+    /if
 } => r
 
 (c: calculate)[?: Number]

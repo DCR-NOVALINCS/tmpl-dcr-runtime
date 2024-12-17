@@ -1,9 +1,9 @@
 tmpl robot(id: String): watering, collectFruit, trim {
     (r: Robot)[{ id: id }]
-    (m: move)[?: Plant]
-    (cf: collectFruit)[?: Plant]
-    (w: watering)[?: Plant]
-    (t: trim)[?: Plant]
+    (m: move)[?]
+    (cf: collectFruit)[?]
+    (w: watering)[?]
+    (t: trim)[?]
 
     m -->* cf, w, t
     cf --><> w, t
@@ -20,22 +20,25 @@ tmpl plant(id: String, position: { x: Number, y: Number }, plantType: { typename
     wp -->+ nw
 }
 
+(pts: PlantTypes)[[{ typename: 'apple' }, { typename: 'orange' }, { typename: 'banana' }]]
+
 (ar: addRobot)[?: { id: String }]
-(ap: addPlant)[?: { id: String, typename: String, position: { x: Number, y: Number } }]
 
 ar -->> {
     robot(id = @trigger.value.id) => watering, collectFruit, trim
 
-    ap -->> {
-        plant(
-            id = @trigger.value.id,
-            position = @trigger.value.position,
-            plantType = plantType,
-            wp = watering
-        ) - when plantType.typename == @trigger.value.typename
-    } - foreach plantType in [
-        { typename: 'apple' },
-        { typename: 'orange' },
-        { typename: 'banana' }
-    ]
+    (ap: addPlant)[?: { id: String, typename: String, position: { x: Number, y: Number } }]
+    
+    foreach plantType in pts.value:
+        ap -->> {
+            if plantType.typename == @trigger.value.typename:
+                plant(
+                    id = @trigger.value.id,
+                    position = @trigger.value.position,
+                    plantType = plantType,
+                    wp -> watering
+                )
+            /if
+        }
+    /foreach
 }

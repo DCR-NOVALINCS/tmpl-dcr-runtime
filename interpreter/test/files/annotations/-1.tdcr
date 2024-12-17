@@ -1,4 +1,3 @@
-
 tmpl f(e: A, m: Number = 5): C {
     (c: C)[?]
 

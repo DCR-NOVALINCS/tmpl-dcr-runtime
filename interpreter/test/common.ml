@@ -39,7 +39,11 @@ let check_string msg s1 s2 = Alcotest.(check string) msg s1 s2
 
 let check_int msg i1 i2 = Alcotest.(check int) msg i1 i2
 
-let check_list msg l1 l2 = Alcotest.(check (list string)) msg l1 l2
+let check_string_list msg l1 l2 = Alcotest.(check (list string)) msg l1 l2
+
+let check_int_list msg l1 l2 = Alcotest.(check (list int)) msg l1 l2
+
+let check_bool_list msg l1 l2 = Alcotest.(check (list bool)) msg l1 l2
 
 let expecting_ok = function
   | Error e ->

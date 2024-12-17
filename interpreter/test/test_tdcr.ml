@@ -198,12 +198,12 @@ let runtime_set =
               | _ -> Right o )
             negatives
         in
-        check_list
+        check_string_list
           "Expecting all instantiated 'positive' to have value True and False, respectively"
           [ Unparser.PlainUnparser.unparse_expr (annotate True)
           ; Unparser.PlainUnparser.unparse_expr (annotate False) ]
           all_positive_true ;
-        check_list
+        check_string_list
           "Expecting all instantiated 'negative' to have both False value"
           [ Unparser.PlainUnparser.unparse_expr (annotate False)
           ; Unparser.PlainUnparser.unparse_expr (annotate False) ]
@@ -441,7 +441,286 @@ let annotation_set =
       (file "annotations/0.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
-        >>= fun (_ty_env, event_env) -> return (program, event_env, expr_env) )
+        >>= fun (_ty_env, event_env) ->
+        instantiate ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        (* Check the events *)
+        check_int "Expected 2 events" 2 (List.length program.events) ;
+        (* check_int "Expected 3 events in the event env" 3
+           (List.length (Env.flatten event_env)) ; *)
+        check_int "Expected 0 template instantiation" 0
+          (List.length program.template_insts) ;
+        (* Check relations *)
+        check_int "Expected 0 relation" 0 (List.length program.relations) ;
+        return (program, event_env, expr_env) )
+      expecting_ok
+  ; make_test "1.tdcr"
+      (file "annotations/1.tdcr")
+      (fun program (event_env, expr_env) ->
+        typecheck ~event_env program
+        >>= fun (_ty_env, event_env) ->
+        instantiate ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        (* Check the events *)
+        check_int "Expected 23 events" 23 (List.length program.events) ;
+        let* ns = find_all_events ~filter:(same_id "n") program in
+        check_int "Expecting 4 events with sub-id 'n'" 4 (List.length ns) ;
+        let* bs = find_all_events ~filter:(same_id "b") program in
+        check_int "Expecting 3 events with sub-id 'b'" 3 (List.length bs) ;
+        let* ss = find_all_events ~filter:(same_id "s") program in
+        check_int "Expecting 5 events with sub-id 's'" 5 (List.length ss) ;
+        let* srs = find_all_events ~filter:(same_id "sr") program in
+        check_int "Expecting 3 events with sub-id 'sr'" 3 (List.length srs) ;
+        let* nrs = find_all_events ~filter:(same_id "nr") program in
+        check_int "Expecting 3 events with sub-id 'nr'" 3 (List.length nrs) ;
+        let* lis = find_all_events ~filter:(same_id "li") program in
+        check_int "Expecting 5 events with sub-id 'li'" 5 (List.length lis) ;
+        let* n_exprs =
+          map
+            (fun n ->
+              let {io; _} = n.data in
+              match io.data with
+              | Output {data= IntLit i; _} -> return i
+              | Output expr ->
+                  Alcotest.fail
+                    ( "Expecting an integer output, got "
+                    ^ Unparser.PlainUnparser.unparse_expr expr )
+              | _ -> Alcotest.fail "Expecting an output" )
+            ns
+        in
+        check_int_list "Expecting list of integers from 1 to 4" [1; 2; 3; 4]
+          n_exprs ;
+        let* b_exprs =
+          map
+            (fun b ->
+              let {io; _} = b.data in
+              match io.data with
+              | Output {data= True; _} -> return true
+              | Output {data= False; _} -> return false
+              | Output expr ->
+                  Alcotest.fail
+                    ( "Expecting a boolean output, got "
+                    ^ Unparser.PlainUnparser.unparse_expr expr )
+              | _ -> Alcotest.fail "Expecting an output" )
+            bs
+        in
+        check_bool_list "Expecting list of booleans" [true; false; true] b_exprs ;
+        let* s_exprs =
+          map
+            (fun s ->
+              let {io; _} = s.data in
+              match io.data with
+              | Output {data= StringLit c; _} -> return c
+              | Output expr ->
+                  Alcotest.fail
+                    ( "Expecting a character output, got "
+                    ^ Unparser.PlainUnparser.unparse_expr expr )
+              | _ -> Alcotest.fail "Expecting an output" )
+            ss
+        in
+        check_string_list "Expecting list of characters"
+          ["a"; "b"; "c"; "d"; "e"] s_exprs ;
+        let* sr_exprs =
+          map
+            (fun sr ->
+              let {io; _} = sr.data in
+              match io.data with
+              | Output {data= StringLit c; _} -> return c
+              | Output expr ->
+                  Alcotest.fail
+                    ( "Expecting a character output, got "
+                    ^ Unparser.PlainUnparser.unparse_expr expr )
+              | _ -> Alcotest.fail "Expecting an output" )
+            srs
+        in
+        check_string_list "Expecting list of characters" ["a"; "b"; "c"]
+          sr_exprs ;
+        let* nr_exprs =
+          map
+            (fun nr ->
+              let {io; _} = nr.data in
+              match io.data with
+              | Output {data= IntLit i; _} -> return i
+              | Output expr ->
+                  Alcotest.fail
+                    ( "Expecting an integer output, got "
+                    ^ Unparser.PlainUnparser.unparse_expr expr )
+              | _ -> Alcotest.fail "Expecting an output" )
+            nrs
+        in
+        check_int_list "Expecting list of integers" [1; 2; 3] nr_exprs ;
+        let* li_exprs =
+          map
+            (fun li ->
+              let {io; _} = li.data in
+              match io.data with
+              | Output {data= IntLit i; _} -> return i
+              | Output expr ->
+                  Alcotest.fail
+                    ( "Expecting an integer output, got "
+                    ^ Unparser.PlainUnparser.unparse_expr expr )
+              | _ -> Alcotest.fail "Expecting an output" )
+            lis
+        in
+        check_int_list "Expecting list of integers" [0; 1; 2; 1; -1] li_exprs ;
+        (* check_int "Expected 3 events in the event env" 3
+           (List.length (Env.flatten event_env)) ; *)
+        return (program, event_env, expr_env) )
+      expecting_ok
+  ; make_test "2.tdcr"
+      (file "annotations/2.tdcr")
+      (fun program (event_env, expr_env) ->
+        typecheck ~event_env program
+        >>= fun (_ty_env, event_env) ->
+        instantiate ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        (* Check the events *)
+        check_int "Expected 2 events" 2 (List.length program.events) ;
+        (* check_int "Expected 3 events in the event env" 3
+           (List.length (Env.flatten event_env)) ; *)
+        check_int "Expected 0 template instantiation" 0
+          (List.length program.template_insts) ;
+        (* Check relations *)
+        check_int "Expected 4 relation" 4 (List.length program.relations) ;
+        (* Check num of events *)
+        let* as' = find_all_events ~filter:(same_id "a") program in
+        check_int "Expecting 1 event with sub-id 'a'" 1 (List.length as') ;
+        let* bs = find_all_events ~filter:(same_id "b") program in
+        check_int "Expecting 1 event with sub-id 'b'" 1 (List.length bs) ;
+        (* Check condition relations *)
+        let* condition_relations_a =
+          find_all_relations
+            ~filter:(fun r from _ -> is_ctrl Condition r && from.data = "a")
+            program
+        in
+        check_int "Expecting 0 condition relation from 'a'" 0
+          (List.length condition_relations_a) ;
+        (* Check exclude relations *)
+        let* exclude_relations_b =
+          find_all_relations
+            ~filter:(fun r from _ -> is_ctrl Exclude r && from.data = "b")
+            program
+        in
+        check_int "Expecting 4 exclude relation from 'b'" 4
+          (List.length exclude_relations_b) ;
+        let* exclude_relations_affecting_a =
+          find_all_relations
+            ~filter:(fun r _ dest -> is_ctrl Exclude r && dest.data = "a")
+            program
+        in
+        check_int "Expecting 4 relations on the form 'b -->% a'"
+          (List.length exclude_relations_b)
+          (List.length exclude_relations_affecting_a) ;
+        return (program, event_env, expr_env) )
+      expecting_ok
+  ; make_test "3.tdcr"
+      (file "annotations/3.tdcr")
+      (fun program (event_env, expr_env) ->
+        typecheck ~event_env program
+        >>= fun (_ty_env, event_env) ->
+        instantiate ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        (* Check the events *)
+        check_int "Expected 1 events" 1 (List.length program.events) ;
+        (* check_int "Expected 3 events in the event env" 3
+           (List.length (Env.flatten event_env)) ; *)
+        check_int "Expected 0 template instantiation" 0
+          (List.length program.template_insts) ;
+        (* Check relations *)
+        check_int "Expected 1 relation" 1 (List.length program.relations) ;
+        (* Check num of relations *)
+        let* spawn_relations =
+          find_all_relations
+            ~filter:(fun r from _ -> is_spawn r && from.data = "a")
+            program
+        in
+        check_int "Expecting only one spawn relation on the program"
+          (List.length spawn_relations)
+          (List.length program.relations) ;
+        execute ~event_id:"a" ~expr:(IntLit 0) ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        check_int "Expected same number of events" 1
+          (List.length program.events) ;
+        check_int "Expected same number of relations" 1
+          (List.length program.relations) ;
+        check_int "Not expecting instantiations to be done." 0
+          (List.length program.template_insts) ;
+        execute ~event_id:"a" ~expr:(IntLit 1) ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        check_int "Expected 2 events" 2 (List.length program.events) ;
+        check_int "Expected 2 relations" 2 (List.length program.relations) ;
+        check_int "Not expecting instantiations to be done." 0
+          (List.length program.template_insts) ;
+        (* Check condition relations *)
+        let* condition_relations_a =
+          find_all_relations
+            ~filter:(fun r from _ -> is_ctrl Condition r && from.data = "a")
+            program
+        in
+        check_int "Expecting 1 condition relation from 'a'" 1
+          (List.length condition_relations_a) ;
+        let* condition_relations_affecting_b =
+          find_all_relations
+            ~filter:(fun r _ dest -> is_ctrl Condition r && dest.data = "b")
+            program
+        in
+        check_int "Expecting 1 condition relation on the form 'a -->* b'"
+          (List.length condition_relations_a)
+          (List.length condition_relations_affecting_b) ;
+        return (program, event_env, expr_env) )
+      expecting_ok
+  ; make_test "4.tdcr"
+      (file "annotations/4.tdcr")
+      (fun program (event_env, expr_env) ->
+        typecheck ~event_env program
+        >>= fun (_ty_env, event_env) ->
+        instantiate ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        (* Check the events *)
+        check_int "Expected 1 events" 1 (List.length program.events) ;
+        (* check_int "Expected 3 events in the event env" 3
+           (List.length (Env.flatten event_env)) ; *)
+        check_int "Expected 0 template instantiation" 0
+          (List.length program.template_insts) ;
+        (* Check relations *)
+        check_int "Expected 4 relation" 4 (List.length program.relations) ;
+        (* Check spawn relations *)
+        let* spawn_relations =
+          find_all_relations
+            ~filter:(fun r from _ -> is_spawn r && from.data = "a")
+            program
+        in
+        check_int "Expecting only one spawn relation on the program"
+          (List.length spawn_relations)
+          (List.length program.relations) ;
+        execute ~event_id:"a" ~expr:(IntLit 0) ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        check_int "Expected same number of events" 1
+          (List.length program.events) ;
+        check_int "Expected same number of relations" 4
+          (List.length program.relations) ;
+        check_int "Not expecting instantiations to be done." 0
+          (List.length program.template_insts) ;
+        execute ~event_id:"a" ~expr:(IntLit 1) ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        check_int "Expected 5 events" 5 (List.length program.events) ;
+        let* bs = find_all_events ~filter:(same_id "b") program in
+        check_int "Expecting 4 events with sub-id 'b'" 4 (List.length bs) ;
+        let* b_exprs =
+          map
+            (fun b ->
+              let {io; _} = b.data in
+              match io.data with
+              | Output {data= IntLit i; _} -> return i
+              | Output expr ->
+                  Alcotest.fail
+                    ( "Expecting an integer output, got "
+                    ^ Unparser.PlainUnparser.unparse_expr expr )
+              | _ -> Alcotest.fail "Expecting an output" )
+            bs
+        in
+        check_int_list "Expecting list of integers" [1; 2; 3; 4] b_exprs ;
+        return (program, event_env, expr_env) )
       expecting_ok ]
 
 (* =============================================================================

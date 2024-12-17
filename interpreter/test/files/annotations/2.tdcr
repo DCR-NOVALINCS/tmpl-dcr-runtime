@@ -1,5 +1,13 @@
 (a: A)[?]
 (b: B)[?]
 
-a -->* b - when 0 > 1
-b -->% a - foreach i in [0, 1, 2, 3]
+# a -->* b - when 0 > 1
+# b -->% a - foreach i in [0, 1, 2, 3]
+
+if 0 > 1:
+    a -->* b
+/if
+
+foreach i in @range(0, 3):
+    b -->% a
+/foreach
