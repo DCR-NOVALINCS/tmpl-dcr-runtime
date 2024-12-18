@@ -303,7 +303,7 @@ and partial_eval_expr expr expr_env =
       partial_eval_expr e expr_env
       >>= fun v -> return {expr with data= UnaryOp (v, op)}
   | Identifier id -> find_id id expr_env
-  | Trigger -> find_id {expr with data= trigger_id} expr_env
+  (* | Trigger -> find_id {expr with data= trigger_id} expr_env *)
   | PropDeref (e, p) ->
       partial_eval_expr e expr_env
       >>= fun v -> return {expr with data= PropDeref (v, p)}

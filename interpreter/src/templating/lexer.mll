@@ -46,7 +46,8 @@ rule read_token = parse
 	| "]-><>"           { RGUARD_MILESTONE}
 	| "]->>"            { RGUARD_SPAWN}
 	| "@trigger"        { TRIGGER }  
-	| '\''              { STR (read_string (Buffer.create 20) lexbuf) }
+	| '\''              { STR (read_string (Buffer.create 20) '\'' lexbuf) }
+	| '\"'              { STR (read_string (Buffer.create 20) '\"' lexbuf) }
 	| '+' 				{ PLUS } 
 	| '*' 				{ MULT } 
 	| '-'				{ MINUS }
@@ -101,16 +102,16 @@ rule read_token = parse
 
 
 (* In doubt, see https://medium.com/@huund/recipes-for-ocamllex-bb4efa0afe53 *)
-and read_string buffer 	= parse
-	| '\''                  { Buffer.contents buffer } (* returns back to callee *)
+and read_string buffer start_token = parse
+	| '\"'                  { Buffer.contents buffer } (* returns back to callee *)
 	| '\\' 'n'  			{ Buffer.add_char buffer '\n'
-								; read_string buffer lexbuf }
+								; read_string buffer start_token lexbuf }
 	| '\\' 'r'  			{ Buffer.add_char buffer '\r'
-								; read_string buffer lexbuf }
+								; read_string buffer start_token lexbuf }
 	| '\\' 't'  			{ Buffer.add_char buffer '\t' 
-								; read_string buffer lexbuf }
-	| [^'\'' '\\']+			{ Buffer.add_string buffer @@ Lexing.lexeme lexbuf
-								; read_string buffer lexbuf }
+								; read_string buffer start_token lexbuf }
+	| [^'\"' '\\']+			{ Buffer.add_string buffer @@ Lexing.lexeme lexbuf
+								; read_string buffer start_token lexbuf }
 	(* | newline            { Buffer.add_string buf @@ Lexing.lexeme lexbuf
 								; Lexing.new_line lexbuf ; read_string buf lexbuf } *)
 	(* | '\\' '"'              { Buffer.add_char buffer '"'

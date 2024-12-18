@@ -720,7 +720,8 @@ let annotation_set =
               | _ -> Alcotest.fail "Expecting an output" )
             bs
         in
-        check_int_list "Expecting list of integers" [1; 2; 3; 4] b_exprs ;
+        check_int_list "Expecting list of integers" [1; 2; 3; 4]
+          (List.sort compare b_exprs) ;
         return (program, event_env, expr_env) )
       expecting_ok ]
 
