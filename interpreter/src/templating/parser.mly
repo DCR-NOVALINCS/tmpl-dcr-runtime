@@ -168,7 +168,7 @@ plain_template_annotation:
     then_branch = plain_program_spawn;
     else_branch = preceded(ELSE, preceded(COLON, plain_program_spawn))?;
     ENDIF;
-  { IfElse { condition; then_branch; else_branch = else_branch } }
+  { IfElse { condition; then_branch; else_branch } }
 
 // =====
 // ===== event declarations

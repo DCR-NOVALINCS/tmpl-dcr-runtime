@@ -37,19 +37,22 @@ and input_file filename =
 let print_output ?(previous_state = empty_runtime_state) = function
   | Ok runtime_state ->
       let {output; _} = runtime_state in
-      CPrinter.cprintln output ; return runtime_state
+      CPrinter.cprintln ~format:Bold output ;
+      return runtime_state
   | Error errors -> print_errors errors ; return previous_state
 
 let set_logger logger_level =
-  Logger.enable () ;
-  match String.trim logger_level with
-  | "debug" -> return @@ Logger.set_logger_level Debug
-  | "info" -> return @@ Logger.set_logger_level Info
-  | "warn" -> return @@ Logger.set_logger_level Warn
-  | "error" -> return @@ Logger.set_logger_level Error
-  | "success" -> return @@ Logger.set_logger_level Success
-  | "" -> return @@ Logger.disable ()
-  | _ -> invalid_logger_level logger_level
+  if Option.is_none logger_level then (Logger.disable () ; return ())
+  else (
+    Logger.enable () ;
+    let logger_level = Option.get logger_level in
+    match String.trim logger_level with
+    | "debug" -> return (Logger.set_logger_level Debug)
+    | "info" -> return (Logger.set_logger_level Info)
+    | "warn" -> return (Logger.set_logger_level Warn)
+    | "error" -> return (Logger.set_logger_level Error)
+    | "success" -> return (Logger.set_logger_level Success)
+    | _ -> invalid_logger_level logger_level )
 
 (* =============================================================================
    Runtime functions
@@ -57,7 +60,7 @@ let set_logger logger_level =
 
 open Cmdliner
 
-type options = {logger_level: string}
+type options = {logger_level: string option}
 
 let rec interpret_command tokens runtime_state =
   match tokens with
@@ -136,7 +139,10 @@ let runtime_cmd =
       let doc = "The level of logging to be used" in
       Arg.(value & opt string "" & info ["l"; "log"] ~doc)
     in
-    Term.(const (fun logger_level -> {logger_level}) $ logger_level)
+    Term.(
+      const (fun ll ->
+          {logger_level= (if String.trim ll = "" then None else Some ll)} )
+      $ logger_level )
   and input_filename =
     let doc = "The input file to be processed" in
     Arg.(required & pos 0 (some string) None & info [] ~doc)

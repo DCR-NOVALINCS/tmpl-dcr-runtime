@@ -204,17 +204,17 @@ and is_event_present_on_relation id relation =
    ============================================================================= *)
 
 and append_subprograms subprograms =
-  fold_right
-    (fun (events, template_insts, relations, annotations)
-         (events', template_insts', relations', annotations') ->
-      return
-      @@ mk_subprogram
-           ~events:(List.append events' events)
-           ~template_insts:(List.append template_insts' template_insts)
-           ~relations:(List.append relations' relations)
-           ~annotations:(List.append annotations' annotations)
-           () )
-    empty_subprogram subprograms
+  let events, template_insts, relations, annotations =
+    List.fold_left
+      (fun (events, template_insts, relations, annotations)
+           (events', template_insts', relations', annotations') ->
+        ( events @ events'
+        , template_insts @ template_insts'
+        , relations @ relations'
+        , annotations @ annotations' ) )
+      ([], [], [], []) subprograms
+  in
+  return (events, template_insts, relations, annotations)
 
 and event_as_expr event =
   (* let {marking; _} = event.data in *)
@@ -238,6 +238,10 @@ and event_as_ty event =
       match !(expr.ty) with None -> failwith "Type not found" | Some ty -> ty )
   in
   RecordTy [(annotate "value", annotate ty)]
+
+and sort_events program =
+  let events = program.events |> List.sort compare in
+  return {program with events}
 
 (* =============================================================================
    Alpha-renaming functions

@@ -661,7 +661,8 @@ let annotation_set =
           (List.length condition_relations_a) ;
         let* condition_relations_affecting_b =
           find_all_relations
-            ~filter:(fun r _ dest -> is_ctrl Condition r && dest.data = "b")
+            ~filter:(fun r _ dest ->
+              is_ctrl Condition r && String.starts_with ~prefix:"b" dest.data )
             program
         in
         check_int "Expecting 1 condition relation on the form 'a -->* b'"
