@@ -68,15 +68,15 @@ i -->> {
 
 Here is a list of the features that are available in this project.
 
-| Features                     | Done? |
-| ---------------------------- | ----- |
-| Basic Semantic of DCR Graphs | ✅     |
-| Templates in DCR Graphs      | ✅     |
-| CLI Interface                | ✅     |
-| Export to JSON               | ✅     |
-| Export back to `.tdcr`       | ✅     |
-| Export to `.dot`             | ❌     |
-| Reactive data values         | ❌     |
+| Features                      | Done? |
+| ----------------------------- | ----- |
+| Basic Semantic of DCR Graphs  | ✅     |
+| Templates in DCR Graphs       | ✅     |
+| Export to JSON                | ✅     |
+| Export back to `.tdcr`        | ✅     |
+| Export to `.dot`              | ❌     |
+| Reactive data values          | ❌     |
+| Interaction between processes | ❌     |
 
 If you have any suggestions or want to contribute to this project, feel free to open an issue or a pull request. 🙂
 
@@ -159,9 +159,8 @@ From this prompt, you can run the following commands:
   ```
   > help
   Available Commands:
-  - debug : Shows any debug information available.
-  - export <FILENAME>: Creates a file named FILENAME with a textual representation of the current state of the graph.
-  - execute <EVENT_ID> <EXPR_STRING>: Executes the event <EVENT_ID> with the expression <EXPR_STRING>, if needed.
+  - export <FILENAME>: Creates a file named <FILENAME> with a textual representation of the current state of the graph.
+  - execute <EVENT_ID> <EXPR_STRING>: Executes the event <EVENT_ID> with the expression <EXPR_STRING> if needed.
   - view : Views the current state of the graph.
   - exit : Exit the program.
   ```
@@ -171,12 +170,16 @@ From this prompt, you can run the following commands:
   > exit
   ```
 
-- **view**: View the current state of the program, i.e., only the events that are enabled in the program.
+- **view**: View the current state of the program, i.e., the enabled events.
   ```
-  > view [-a | --all]
+  > view [-a | --all] [-d | --disabled] [-r | --relations] [-t | --templates] [-v | --value]
   ```
   **Flags:**
   - `-a` or `--all`: View all events, including those that are not enabled.
+  - `-d` or `--disabled`: View the disabled events.
+  - `-r` or `--relations`: View the relations between the events.
+  - `-t` or `--templates`: View the templates that are available in the program.
+  - `-v` or `--value`: View the values of the events.
 
 - **execute**: Execute the event with the given `event_id` and the given `expr` as the input.
   ```

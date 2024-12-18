@@ -80,6 +80,7 @@ let rec interpret_command tokens runtime_state =
         | _ -> return runtime_state ) )
 
 and prompt runtime_state =
+  flush_all () ;
   CPrinter.cprint ~color:BrightGreen ~format:Bold "> " ;
   flush stdout ;
   (* Get command from input *)
