@@ -85,8 +85,24 @@ and change_relation old_id new_id relation =
       let new_from = if from.data = old_id.data then new_id else from in
       {relation with data= SpawnRelation (new_from, guard, subprogram)}
 
+and update_relation_guard ?(eval = partial_eval_expr) relation expr_env =
+  match relation.data with
+  | ControlRelation (from, guard, dest, t) ->
+      eval guard expr_env
+      >>= fun guard_value ->
+      return {relation with data= ControlRelation (from, guard_value, dest, t)}
+  | _ -> return relation
+
+and update_expr_id ?(eval = eval_expr) old_id new_id expr expr_env =
+  eval expr expr_env
+  >>= fun value ->
+  match value.data with
+  | Identifier id when id.data = old_id ->
+      return {expr with data= Identifier new_id}
+  | _ -> return expr
+
 (* =============================================================================
-   Updating relation functions
+   Preprocessing functions
    ============================================================================= *)
 
 and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program

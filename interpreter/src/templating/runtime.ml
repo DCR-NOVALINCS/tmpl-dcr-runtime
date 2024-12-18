@@ -132,6 +132,9 @@ and propagate_effect relation event (event_env, expr_env) program =
           (* Update event values *)
           map (fun e -> update_event_io ~eval:eval_expr e expr_env) spawn_events
           >>= fun spawn_events ->
+          (* Update relations *)
+          map (fun r -> update_relation_guard r expr_env) spawn_relations
+          >>= fun spawn_relations ->
           (* Put it all together *)
           return
             ( { program with

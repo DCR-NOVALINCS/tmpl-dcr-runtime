@@ -104,7 +104,8 @@ and unparse_program_json program =
 
 (* --- Vizualization functions --- *)
 
-and view ?(filter = fun event _ -> Some event) ?(should_print_events = true)
+and view ?(filter = fun event _ -> Some event)
+    ?(should_print_template_decls = false) ?(should_print_events = true)
     ?(should_print_value = false) ?(should_print_relations = false)
     ?(expr_env = empty_env) ?(event_env = empty_env) program =
   filter_map (fun event -> filter event (event_env, expr_env)) program.events
@@ -114,7 +115,7 @@ and view ?(filter = fun event _ -> Some event) ?(should_print_events = true)
   return
     (unparse ~should_print_events ~should_print_value
        ~should_print_executed_marking:true ~should_print_relations
-       ~should_print_template_decls:false program )
+       ~should_print_template_decls program )
 
 and view_debug program =
   let open Unparser.PlainUnparser in
@@ -129,9 +130,10 @@ and view_enabled ?(should_print_value = false) ?(should_print_relations = false)
       |> function Ok true -> Some event | _ -> None )
     program
 
-and view_disabled ?(should_print_relations = false) ?(expr_env = empty_env)
+and view_disabled ?(should_print_value = false)
+    ?(should_print_relations = false) ?(expr_env = empty_env)
     ?(event_env = empty_env) program =
-  view ~should_print_relations ~event_env ~expr_env
+  view ~should_print_relations ~should_print_value ~event_env ~expr_env
     ~filter:(fun event (event_env, expr_env) ->
       is_enabled event program (event_env, expr_env)
       |> function Ok false -> Some event | _ -> None )
