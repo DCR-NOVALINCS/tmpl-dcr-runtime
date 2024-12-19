@@ -1,5 +1,11 @@
 # CLI Module
 
-The CLI module is responsible for providing a command-line interface for the interpreter. The module is implemented in the `cli` package and consists of the following components:
+The CLI module is responsible for providing a command-line interface for the interpreter. 
+The module consists of the following components:
 
-<!-- TODO: List all the modules -->
+| File                       | Description                                              |
+| -------------------------- | -------------------------------------------------------- |
+| [`exec.ml`](exec.ml)       | Contains the main entry point for the CLI execution.     |
+| [`options.ml`](options.ml) | Defines the options and configurations for the CLI.      |
+| [`runtime.ml`](runtime.ml) | Manages the runtime state and execution flow of the CLI. |
+    
