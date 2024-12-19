@@ -18,7 +18,7 @@ module ResultMonad = struct
 
   let ( let+ ) = apply
 
-  let bind_error m f = match m with Error e -> f e | Ok x -> Ok x
+  let bind_error m f = match m with Error e -> f e | Ok _ as ok -> ok
 
   let ( >>! ) = bind_error
 

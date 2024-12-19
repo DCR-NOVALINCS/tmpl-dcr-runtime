@@ -22,7 +22,7 @@ val add :
     @return the BK-tree with the value added. *)
 
 val nearest_neighbor : ('a -> 'b -> int) -> 'a bk_tree -> 'b -> 'a * int
-(** [nearest_neighbor distance_fn tree query] finds the nearest neighbor in the
+(** [nearest_neighbor ?distance_fn tree query] finds the nearest neighbor in the
     BK-tree.
     @param distance_fn
       the function to calculate the distance between two strings.

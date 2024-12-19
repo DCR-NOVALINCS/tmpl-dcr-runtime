@@ -5,7 +5,7 @@ open Monads.ResultMonad
 open Printing
 open Env
 open Checkable
-open Repl.Root
+open Repl.Exec
 open Repl.State
 open Core
 open Api
@@ -14,7 +14,8 @@ open Dcr
 open Instantiation
 open Helper
 open Ast
-open Error
+
+(* open Error *)
 open Unparser
 open Cmdliner
 
@@ -53,12 +54,12 @@ let input_file filename =
 let interpret_command tokens runtime_state =
   match tokens with
   | [] -> return runtime_state
-  | cmd_name :: _ -> (
-    match List.assoc_opt cmd_name cmds with
+  | name :: _ -> (
+    match List.assoc_opt name commands with
     | None ->
         let open Bktree in
         let nearest, distance =
-          nearest_neighbor levenshtein_distance cmds_bbk_tree cmd_name
+          nearest_neighbor levenshtein_distance cmds_bbk_tree name
         in
         invalid_command ~nearest ~distance tokens
     | Some {callback; _} -> (
@@ -78,16 +79,10 @@ let rec prompt runtime_state =
       sanitize_input input
       >>= fun tokens ->
       interpret_command tokens runtime_state
-      >>! fun errors ->
-      print_errors errors ;
-      return runtime_state
-      >>= fun state ->
-      (* print_output ~previous_state:runtime_state state *)
-      let {output; _} = state in
-      CPrinter.cprintln ~format:Bold output ;
-      prompt {state with output= ""}
+      |> print_output ~previous_state:runtime_state
+      >>= fun state -> prompt {state with output= ""}
 
-let runtime options filename =
+and runtime options filename =
   try
     set_logger options.logger_level
     >>= fun _ ->

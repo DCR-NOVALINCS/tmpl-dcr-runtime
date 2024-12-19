@@ -5,6 +5,7 @@ open Monads.ResultMonad
 open Ast
 open Syntax
 open Error
+open Cmdliner
 
 (* =============================================================================
    Runtime State Management Section
@@ -32,3 +33,20 @@ let print_output ?(previous_state = empty_runtime_state) = function
       CPrinter.cprintln ~format:Bold (string_of_state runtime_state) ;
       return runtime_state
   | Error errors -> print_errors errors ; return previous_state
+
+(* =============================================================================
+   Command Creation Section
+   ============================================================================= *)
+
+type cmd =
+  { params: string list
+  ; description: string
+  ; callback:
+      (runtime_state -> (runtime_state, detailed_error list) result) Cmd.t }
+
+let create_cmd (name, params, description) term cmds =
+  (* Add both the default and shortened versions of the command to the list *)
+  let cmd =
+    {params; description; callback= Cmd.v (Cmd.info ~man:[] name) term}
+  in
+  (name, cmd) :: cmds
