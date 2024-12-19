@@ -37,11 +37,6 @@ install:
 	make pre-build
 	dune install
 
-lint:
-	make pre-build
-	dune build @lint
-	dune fmt --auto-promote
-
 format:
 	make pre-build
 	dune fmt
@@ -60,3 +55,4 @@ doc:
 
 # Targets
 .SILENT: pre-build build watch clean
+.PHONY: test install format doc
