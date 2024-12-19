@@ -1,0 +1,3 @@
+(library
+ (name repl)
+ (libraries common core cmdliner))

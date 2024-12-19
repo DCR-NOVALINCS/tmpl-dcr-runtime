@@ -1,5 +1,5 @@
 tmpl g(n: Number): A {
-    (a: A)[{n : n, s: 'Hello world!'}]
+    (a: A)[{n : n, s: "Hello world!"}]
 } => a
 
 tmpl h(n: Number): B {

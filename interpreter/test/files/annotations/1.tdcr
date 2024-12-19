@@ -7,14 +7,14 @@ foreach i in @range(0, 3):
 /foreach
 
 foreach b in [true, false, true AND 1+1 > 0]:
-    (b: B)[b]
-/foreach
+     (b: B)[b]
+    /foreach
 
-foreach s in ['a', 'b', 'c', 'd', 'e']:
+foreach s in ["a", "b", "c", "d", "e"]:
     (s: S)[s]
 /foreach
 
-foreach r in [{ name: 'a', value: 1 }, { name: 'b', value: 2 }, { name: 'c', value: 3 }]:
+foreach r in [{ name: "a", value: 1 }, { name: "b", value: 2 }, { name: "c", value: 3 }]:
     (sr: S)[r.name]
     (nr: N)[r.value]
 /foreach
