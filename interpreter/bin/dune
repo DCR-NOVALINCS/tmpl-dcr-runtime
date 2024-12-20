@@ -1,4 +1,13 @@
+; Executable for the CLI version of the interpreter.
+
 (executable
  (name main)
  (public_name tmpl_dcr)
- (libraries core cli))
+ (libraries cli)
+ (modules main))
+
+(documentation
+ (package tmpl_dcr))
+
+; TODO: Executable for the server version of the interpreter.
+; TODO: Executable for the web version of the interpreter.
