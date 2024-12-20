@@ -2,4 +2,4 @@
  (name core)
  (preprocess
   (pps ppx_yojson_conv ppx_deriving.show))
- (libraries common dcr parsing typing cmdliner))
+ (libraries common dcr parsing typing unparser cmdliner))

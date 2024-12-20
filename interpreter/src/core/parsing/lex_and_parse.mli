@@ -10,7 +10,8 @@ open Error
 val parse_program :
   ?filename:string -> Lexing.lexbuf -> (program, detailed_error list) result
 (** [parse_program ?filename lexbuf] parses the lexbuf as a program and returns
-    the result. If an error occurs, it returns the error.
+    the result. This function sets the [pos_fname] field in the lexbuf to the
+    provided filename. If an error occurs, it returns the error.
     @param filename The name of the file being parsed.
     @param lexbuf The lexbuf to be parsed.
     @return The result of the parsing as result. *)
@@ -18,7 +19,8 @@ val parse_program :
 val parse_expression :
   ?filename:string -> Lexing.lexbuf -> (expr, detailed_error list) result
 (** [parse_expression ?filename lexbuf] parses the lexbuf as an expression and
-    returns the result. If an error occurs, it returns the error.
+    returns the result. This function sets the [pos_fname] field in the lexbuf
+    to the provided filename. If an error occurs, it returns the error.
     @param filename The name of the file being parsed.
     @param lexbuf The lexbuf to be parsed.
     @return The result of the parsing as result. *)

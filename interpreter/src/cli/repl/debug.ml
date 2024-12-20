@@ -1,5 +1,5 @@
 open State
-open Ast.Unparser
+open Unparser
 open Common
 open Env
 open Monads.ResultMonad
@@ -21,17 +21,17 @@ and debug_cmd view_envs state =
     | true ->
         Buffer.add_string buffer
           (CString.colorize ~color:Magenta ~format:Bold "Type Environment:\n") ;
-        Buffer.add_string buffer (string_of_env unparse_ty ty_env) ;
+        Buffer.add_string buffer (string_of_env Plain.unparse_ty ty_env) ;
         Buffer.add_string buffer
           (CString.colorize ~color:Magenta ~format:Bold
              "\n\nEvent Environment:\n" ) ;
         Buffer.add_string buffer
-          (string_of_env (fun e -> unparse_events [e]) event_env) ;
+          (string_of_env (fun e -> Plain.unparse_events [e]) event_env) ;
         Buffer.add_string buffer
           (CString.colorize ~color:Magenta ~format:Bold
              "\n\nExpression Environment:\n" ) ;
         Buffer.add_string buffer
-          (string_of_env (fun e -> unparse_expr e) expr_env)
+          (string_of_env (fun e -> Plain.unparse_expr e) expr_env)
   in
   let output = Buffer.contents buffer in
   return {state with output}

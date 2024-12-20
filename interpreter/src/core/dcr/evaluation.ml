@@ -59,7 +59,8 @@ let rec eval_expr expr env =
           | _ -> property_not_found p v )
       | _ ->
           should_not_happen ~module_path:"evaluation.ml"
-            ("Tried to dereference a non-record value " ^ unparse_expr v) )
+            ("Tried to dereference a non-record value " ^ Plain.unparse_expr v)
+      )
   | List elems ->
       map (fun elem -> eval_expr elem env) elems
       >>| fun elems -> {expr with data= List elems}
@@ -80,7 +81,8 @@ let rec eval_expr expr env =
             | _ ->
                 should_not_happen ~module_path:"evaluation.ml"
                   (Printf.sprintf "Invalid range expression (%s..%s)"
-                     (unparse_expr start_value) (unparse_expr end_value) )
+                     (Plain.unparse_expr start_value)
+                     (Plain.unparse_expr end_value) )
             (* type_mismatch ~loc:s.loc [IntTy; IntTy] []  *) )
       >>| fun es -> annotate ~loc:expr.loc ~ty:(Some (ListTy IntTy)) (List es)
   | Record fields ->
@@ -112,7 +114,7 @@ and eval_binop v1 v2 op =
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
           (Printf.sprintf "Invalid addition (+) between %s and %s"
-             (unparse_expr v1) (unparse_expr v2) ) )
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
   | Sub -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
@@ -120,7 +122,7 @@ and eval_binop v1 v2 op =
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
           (Printf.sprintf "Invalid subtraction (-) between %s and %s"
-             (unparse_expr v1) (unparse_expr v2) ) )
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
   | Mult -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
@@ -128,7 +130,7 @@ and eval_binop v1 v2 op =
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
           (Printf.sprintf "Invalid multiplication (*) between %s and %s"
-             (unparse_expr v1) (unparse_expr v2) ) )
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
   | Div -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
@@ -136,7 +138,7 @@ and eval_binop v1 v2 op =
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
           (Printf.sprintf "Invalid division (/) between %s and %s"
-             (unparse_expr v1) (unparse_expr v2) ) )
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
   | Eq -> (
     match (v1.data, v2.data) with
     (* Number *)
@@ -156,7 +158,7 @@ and eval_binop v1 v2 op =
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
           (Printf.sprintf "Invalid equality (==) between %s and %s"
-             (unparse_expr v1) (unparse_expr v2) ) )
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
   | NotEq -> (
     match (v1.data, v2.data) with
     (* Number *)
@@ -176,7 +178,7 @@ and eval_binop v1 v2 op =
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
           (Printf.sprintf "Invalid inequality (!=) between %s and %s"
-             (unparse_expr v1) (unparse_expr v2) ) )
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
   | GreaterThan -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
@@ -185,7 +187,7 @@ and eval_binop v1 v2 op =
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
           (Printf.sprintf "Invalid greater than (>) between %s and %s"
-             (unparse_expr v1) (unparse_expr v2) ) )
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
   | GreaterOrEqual -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
@@ -194,7 +196,7 @@ and eval_binop v1 v2 op =
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
           (Printf.sprintf "Invalid greater or equal (>=) between %s and %s"
-             (unparse_expr v1) (unparse_expr v2) ) )
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
   | LessThan -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
@@ -203,7 +205,7 @@ and eval_binop v1 v2 op =
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
           (Printf.sprintf "Invalid less than (<) between %s and %s"
-             (unparse_expr v1) (unparse_expr v2) ) )
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
   | LessOrEqual -> (
     match (v1.data, v2.data) with
     | IntLit i1, IntLit i2 ->
@@ -212,7 +214,7 @@ and eval_binop v1 v2 op =
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
           (Printf.sprintf "Invalid less or equal (<=) between %s and %s"
-             (unparse_expr v1) (unparse_expr v2) ) )
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
   | And -> (
     match (v1.data, v2.data) with
     | True, True -> return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
@@ -221,7 +223,7 @@ and eval_binop v1 v2 op =
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
           (Printf.sprintf "Invalid and (AND) between %s and %s"
-             (unparse_expr v1) (unparse_expr v2) ) )
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
   | Or -> (
     match (v1.data, v2.data) with
     | False, False -> return (annotate ~loc:v1.loc ~ty:(Some BoolTy) False)
@@ -229,8 +231,8 @@ and eval_binop v1 v2 op =
         return (annotate ~loc:v1.loc ~ty:(Some BoolTy) True)
     | _ ->
         should_not_happen ~module_path:"evaluation.ml"
-          (Printf.sprintf "Invalid or (OR) between %s and %s" (unparse_expr v1)
-             (unparse_expr v2) ) )
+          (Printf.sprintf "Invalid or (OR) between %s and %s"
+             (Plain.unparse_expr v1) (Plain.unparse_expr v2) ) )
 
 and eval_unop v op =
   match op with

@@ -11,7 +11,7 @@ let property_not_found ?(errors = []) p e =
     ( { location= e.loc
       ; message=
           "Property " ^ keyword p.data ^ " not found in " ^ keyword
-          @@ unparse_expr e
+          @@ Plain.unparse_expr e
       ; hint=
           Some "Ensure the property is declared and in scope. Check for typos."
       }

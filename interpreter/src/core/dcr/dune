@@ -2,4 +2,4 @@
  (name dcr)
  (preprocess
   (pps ppx_yojson_conv ppx_deriving.show))
- (libraries ast common))
+ (libraries ast common unparser))

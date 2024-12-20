@@ -13,9 +13,6 @@ open Typing.Typechecking
 open Dcr
 open Instantiation
 open Helper
-open Ast
-
-(* open Error *)
 open Unparser
 open Cmdliner
 
@@ -95,9 +92,9 @@ and runtime options filename =
     >>= fun (event_env, expr_env, program) ->
     (* Logger.success "Preprocessed successfully" ; *)
     Logger.debug @@ "Expr Env after preprocessing:\n"
-    ^ string_of_env unparse_expr expr_env ;
+    ^ string_of_env Plain.unparse_expr expr_env ;
     Logger.debug @@ "Event Env after preprocessing:\n"
-    ^ string_of_env (fun e -> unparse_events [e]) event_env ;
+    ^ string_of_env (fun e -> Plain.unparse_events [e]) event_env ;
     typecheck ~event_env program
     >>= fun (ty_env, event_env) ->
     Logger.success "Typechecked successfully" ;
@@ -105,9 +102,9 @@ and runtime options filename =
     >>= fun (program, event_env, expr_env) ->
     Logger.success "Instantiated successfully" ;
     Logger.debug @@ "Expr Env after instantiation:\n"
-    ^ string_of_env unparse_expr expr_env ;
+    ^ string_of_env Plain.unparse_expr expr_env ;
     Logger.debug @@ "Event Env after instantiation:\n"
-    ^ string_of_env (fun e -> unparse_events [e]) event_env ;
+    ^ string_of_env (fun e -> Plain.unparse_events [e]) event_env ;
     let runtime_state = mk_runtime_state ~ty_env ~expr_env ~event_env program in
     prompt runtime_state
   with Duplicate_binding id ->

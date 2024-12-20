@@ -1,7 +1,7 @@
 open State
 open Core
 open Api
-open Ast.Unparser
+open Unparser
 open Common
 open Monads.ResultMonad
 open Printing
@@ -35,6 +35,6 @@ and execute_cmd event_id expr_str state =
     ; output=
         Printf.sprintf "Executed event %s with expression %s\n"
           (keyword event_id)
-          (keyword (unparse_expr expr)) }
+          (keyword (Plain.unparse_expr expr)) }
 
 let term = Term.(const execute_cmd $ event_id $ expr)

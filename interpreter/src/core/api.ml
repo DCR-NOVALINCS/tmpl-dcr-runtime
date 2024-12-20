@@ -1,3 +1,7 @@
+(** {1 API}
+
+    This module provides functions to interact with the interpreter. *)
+
 open Ast
 open Syntax
 open Error
@@ -17,7 +21,7 @@ open Env
 open Printing
 
 (* =============================================================================
-   Available functions
+   Execute functions
    ============================================================================= *)
 
 let rec execute ~event_id ?(expr = Unit) ?(ty_env = empty_env)
@@ -42,10 +46,11 @@ let rec execute ~event_id ?(expr = Unit) ?(ty_env = empty_env)
         >>= fun event ->
         return (update_event event program)
         >>= fun program ->
-        Logger.debug @@ "Updated events:\n" ^ unparse_events program.events ;
+        Logger.debug @@ "Updated events:\n"
+        ^ Plain.unparse_events program.events ;
         (* Debug event_env *)
         Logger.debug @@ "Event Env after executing event:\n"
-        ^ string_of_env (fun e -> unparse_events [e]) event_env ;
+        ^ string_of_env (fun e -> Plain.unparse_events [e]) event_env ;
         (* Propagate relation effects that this event is apart of. *)
         propagate_effects event (event_env, expr_env) program
         >>= fun (program, _, _) ->
@@ -79,7 +84,9 @@ and execute_input_event event expr (ty_env, expr_env) =
       let id, _ = info in
       something_went_wrong ~loc:id.loc ("Is not a input event" ^ keyword id.data)
 
-(* --- Parse --- *)
+(* =============================================================================
+   Parsing functions
+   ============================================================================= *)
 
 and parse_program_from_file filename =
   let file_channel = open_in filename in
@@ -95,18 +102,23 @@ and parse_expression_from_string expr_tokens =
     let lexbuf = Lexing.from_string (String.concat " " expr_tokens) in
     parse_expression lexbuf
 
-(* --- Unparse --- *)
+(* =============================================================================
+   Unparsing functions
+   ============================================================================= *)
 
 and unparse_program_tdcr ?(should_print_value = false)
     ?(should_print_executed_marking = false) program =
   let open Unparser in
-  return (unparse ~should_print_executed_marking ~should_print_value program)
+  return
+    (Plain.unparse ~should_print_executed_marking ~should_print_value program)
 
 and unparse_program_json program =
   let open Yojson.Safe in
   return (pretty_to_string (yojson_of_program program))
 
-(* --- Vizualization functions --- *)
+(* =============================================================================
+   Visualization functions
+   ============================================================================= *)
 
 and view ?(filter = fun event _ -> Some event)
     ?(should_print_template_decls = false) ?(should_print_events = true)
@@ -117,27 +129,30 @@ and view ?(filter = fun event _ -> Some event)
   let* program = sort_events {program with events} in
   let open Unparser in
   return
-    (unparse ~should_print_events ~should_print_value
+    (Plain.unparse ~should_print_events ~should_print_value
        ~should_print_executed_marking:true ~should_print_relations
        ~should_print_template_decls program )
 
 and view_debug program =
   let open Unparser in
-  return @@ unparse ~should_print_executed_marking:true program
+  return @@ Plain.unparse ~should_print_executed_marking:true program
 (* view ~should_print_relations:true program *)
 
-and view_enabled ?(should_print_value = false) ?(should_print_relations = false)
+and view_enabled ?(should_print_template_decls = false)
+    ?(should_print_value = false) ?(should_print_relations = false)
     ?(expr_env = empty_env) ?(event_env = empty_env) program =
-  view ~should_print_value ~should_print_relations ~event_env ~expr_env
+  view ~should_print_template_decls ~should_print_value ~should_print_relations
+    ~event_env ~expr_env
     ~filter:(fun event (event_env, expr_env) ->
       is_enabled event program (event_env, expr_env)
       |> function Ok true -> Some event | _ -> None )
     program
 
-and view_disabled ?(should_print_value = false)
-    ?(should_print_relations = false) ?(expr_env = empty_env)
-    ?(event_env = empty_env) program =
-  view ~should_print_relations ~should_print_value ~event_env ~expr_env
+and view_disabled ?(should_print_template_decls = false)
+    ?(should_print_value = false) ?(should_print_relations = false)
+    ?(expr_env = empty_env) ?(event_env = empty_env) program =
+  view ~should_print_template_decls ~should_print_relations ~should_print_value
+    ~event_env ~expr_env
     ~filter:(fun event (event_env, expr_env) ->
       is_enabled event program (event_env, expr_env)
       |> function Ok false -> Some event | _ -> None )

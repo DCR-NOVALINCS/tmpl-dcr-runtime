@@ -10,10 +10,12 @@ let type_mismatch ?(errors = []) ?(loc = Nowhere) expected_tys got_tys =
   (* let string_expected = unparse_ty expected in *)
   let rec string_tys = function
     | [] -> keyword "?"
-    | [ty1] -> keyword (unparse_ty ty1)
+    | [ty1] -> keyword (Plain.unparse_ty ty1)
     | ty1 :: [last] ->
-        keyword (unparse_ty ty1) ^ " and " ^ keyword (unparse_ty last)
-    | ty :: tys -> keyword (unparse_ty ty) ^ ", " ^ string_tys tys
+        keyword (Plain.unparse_ty ty1)
+        ^ " and "
+        ^ keyword (Plain.unparse_ty last)
+    | ty :: tys -> keyword (Plain.unparse_ty ty) ^ ", " ^ string_tys tys
   in
   fail
     ( { location= loc
@@ -44,7 +46,7 @@ let event_type_mismatch ?(errors = []) ?(loc = Nowhere) ?(available = [])
           (string_tys tys)
   and string_of_event_type_pair (event_label, event_type, ty) =
     Printf.sprintf "%s%s" (keyword event_label)
-      (keyword (show_event_type' (unparse_ty ty) event_type))
+      (keyword (show_event_type' (Plain.unparse_ty ty) event_type))
     (* (keyword ) *)
   in
   fail
@@ -61,7 +63,7 @@ let event_type_mismatch ?(errors = []) ?(loc = Nowhere) ?(available = [])
                   (List.map
                      (fun (event_label, (ty, event_type)) ->
                        Printf.sprintf "- %s: %s" event_label
-                         (show_event_type' (unparse_ty ty) event_type) )
+                         (show_event_type' (Plain.unparse_ty ty) event_type) )
                      available ) ) ) }
     :: errors )
 
@@ -90,7 +92,7 @@ let property_not_found_type ?(errors = []) ?(loc = Nowhere) p ty =
     ( { location= loc
       ; message=
           "Property " ^ keyword p.data ^ " not found in " ^ keyword
-          @@ unparse_ty ty
+          @@ Plain.unparse_ty ty
       ; hint=
           Some "Ensure the property is declared and in scope. Check for typos."
       }

@@ -8,6 +8,14 @@ val type_mismatch :
   -> type_expr' list
   -> type_expr' list
   -> ('a, detailed_error list) result
+(** [type_mismatch ?errors ?loc expected actual] returns a [Result] with an
+    error if the expected and actual types do not match.
+    @param ?errors A list of errors to append to the result.
+    @param ?loc The location of the error.
+    @param expected The expected type.
+    @param actual The actual type.
+    @return
+      A [Result] with an error if the expected and actual types do not match. *)
 
 val event_type_mismatch :
      ?errors:detailed_error list

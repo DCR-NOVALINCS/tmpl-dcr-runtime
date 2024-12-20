@@ -1,22 +1,7 @@
-(* open Helper *)
+open Helper
 open Common.Monads.FilterMonad
+open Ast
 open Syntax
-
-let unparse_list ?(initial = "") ?(separator = "") ?(buffer = Buffer.create 100)
-    unparse_fn list =
-  match list with
-  | [] -> ()
-  | _ ->
-      Buffer.add_string buffer @@ initial ;
-      let rec unparse_list_aux = function
-        | [] -> ()
-        | [x] -> unparse_fn ~buffer x
-        | x :: xs ->
-            unparse_fn ~buffer x ;
-            Buffer.add_string buffer @@ separator ;
-            unparse_list_aux xs
-      in
-      unparse_list_aux list
 
 let rec unparse ?(indent = "") ?(abbreviated = true) ?(separator = "\n")
     ?(should_print_template_decls = true) ?(should_print_events = true)
@@ -53,6 +38,20 @@ and unparse_template_decls ?(indent = "") ?(abbreviated = true)
     ?(separator = "\n\n") ?(should_print_events = true)
     ?(should_print_template_insts = true) ?(should_print_relations = true)
     ?(buffer = Buffer.create 100) template_decls =
+  unparse_list ~buffer ~separator
+    (fun ~buffer template_decl ->
+      unparse_template_decl ~indent ~abbreviated ~separator ~should_print_events
+        ~should_print_template_insts ~should_print_relations ~buffer
+        template_decl
+      |> ignore ;
+      Buffer.add_string buffer @@ separator )
+    template_decls ;
+  Buffer.contents buffer
+
+and unparse_template_decl ?(indent = "") ?(abbreviated = true)
+    ?(separator = "\n\n") ?(should_print_events = true)
+    ?(should_print_template_insts = true) ?(should_print_relations = true)
+    ?(buffer = Buffer.create 100) template_decl =
   let unparse_template_param ?(indent = "") ?(separator = ": ")
       ?(buffer = Buffer.create 100) (id, tmpl_ty) =
     Buffer.add_string buffer @@ indent ;
@@ -68,46 +67,37 @@ and unparse_template_decls ?(indent = "") ?(abbreviated = true)
             unparse_expr ~buffer expr |> ignore )
     | EventParam label -> Buffer.add_string buffer @@ label.data
   in
-  let unparse_template_decl ?(indent = "") ?(abbreviated = true)
-      ?(buffer = Buffer.create 100) template_decl =
-    let {id; params; export_types; graph; export; _} = template_decl in
-    (* let buffer = Buffer.create 100 in *)
-    Buffer.add_string buffer @@ indent ;
-    Buffer.add_string buffer @@ "tmpl " ;
-    Buffer.add_string buffer @@ id.data ;
-    Buffer.add_string buffer @@ "( " ;
-    unparse_list ~buffer ~separator:", "
-      (fun ~buffer param -> unparse_template_param ~buffer param)
-      params ;
-    Buffer.add_string buffer @@ " )" ;
-    unparse_list ~buffer ~initial:": " ~separator:", "
-      (fun ~buffer label -> Buffer.add_string buffer @@ label.data)
-      export_types ;
-    Buffer.add_string buffer @@ " {\n" ;
-    Buffer.add_string buffer @@ indent ;
-    let graph_indent = indent ^ "  " in
-    let tmpl_events, tmpl_insts, tmpl_relations, _ = graph in
-    unparse_subprogram ~indent:graph_indent ~abbreviated ~separator
-      ~print_events:(should_print_events && List.length tmpl_events > 0)
-      ~print_template_insts:
-        (should_print_template_insts && List.length tmpl_insts > 0)
-      ~print_relations:(should_print_relations && List.length tmpl_relations > 0)
-      ~buffer graph
-    |> ignore ;
-    Buffer.add_string buffer @@ "\n" ^ indent ;
-    Buffer.add_string buffer @@ indent ^ "}" ;
-    (* let export = List.map (fun ex -> ex.data) export in Buffer.add_string
-       buffer @@ String.concat ", " export *)
-    unparse_list ~buffer ~initial:" => " ~separator:", "
-      (fun ~buffer ex -> Buffer.add_string buffer @@ ex.data)
-      export
-  in
-  unparse_list ~buffer ~separator
-    (fun ~buffer template_decl ->
-      unparse_template_decl ~indent ~abbreviated ~buffer template_decl |> ignore ;
-      Buffer.add_string buffer @@ separator )
-    template_decls ;
-  Buffer.contents buffer
+  let {id; params; export_types; graph; export; _} = template_decl in
+  (* let buffer = Buffer.create 100 in *)
+  Buffer.add_string buffer @@ indent ;
+  Buffer.add_string buffer @@ "tmpl " ;
+  Buffer.add_string buffer @@ id.data ;
+  Buffer.add_string buffer @@ "( " ;
+  unparse_list ~buffer ~separator:", "
+    (fun ~buffer param -> unparse_template_param ~buffer param)
+    params ;
+  Buffer.add_string buffer @@ " )" ;
+  unparse_list ~buffer ~initial:": " ~separator:", "
+    (fun ~buffer label -> Buffer.add_string buffer @@ label.data)
+    export_types ;
+  Buffer.add_string buffer @@ " {\n" ;
+  Buffer.add_string buffer @@ indent ;
+  let graph_indent = indent ^ "  " in
+  let tmpl_events, tmpl_insts, tmpl_relations, _ = graph in
+  unparse_subprogram ~indent:graph_indent ~abbreviated ~separator
+    ~print_events:(should_print_events && List.length tmpl_events > 0)
+    ~print_template_insts:
+      (should_print_template_insts && List.length tmpl_insts > 0)
+    ~print_relations:(should_print_relations && List.length tmpl_relations > 0)
+    ~buffer graph
+  |> ignore ;
+  Buffer.add_string buffer @@ "\n" ^ indent ;
+  Buffer.add_string buffer @@ indent ^ "}" ;
+  (* let export = List.map (fun ex -> ex.data) export in Buffer.add_string
+     buffer @@ String.concat ", " export *)
+  unparse_list ~buffer ~initial:" => " ~separator:", "
+    (fun ~buffer ex -> Buffer.add_string buffer @@ ex.data)
+    export
 
 and unparse_subprogram ?(indent = "") ?(abbreviated = true) ?(separator = "\n")
     ?(print_events = true) ?(print_value = false) ?(print_executed = false)
@@ -136,6 +126,17 @@ and unparse_subprogram ?(indent = "") ?(abbreviated = true) ?(separator = "\n")
 
 and unparse_events ?(indent = "") ?(abbreviated = true) ?(print_value = false)
     ?(print_executed = false) ?(buffer = Buffer.create 100) events =
+  (* in *)
+  unparse_list ~buffer ~separator:"\n"
+    (fun ~buffer event ->
+      ignore
+        (unparse_event ~indent ~abbreviated ~print_value ~print_executed ~buffer
+           event ) )
+    events ;
+  Buffer.contents buffer
+
+and unparse_event ?(indent = "") ?(abbreviated = true) ?(print_value = false)
+    ?(print_executed = false) ?(buffer = Buffer.create 100) event =
   let unparse_info ?(indent = "") ?(buffer = Buffer.create 100) (id, label) =
     Buffer.add_string buffer @@ indent ;
     Buffer.add_string buffer @@ Printf.sprintf "(%s:%s)" id.data label.data ;
@@ -183,25 +184,25 @@ and unparse_events ?(indent = "") ?(abbreviated = true) ?(print_value = false)
     if abbreviated then unparse_marking_abbreviated ~indent ~buffer marking.data
     else unparse_marking_extended ~indent ~buffer marking.data
   in
-  let unparse_event ?(indent = "") ?(abbreviated = true)
-      ?(buffer = Buffer.create 100) event =
-    let {info; io; marking} = event.data in
-    Buffer.add_string buffer @@ indent ;
-    unparse_marking ~abbreviated ~buffer marking ;
-    unparse_info ~buffer info ;
-    unparse_io ~buffer io ;
-    if print_value then (
-      Buffer.add_string buffer @@ " -> " ;
-      unparse_expr ~buffer !(marking.data.value) |> ignore ) ;
-    ()
-  in
-  unparse_list ~buffer ~separator:"\n"
-    (fun ~buffer event -> unparse_event ~indent ~abbreviated ~buffer event)
-    events ;
+  let {info; io; marking} = event.data in
+  Buffer.add_string buffer @@ indent ;
+  unparse_marking ~abbreviated ~buffer marking ;
+  unparse_info ~buffer info ;
+  unparse_io ~buffer io ;
+  if print_value then (
+    Buffer.add_string buffer @@ " -> " ;
+    unparse_expr ~buffer !(marking.data.value) |> ignore ) ;
   Buffer.contents buffer
 
 and unparse_template_insts ?(indent = "") ?(buffer = Buffer.create 100)
     template_insts =
+  unparse_list ~buffer ~separator:"\n"
+    (fun ~buffer inst ->
+      ignore (unparse_template_inst ~indent ~buffer inst.data) )
+    template_insts ;
+  Buffer.contents buffer
+
+and unparse_template_inst ?(indent = "") ?(buffer = Buffer.create 100) inst =
   let unparse_arg ?(indent = "") ?(separator = " = ")
       ?(buffer = Buffer.create 100) (arg_name, arg_ty) =
     Buffer.add_string buffer @@ indent ;
@@ -211,34 +212,37 @@ and unparse_template_insts ?(indent = "") ?(buffer = Buffer.create 100)
     | ExprArg expr -> unparse_expr ~buffer expr |> ignore
     | EventArg label -> Buffer.add_string buffer @@ label.data
   in
-  let unparse_inst ?(indent = "") ?(buffer = Buffer.create 100) inst =
-    let {tmpl_id; args; x} = inst in
-    Buffer.add_string buffer @@ indent ;
-    Buffer.add_string buffer @@ tmpl_id.data ;
-    Buffer.add_string buffer @@ "(" ;
-    unparse_list ~buffer ~separator:", "
-      (fun ~buffer arg -> unparse_arg ~buffer arg)
-      args ;
-    (* List.iter (fun (arg_name, expr) -> Buffer.add_string buffer @@
-       Printf.sprintf "%s = " arg_name.data; unparse_expr ~buffer expr; )
-       args; *)
-    Buffer.add_string buffer @@ ")" ;
-    (* Buffer.add_string buffer @@ " => "; *)
-    unparse_list ~buffer ~initial:" => " ~separator:", "
-      (fun ~buffer x -> Buffer.add_string buffer @@ x.data)
-      x ;
-    (* Buffer.add_string buffer @@ " - "; *)
-    (* unparse_annotations ~indent ~buffer tmpl_annotations |> ignore ; *)
-    ()
-  in
-  unparse_list ~buffer ~separator:"\n"
-    (fun ~buffer inst -> unparse_inst ~indent ~buffer inst.data)
-    template_insts ;
+  let {tmpl_id; args; x} = inst in
+  Buffer.add_string buffer @@ indent ;
+  Buffer.add_string buffer @@ tmpl_id.data ;
+  Buffer.add_string buffer @@ "(" ;
+  unparse_list ~buffer ~separator:", "
+    (fun ~buffer (arg_name, arg_ty) ->
+      let separator =
+        match arg_ty with ExprArg _ -> " = " | EventArg _ -> " -> "
+      in
+      unparse_arg ~buffer ~separator (arg_name, arg_ty) )
+    args ;
+  Buffer.add_string buffer @@ ")" ;
+  unparse_list ~buffer ~initial:" => " ~separator:", "
+    (fun ~buffer x -> Buffer.add_string buffer @@ x.data)
+    x ;
   Buffer.contents buffer
 
 and unparse_relations ?(indent = "") ?(abbreviated = true)
     ?(should_print_events = true) ?(should_print_template_insts = true)
     ?(buffer = Buffer.create 100) relations =
+  unparse_list ~buffer ~separator:"\n"
+    (fun ~buffer relation ->
+      ignore
+        (unparse_relation ~indent ~abbreviated ~should_print_events
+           ~should_print_template_insts ~buffer relation ) )
+    relations ;
+  Buffer.contents buffer
+
+and unparse_relation ?(indent = "") ?(abbreviated = true)
+    ?(should_print_events = true) ?(should_print_template_insts = true)
+    ?(buffer = Buffer.create 100) relation =
   let unparse_relation_arrow ~arrow_start ~guard:(guard_expr, guard_buffer)
       ?(buffer = Buffer.create 100) ~end_symbol _ =
     Buffer.add_string buffer @@ arrow_start ;
@@ -266,86 +270,82 @@ and unparse_relations ?(indent = "") ?(abbreviated = true)
     unparse_relation_arrow ~arrow_start ~guard ~end_symbol:arrow_end ~buffer ()
     |> ignore
   in
-  let unparse_relation ?(indent = "") ?(abbreviated = true)
-      ?(buffer = Buffer.create 100) relation =
-    let guard_buffer = Buffer.create 100 in
-    Buffer.add_string buffer @@ indent ;
-    match relation.data with
-    | ControlRelation (from, guard, dest, t) ->
-        Buffer.add_string buffer @@ from.data ;
-        Buffer.add_string buffer @@ " " ;
-        unparse_relation_type ~buffer ~guard:(guard, guard_buffer) t |> ignore ;
-        Buffer.add_string buffer @@ " " ;
-        Buffer.add_string buffer @@ dest.data ;
-        ()
-    | SpawnRelation (from, guard, subprogram) ->
-        Buffer.add_string buffer @@ from.data ;
-        Buffer.add_string buffer @@ " " ;
-        unparse_relation_arrow ~arrow_start:"-" ~guard:(guard, guard_buffer)
-          ~end_symbol:"->>" ~buffer ()
-        |> ignore ;
-        (* Buffer.add_string buffer @@ "-"; *)
-        Buffer.add_string buffer @@ " {\n" ;
-        let graph_indent = indent ^ "  " in
-        let spawn_events, spawn_insts, spawn_relations, _ = subprogram in
-        unparse_subprogram ~indent:graph_indent ~separator:"\n"
-          ~print_events:(should_print_events && List.length spawn_events > 0)
-          ~print_template_insts:
-            (should_print_template_insts && List.length spawn_insts > 0)
-          ~print_relations:(List.length spawn_relations > 0)
-          ~abbreviated ~buffer subprogram
-        |> ignore ;
-        Buffer.add_string buffer @@ "\n" ^ indent ^ "}"
-  in
-  unparse_list ~buffer ~separator:"\n"
-    (fun ~buffer relation ->
-      unparse_relation ~indent ~abbreviated ~buffer relation )
-    relations ;
+  let guard_buffer = Buffer.create 100 in
+  Buffer.add_string buffer @@ indent ;
+  ( match relation.data with
+  | ControlRelation (from, guard, dest, t) ->
+      Buffer.add_string buffer @@ from.data ;
+      Buffer.add_string buffer @@ " " ;
+      unparse_relation_type ~buffer ~guard:(guard, guard_buffer) t |> ignore ;
+      Buffer.add_string buffer @@ " " ;
+      Buffer.add_string buffer @@ dest.data
+  | SpawnRelation (from, guard, subprogram) ->
+      Buffer.add_string buffer @@ from.data ;
+      Buffer.add_string buffer @@ " " ;
+      unparse_relation_arrow ~arrow_start:"-" ~guard:(guard, guard_buffer)
+        ~end_symbol:"->>" ~buffer ()
+      |> ignore ;
+      (* Buffer.add_string buffer @@ "-"; *)
+      Buffer.add_string buffer @@ " {\n" ;
+      let graph_indent = indent ^ "  " in
+      let spawn_events, spawn_insts, spawn_relations, _ = subprogram in
+      unparse_subprogram ~indent:graph_indent ~separator:"\n"
+        ~print_events:(should_print_events && List.length spawn_events > 0)
+        ~print_template_insts:
+          (should_print_template_insts && List.length spawn_insts > 0)
+        ~print_relations:(List.length spawn_relations > 0)
+        ~abbreviated ~buffer subprogram
+      |> ignore ;
+      Buffer.add_string buffer @@ "\n" ^ indent ^ "}" ) ;
   Buffer.contents buffer
 
 and unparse_annotations ?(indent = "") ?(abbreviated = true)
     ?(should_print_events = true) ?(should_print_template_insts = true)
     ?(buffer = Buffer.create 100) annotations =
-  let unparse_annotation ?(indent = "") ?(buffer = Buffer.create 100) annotation
-      =
-    Buffer.add_string buffer @@ indent ;
-    match annotation with
-    | IfElse {condition; then_branch; else_branch} ->
-        Buffer.add_string buffer @@ "if " ;
-        unparse_expr ~buffer condition |> ignore ;
-        Buffer.add_string buffer @@ ":\n" ;
-        unparse_subprogram ~indent:(indent ^ "  ") ~buffer
-          ~print_events:should_print_events ~abbreviated
-          ~print_template_insts:should_print_template_insts then_branch
-        |> ignore ;
-        Buffer.add_string buffer @@ "\n" ;
-        Buffer.add_string buffer @@ indent ;
-        ( match else_branch with
-        | None -> ()
-        | Some branch ->
-            Buffer.add_string buffer @@ "else:\n" ;
-            unparse_subprogram ~indent:(indent ^ "  ") ~buffer branch |> ignore
-        ) ;
-        Buffer.add_string buffer @@ indent ;
-        Buffer.add_string buffer @@ "/if\n" ;
-        Buffer.add_string buffer @@ "\n"
-    | Foreach (id, expr, body) ->
-        Buffer.add_string buffer @@ "foreach " ;
-        Buffer.add_string buffer @@ id.data ;
-        Buffer.add_string buffer @@ " in " ;
-        unparse_expr ~buffer expr |> ignore ;
-        Buffer.add_string buffer @@ ":\n" ;
-        unparse_subprogram ~indent:(indent ^ "  ") ~buffer
-          ~print_events:should_print_events ~abbreviated
-          ~print_template_insts:should_print_template_insts body
-        |> ignore ;
-        Buffer.add_string buffer @@ "\n" ;
-        Buffer.add_string buffer @@ indent ;
-        Buffer.add_string buffer @@ "/foreach\n"
-  in
   unparse_list ~buffer ~separator:"\n"
-    (fun ~buffer annotation -> unparse_annotation ~indent ~buffer annotation)
+    (fun ~buffer annotation ->
+      ignore
+        (unparse_annotation ~indent ~abbreviated ~should_print_events
+           ~should_print_template_insts ~buffer annotation ) )
     annotations ;
+  Buffer.contents buffer
+
+and unparse_annotation ?(indent = "") ?(abbreviated = true)
+    ?(should_print_events = true) ?(should_print_template_insts = true)
+    ?(buffer = Buffer.create 100) annotation =
+  Buffer.add_string buffer @@ indent ;
+  ( match annotation with
+  | IfElse {condition; then_branch; else_branch} ->
+      Buffer.add_string buffer @@ "if " ;
+      unparse_expr ~buffer condition |> ignore ;
+      Buffer.add_string buffer @@ ":\n" ;
+      unparse_subprogram ~indent:(indent ^ "  ") ~buffer
+        ~print_events:should_print_events ~abbreviated
+        ~print_template_insts:should_print_template_insts then_branch
+      |> ignore ;
+      Buffer.add_string buffer @@ "\n" ;
+      Buffer.add_string buffer @@ indent ;
+      ( match else_branch with
+      | None -> ()
+      | Some branch ->
+          Buffer.add_string buffer @@ "else:\n" ;
+          unparse_subprogram ~indent:(indent ^ "  ") ~buffer branch |> ignore ) ;
+      Buffer.add_string buffer @@ indent ;
+      Buffer.add_string buffer @@ "/if\n" ;
+      Buffer.add_string buffer @@ "\n"
+  | Foreach (id, expr, body) ->
+      Buffer.add_string buffer @@ "foreach " ;
+      Buffer.add_string buffer @@ id.data ;
+      Buffer.add_string buffer @@ " in " ;
+      unparse_expr ~buffer expr |> ignore ;
+      Buffer.add_string buffer @@ ":\n" ;
+      unparse_subprogram ~indent:(indent ^ "  ") ~buffer
+        ~print_events:should_print_events ~abbreviated
+        ~print_template_insts:should_print_template_insts body
+      |> ignore ;
+      Buffer.add_string buffer @@ "\n" ;
+      Buffer.add_string buffer @@ indent ;
+      Buffer.add_string buffer @@ "/foreach\n" ) ;
   Buffer.contents buffer
 
 and unparse_ty ?(indent = "") ?(buffer = Buffer.create 100) ty =
@@ -363,9 +363,6 @@ and unparse_ty ?(indent = "") ?(buffer = Buffer.create 100) ty =
           Buffer.add_string buffer @@ ": " ;
           unparse_ty ~indent ~buffer ty.data |> ignore )
         fields ;
-      (* List.iter (fun (field, ty) -> Buffer.add_string buffer @@ field.data;
-         Buffer.add_string buffer @@ ": "; unparse_ty ~indent ~buffer ty; )
-         fields; *)
       Buffer.add_string buffer @@ " }"
   | ListTy ty ->
       Buffer.add_string buffer @@ "List[" ;
@@ -400,9 +397,9 @@ and unparse_expr ?(indent = "") ?(buffer = Buffer.create 100) expr =
   | False -> Buffer.add_string buffer @@ "false"
   | IntLit i -> Buffer.add_string buffer @@ string_of_int i
   | StringLit s ->
-      Buffer.add_string buffer @@ "\'" ;
+      Buffer.add_string buffer @@ "\"" ;
       Buffer.add_string buffer @@ s ;
-      Buffer.add_string buffer @@ "\'"
+      Buffer.add_string buffer @@ "\""
   | Parenthesized e ->
       Buffer.add_string buffer @@ "(" ;
       unparse_expr ~indent ~buffer e |> ignore ;

@@ -189,7 +189,7 @@ let runtime_set =
             (fun o ->
               let {io; _} = o.data in
               match io.data with
-              | Output value -> Left (unparse_expr value)
+              | Output value -> Left (Plain.unparse_expr value)
               | _ -> Right o )
             positives
         in
@@ -198,17 +198,19 @@ let runtime_set =
             (fun o ->
               let {io; _} = o.data in
               match io.data with
-              | Output value -> Left (unparse_expr value)
+              | Output value -> Left (Plain.unparse_expr value)
               | _ -> Right o )
             negatives
         in
         check_string_list
           "Expecting all instantiated 'positive' to have value True and False, respectively"
-          [unparse_expr (annotate True); unparse_expr (annotate False)]
+          [ Plain.unparse_expr (annotate True)
+          ; Plain.unparse_expr (annotate False) ]
           all_positive_true ;
         check_string_list
           "Expecting all instantiated 'negative' to have both False value"
-          [unparse_expr (annotate False); unparse_expr (annotate False)]
+          [ Plain.unparse_expr (annotate False)
+          ; Plain.unparse_expr (annotate False) ]
           all_negative_false ;
         return program )
       expecting_ok ]
@@ -485,7 +487,8 @@ let annotation_set =
               | Output {data= IntLit i; _} -> return i
               | Output expr ->
                   Alcotest.fail
-                    ("Expecting an integer output, got " ^ unparse_expr expr)
+                    ( "Expecting an integer output, got "
+                    ^ Plain.unparse_expr expr )
               | _ -> Alcotest.fail "Expecting an output" )
             ns
         in
@@ -500,7 +503,8 @@ let annotation_set =
               | Output {data= False; _} -> return false
               | Output expr ->
                   Alcotest.fail
-                    ("Expecting a boolean output, got " ^ unparse_expr expr)
+                    ( "Expecting a boolean output, got "
+                    ^ Plain.unparse_expr expr )
               | _ -> Alcotest.fail "Expecting an output" )
             bs
         in
@@ -513,7 +517,8 @@ let annotation_set =
               | Output {data= StringLit c; _} -> return c
               | Output expr ->
                   Alcotest.fail
-                    ("Expecting a character output, got " ^ unparse_expr expr)
+                    ( "Expecting a character output, got "
+                    ^ Plain.unparse_expr expr )
               | _ -> Alcotest.fail "Expecting an output" )
             ss
         in
@@ -527,7 +532,8 @@ let annotation_set =
               | Output {data= StringLit c; _} -> return c
               | Output expr ->
                   Alcotest.fail
-                    ("Expecting a character output, got " ^ unparse_expr expr)
+                    ( "Expecting a character output, got "
+                    ^ Plain.unparse_expr expr )
               | _ -> Alcotest.fail "Expecting an output" )
             srs
         in
@@ -541,7 +547,8 @@ let annotation_set =
               | Output {data= IntLit i; _} -> return i
               | Output expr ->
                   Alcotest.fail
-                    ("Expecting an integer output, got " ^ unparse_expr expr)
+                    ( "Expecting an integer output, got "
+                    ^ Plain.unparse_expr expr )
               | _ -> Alcotest.fail "Expecting an output" )
             nrs
         in
@@ -554,7 +561,8 @@ let annotation_set =
               | Output {data= IntLit i; _} -> return i
               | Output expr ->
                   Alcotest.fail
-                    ("Expecting an integer output, got " ^ unparse_expr expr)
+                    ( "Expecting an integer output, got "
+                    ^ Plain.unparse_expr expr )
               | _ -> Alcotest.fail "Expecting an output" )
             lis
         in
@@ -711,7 +719,8 @@ let annotation_set =
               | Output {data= IntLit i; _} -> return i
               | Output expr ->
                   Alcotest.fail
-                    ("Expecting an integer output, got " ^ unparse_expr expr)
+                    ( "Expecting an integer output, got "
+                    ^ Plain.unparse_expr expr )
               | _ -> Alcotest.fail "Expecting an output" )
             bs
         in

@@ -1,10 +1,10 @@
+open Helper
+open Errors
+open Evaluation
 open Ast
 open Syntax
 open Error
 open Unparser
-open Evaluation
-open Errors
-open Helper
 open Common
 open Monads.ResultMonad
 open Env
@@ -289,23 +289,24 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       >>= fun (expr_env, event_env, tmpl_env) ->
       (* DEBUG: Expr_env *)
       Logger.debug @@ "Expr Env before instantiation:" ;
-      Logger.debug @@ string_of_env unparse_expr expr_env ;
+      Logger.debug @@ string_of_env Plain.unparse_expr expr_env ;
       (* DEBUG: Event_env *)
       Logger.debug @@ "Event Env before instantiation:" ;
-      Logger.debug @@ string_of_env (fun e -> unparse_events [e]) event_env ;
+      Logger.debug
+      @@ string_of_env (fun e -> Plain.unparse_events [e]) event_env ;
       (* Get events, instantiations and relations from the template *)
       let events_ti, insts_ti, relations_ti, annotations_ti = graph in
       let result_events, _, result_relations, _ = result_program in
       (* Evaluate template annotations *)
       Logger.debug "Evaluating annotations of the template" ;
-      Logger.debug @@ unparse_annotations annotations_ti ;
+      Logger.debug @@ Plain.unparse_annotations annotations_ti ;
       evaluate_annotations annotations_ti (expr_env, event_env, tmpl_env)
       >>= fun ( (annot_events, annot_insts, annot_relations, _)
               , event_env
               , expr_env ) ->
       Logger.debug "Annotations evaluated:" ;
-      Logger.debug @@ unparse_events annot_events ;
-      Logger.debug @@ unparse_relations annot_relations ;
+      Logger.debug @@ Plain.unparse_events annot_events ;
+      Logger.debug @@ Plain.unparse_relations annot_relations ;
       (* Replace the expression inside of the instantiations of [q_ti] *)
       map
         (fun inst -> instantiate_inst inst (expr_env, event_env, tmpl_env))
@@ -345,15 +346,16 @@ and instantiate_tmpl result_program inst (expr_env, event_env, tmpl_env) =
       (* Put it all together *)
       Logger.debug
       @@ Printf.sprintf "Instantiated events from template %s:" id.data ;
-      Logger.debug @@ unparse_events events_ti ;
+      Logger.debug @@ Plain.unparse_events events_ti ;
       Logger.debug
       @@ Printf.sprintf "Instantiated relations from template %s:" id.data ;
-      Logger.debug @@ unparse_relations relations_ti ;
+      Logger.debug @@ Plain.unparse_relations relations_ti ;
       (*Debug envs *)
       Logger.debug @@ "Expr Env after instantiation:" ;
-      Logger.debug @@ string_of_env unparse_expr expr_env ;
+      Logger.debug @@ string_of_env Plain.unparse_expr expr_env ;
       Logger.debug @@ "Event Env after instantiation:" ;
-      Logger.debug @@ string_of_env (fun e -> unparse_events [e]) event_env ;
+      Logger.debug
+      @@ string_of_env (fun e -> Plain.unparse_events [e]) event_env ;
       return
       @@ ( mk_subprogram
              ~events:(List.flatten [events_ti; result_events])
@@ -466,7 +468,7 @@ and evaluate_annotation annotation (event_env, expr_env, tmpl_env) =
       >>= fun value ->
       (* Debug value *)
       Logger.debug @@ "Value of the if-else annotation:" ;
-      Logger.debug @@ unparse_expr value ;
+      Logger.debug @@ Plain.unparse_expr value ;
       match value.data with
       | True ->
           (* Re-evaluate the expressions inside of [body] *)
@@ -477,7 +479,7 @@ and evaluate_annotation annotation (event_env, expr_env, tmpl_env) =
           >>= fun (event_env, expr_env, result) ->
           (* Debug result *)
           Logger.debug "Result of the then branch:" ;
-          Logger.debug @@ unparse_subprogram result ;
+          Logger.debug @@ Plain.unparse_subprogram result ;
           return (result, event_env, expr_env)
       | False -> (
         match else_branch with
@@ -491,7 +493,7 @@ and evaluate_annotation annotation (event_env, expr_env, tmpl_env) =
             >>= fun (event_env, expr_env, result) ->
             (* Debug result *)
             Logger.debug "Result of the else branch:" ;
-            Logger.debug @@ unparse_subprogram result ;
+            Logger.debug @@ Plain.unparse_subprogram result ;
             return (result, event_env, expr_env) )
       | _ ->
           fixme ~loc:value.loc
@@ -530,7 +532,7 @@ and evaluate_annotation annotation (event_env, expr_env, tmpl_env) =
       >>= fun (event_env, expr_env, result) ->
       (* Debug result *)
       Logger.debug "Result of the foreach annotation:" ;
-      Logger.debug @@ unparse_subprogram result ;
+      Logger.debug @@ Plain.unparse_subprogram result ;
       return (result, event_env, expr_env)
 
 (* =============================================================================
@@ -551,7 +553,7 @@ let instantiate ?(expr_env = empty_env) ?(event_env = empty_env) program =
   (* Debug subprogram *)
   Logger.debug "Result of the annotations:" ;
   Logger.debug
-  @@ unparse_subprogram
+  @@ Plain.unparse_subprogram
        (annot_events, annot_insts, annot_relations, annot_annotations) ;
   (* Instantiate all the instantiations of the program *)
   let insts = List.flatten [program.template_insts; annot_insts] in

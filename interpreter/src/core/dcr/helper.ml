@@ -333,7 +333,8 @@ and fresh_event_ids ?(exclude = []) events relations =
         | _ -> return id
       in
       Logger.debug
-        (Printf.sprintf "Replacing relation %s" (unparse_relations [relation])) ;
+        (Printf.sprintf "Replacing relation %s"
+           (Plain.unparse_relations [relation]) ) ;
       match relation.data with
       | SpawnRelation (from_id, guard, subprogram) ->
           replace_id from_id

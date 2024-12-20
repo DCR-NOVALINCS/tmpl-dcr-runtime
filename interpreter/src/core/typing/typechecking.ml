@@ -45,7 +45,7 @@ module EventTypes = struct
     let f key value acc =
       let kind =
         let value_ty, event_type = value in
-        let value_ty_str = unparse_ty value_ty in
+        let value_ty_str = Plain.unparse_ty value_ty in
         match event_type with
         | InputType -> "Input(" ^ value_ty_str ^ ")"
         | OutputType -> "Output(" ^ value_ty_str ^ ")"
@@ -112,7 +112,7 @@ let rec typecheck ?(event_env = empty_env) program =
     (ty_env, event_env, tmpl_ty_env, label_types)
   >>= fun (ty_env, event_env, _) ->
   Logger.debug @@ "Event Env after typechecking program:\n"
-  ^ string_of_env (fun e -> unparse_events [e]) event_env ;
+  ^ string_of_env (fun e -> Plain.unparse_events [e]) event_env ;
   return (ty_env, event_env)
 
 (* =============================================================================
@@ -143,7 +143,7 @@ and typecheck_template_decl template_decl
         match param_type with
         | ExprParam (ty, _) ->
             Logger.debug "Binding expr: " ;
-            Logger.debug @@ unparse_ty ty.data ;
+            Logger.debug @@ Plain.unparse_ty ty.data ;
             return (bind id.data ty.data ty_env)
             >>= fun ty_env -> return (ty_env, event_env, label_types)
         | EventParam label ->
@@ -218,7 +218,7 @@ and typecheck_template_decl template_decl
     export
   >>= fun (exported_events, event_ids_not_found) ->
   Logger.debug @@ "Exported events: " ;
-  Logger.debug @@ unparse_events exported_events ;
+  Logger.debug @@ Plain.unparse_events exported_events ;
   Logger.debug @@ "Event ids not found: " ;
   Logger.debug
   @@ String.concat ", " (List.map (fun x -> x.data) event_ids_not_found) ;
@@ -275,9 +275,9 @@ and typecheck_subprogram (events, insts, relations, annotations)
   >>= fun (ty_env, event_env, label_types) ->
   (* Debug envs *)
   Logger.debug @@ "Type env after typechecking subprogram:\n"
-  ^ string_of_env unparse_ty ty_env ;
+  ^ string_of_env Plain.unparse_ty ty_env ;
   Logger.debug @@ "Event env after typechecking subprogram:\n"
-  ^ string_of_env (fun e -> unparse_events [e]) event_env ;
+  ^ string_of_env (fun e -> Plain.unparse_events [e]) event_env ;
   return (ty_env, event_env, label_types)
 
 (* =============================================================================
@@ -302,7 +302,7 @@ and typecheck_event event (ty_env, event_env, label_types) =
   | None | Some Undefined ->
       Logger.debug
       @@ Printf.sprintf "%s -> %s" label.data
-           (show_event_type' (unparse_ty got_value_ty) got_event_type) ;
+           (show_event_type' (Plain.unparse_ty got_value_ty) got_event_type) ;
       return
         (EventTypes.add
            (label.data, Defined (got_value_ty, got_event_type))
@@ -356,7 +356,7 @@ and typecheck_inst inst (ty_env, event_env, tmpl_ty_env, label_types) =
                 typecheck_expr ~ty_env expr
                 >>= fun got_ty ->
                 match List.assoc_opt id.data expr_param_tys with
-                | None -> todo "error message for not found a expr param"
+                | None -> id_not_found id
                 | Some expected_ty ->
                     if equal_types got_ty expected_ty.data then
                       return (ty_env, event_env, label_types)

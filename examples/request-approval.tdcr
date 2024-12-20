@@ -1,4 +1,4 @@
-tmpl request(id: Number, description: String): request, setRequestApproved, setRequestRefused {
+tmpl request(id: Number, description: String): Request, setRequestApproved, setRequestRefused {
     (r: Request)[{ id: id, description: description }]
     (sa: setRequestApproved)[?]
     (sr: setRequestRefused)[?]
@@ -13,37 +13,53 @@ tmpl base_approver(sa: setRequestApproved, sr: setRequestRefused): approveReques
     ar, rr -->% ar, rr
     ar -->* sa
     rr *--> sr
-    rr -->% r
+    rr -->% rr
 } => ar, rr
 
 tmpl managerApprover(r: Request, set_approved: setRequestApproved, set_reproved: setRequestRefused): approveRequest, refuseRequest {
     (m: Manager)[{ request: r.value.id }]
 
-    base(sa = set_approved, sr = set_reproved) => mar, mrr
+    base_approver(sa -> set_approved, sr -> set_reproved) => mar, mrr
 } => mar, mrr
 
 tmpl directorApprover(r: Request, set_approved: setRequestApproved, set_reproved: setRequestRefused): approveRequest, refuseRequest {
     (d: Director)[{ request: r.value.id }]
     
-    base_approver(sa = set_approved, sr = set_reproved) => dar, drr
+    base_approver(sa -> set_approved, sr -> set_reproved) => dar, drr
 
     dar *--> set_approved
     drr *--> set_reproved
 } => dar, drr
 
-(ar: addRequest)[?: { id: Number, description: String }]
+(ar: addRequest)[?: { id: Number, description: String, count: Number }]
 
 ar -->> {
     (aa: addApprover)[?: { count: Number, type: String }]
     
     request(id = @trigger.value.id, description = @trigger.value.description) => requestData, setApproved, setReproved
     
-    aa -->> {
-
-        managerApprover(r = requestData, set_approved = setApproved, set_reproved = setReproved) => approveRequest, refuseRequest - when @trigger.value.type == 'manager'
-        directorApprover(r = requestData, set_approved = setApproved, set_reproved = setReproved) => approveRequest, refuseRequest - when @trigger.value.type == 'director'
-
-    # } - foreach i in 1..@trigger.value
-    # Creates a list from 1 to the value of the trigger, ex: -1..3 -> [-1, 0, 1, 2, 3]
-    } - foreach i in [0, 1, 2, @trigger.value.count]   
+    foreach i in @range(1, @trigger.value.count):
+        aa -->> {
+            if @trigger.value.type == "manager":
+                managerApprover(
+                    r -> requestData, 
+                    set_approved -> setApproved, 
+                    set_reproved -> setReproved
+                ) => approveRequest, refuseRequest
+            else:
+                if @trigger.value.type == "director":
+                    directorApprover(
+                        r -> requestData, 
+                        set_approved -> setApproved, 
+                        set_reproved -> setReproved
+                    ) => approveRequest, refuseRequest
+                else:
+                    base_approver(
+                        sa -> setApproved, 
+                        sr -> setReproved
+                    ) => approveRequest, refuseRequest
+                /if
+            /if
+        }
+    /foreach
 }
