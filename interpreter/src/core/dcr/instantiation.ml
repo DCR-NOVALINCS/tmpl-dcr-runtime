@@ -421,6 +421,8 @@ and export_map_events x export (events, relations) =
 and evaluate_annotations annotations (expr_env, event_env, tmpl_env) =
   fold_right
     (fun (subprograms, event_env, expr_env) annotation ->
+      Logger.debug "Evaluating annotation" ;
+      Logger.debug @@ Plain.unparse_annotation annotation ;
       evaluate_annotation annotation (event_env, expr_env, tmpl_env)
       >>= fun (result, event_env, expr_env) ->
       preprocess_subprogram ~expr_env ~event_env result
@@ -517,12 +519,12 @@ and evaluate_annotation annotation (event_env, expr_env, tmpl_env) =
           evaluate_subprogram
             (events, insts, relations, annots)
             (foreach_expr_env, foreach_event_env, tmpl_env)
-          >>= fun ((events, insts, relations, _), _, _) ->
+          >>= fun ((events, insts, relations, annotations), _, _) ->
           (* Fresh event'ids *)
           fresh_event_ids events relations
           >>= fun (events, relations) ->
           (* Accumulate the result *)
-          return (events, insts, relations, []) )
+          return (events, insts, relations, annotations) )
         elems
       >>= fun subprograms ->
       append_subprograms subprograms
@@ -546,15 +548,12 @@ let instantiate ?(expr_env = empty_env) ?(event_env = empty_env) program =
   >>= fun (expr_env, event_env, tmpl_env) ->
   (* Evaluate template annotations from [root] program *)
   let annotations = program.annotations in
+  Logger.debug "Evaluating annotations of the program" ;
+  Logger.debug @@ Plain.unparse_annotations annotations ;
   evaluate_annotations annotations (expr_env, event_env, tmpl_env)
-  >>= fun ( (annot_events, annot_insts, annot_relations, annot_annotations)
+  >>= fun ( (annot_events, annot_insts, annot_relations, _annot_annotations)
           , event_env
           , expr_env ) ->
-  (* Debug subprogram *)
-  Logger.debug "Result of the annotations:" ;
-  Logger.debug
-  @@ Plain.unparse_subprogram
-       (annot_events, annot_insts, annot_relations, annot_annotations) ;
   (* Instantiate all the instantiations of the program *)
   let insts = List.flatten [program.template_insts; annot_insts] in
   instantiate_tmpls insts (expr_env, event_env, tmpl_env)

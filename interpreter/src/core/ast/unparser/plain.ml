@@ -83,7 +83,7 @@ and unparse_template_decl ?(indent = "") ?(abbreviated = true)
   Buffer.add_string buffer @@ " {\n" ;
   Buffer.add_string buffer @@ indent ;
   let graph_indent = indent ^ "  " in
-  let tmpl_events, tmpl_insts, tmpl_relations, _ = graph in
+  let tmpl_events, tmpl_insts, tmpl_relations, _tmpl_annotations = graph in
   unparse_subprogram ~indent:graph_indent ~abbreviated ~separator
     ~print_events:(should_print_events && List.length tmpl_events > 0)
     ~print_template_insts:
@@ -288,7 +288,9 @@ and unparse_relation ?(indent = "") ?(abbreviated = true)
       (* Buffer.add_string buffer @@ "-"; *)
       Buffer.add_string buffer @@ " {\n" ;
       let graph_indent = indent ^ "  " in
-      let spawn_events, spawn_insts, spawn_relations, _ = subprogram in
+      let spawn_events, spawn_insts, spawn_relations, _spawn_annotations =
+        subprogram
+      in
       unparse_subprogram ~indent:graph_indent ~separator:"\n"
         ~print_events:(should_print_events && List.length spawn_events > 0)
         ~print_template_insts:

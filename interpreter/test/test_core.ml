@@ -15,7 +15,7 @@ open Typing
 open Typechecking
 
 (* =============================================================================
-   Simple Section
+   Runtime/DCR Section
    ============================================================================= *)
 
 let tests_folder = "test/files"
@@ -721,11 +721,55 @@ let annotation_set =
                   Alcotest.fail
                     ( "Expecting an integer output, got "
                     ^ Plain.unparse_expr expr )
-              | _ -> Alcotest.fail "Expecting an output" )
+              | _ -> Alcotest.fail "Expecting an output event" )
             bs
         in
         check_int_list "Expecting list of integers" [1; 2; 3; 4]
           (List.sort compare b_exprs) ;
+        return (program, event_env, expr_env) )
+      expecting_ok
+  ; make_test "5.tdcr"
+      (file "annotations/5.tdcr")
+      (fun program (event_env, expr_env) ->
+        typecheck ~event_env program
+        >>= fun (_ty_env, event_env) ->
+        instantiate ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        (* Check the events *)
+        check_int "Expected 1 events" 1 (List.length program.events) ;
+        (* check_int "Expected 3 events in the event env" 3
+           (List.length (Env.flatten event_env)) ; *)
+        check_int "Expected 0 template instantiation" 0
+          (List.length program.template_insts) ;
+        (* Check relations *)
+        check_int "Expected 1 relation" 1 (List.length program.relations) ;
+        (* Check num of relations *)
+        let* spawn_relations =
+          find_all_relations
+            ~filter:(fun r from _ -> is_spawn r && from.data = "a")
+            program
+        in
+        check_int "Expecting only one spawn relation on the program"
+          (List.length spawn_relations)
+          (List.length program.relations) ;
+        execute ~event_id:"a" ~expr:(IntLit (-1)) ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        check_int "Expected 2 events" 2 (List.length program.events) ;
+        let* bs = find_all_events ~filter:(same_id "b") program in
+        check_int "Expecting 1 events with sub-id 'b'" 1 (List.length bs) ;
+        execute ~event_id:"a" ~expr:(IntLit 1) ~expr_env ~event_env program
+        >>= fun (program, event_env, expr_env) ->
+        check_int "Expected 3 events" 3 (List.length program.events) ;
+        let* bs = find_all_events ~filter:(same_id "b") program in
+        check_int "Expecting 2 events with sub-id 'b'" 2 (List.length bs) ;
+        let* spawn_relations_from_b =
+          find_all_relations
+            ~filter:(fun r from _ -> is_spawn r && from.data = "b")
+            program
+        in
+        check_int "Expecting only one spawn relation from a 'b' event"
+          (List.length spawn_relations_from_b)
+          (List.length program.relations) ;
         return (program, event_env, expr_env) )
       expecting_ok ]
 

@@ -123,14 +123,16 @@ and preprocess_program ?(expr_env = empty_env) ?(event_env = empty_env) program
   >>= fun (event_env, expr_env) -> return (event_env, expr_env, program)
 
 and preprocess_subprogram ?(expr_env = empty_env) ?(event_env = empty_env)
-    (events, template_insts, relations, _) =
+    (events, template_insts, relations, annotations) =
   preprocess_program ~expr_env ~event_env
-    {empty_program with events; template_insts; relations}
+    {empty_program with events; template_insts; relations; annotations}
   >>= fun (event_env, expr_env, program) ->
   return
     ( event_env
     , expr_env
-    , (program.events, program.template_insts, program.relations, []) )
+    , mk_subprogram ~events:program.events
+        ~template_insts:program.template_insts ~relations:program.relations
+        ~annotations:program.annotations () )
 
 (* =============================================================================
    Getters

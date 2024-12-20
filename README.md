@@ -172,10 +172,9 @@ From this prompt, you can run the following commands:
 
 - **view**: View the current state of the program, i.e., the enabled events.
   ```
-  > view [-a | --all] [-d | --disabled] [-r | --relations] [-t | --templates] [-v | --value]
+  > view [-d | --disabled] [-r | --relations] [-t | --templates] [-v | --value]
   ```
   **Flags:**
-  - `-a` or `--all`: View all events, including those that are not enabled.
   - `-d` or `--disabled`: View the disabled events.
   - `-r` or `--relations`: View the relations between the events.
   - `-t` or `--templates`: View the templates that are available in the program.

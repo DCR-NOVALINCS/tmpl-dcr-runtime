@@ -20,7 +20,7 @@ tmpl plant(id: String, position: { x: Number, y: Number }, plantType: { typename
     wp -->+ nw
 }
 
-(pts: PlantTypes)[[{ typename: 'apple' }, { typename: 'orange' }, { typename: 'banana' }]]
+%(pts: PlantTypes)[[{ typename: "apple" }, { typename: "orange" }, { typename: "banana" }]]
 
 (ar: addRobot)[?: { id: String }]
 

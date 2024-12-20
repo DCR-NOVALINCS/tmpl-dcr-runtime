@@ -101,9 +101,9 @@ and propagate_effect relation event (event_env, expr_env) program =
         >>= fun is_guard_true ->
         if not is_guard_true then return (program, event_env, expr_env)
         else
-          let spawn_events, spawn_insts, spawn_relations, spawn_annots =
-            spawn_prog
-          in
+          (* let spawn_events, spawn_insts, spawn_relations, spawn_annots =
+               spawn_prog
+             in *)
           (* Begin new env scope and bind trigger_id *)
           return (begin_scope event_env, begin_scope expr_env)
           >>= fun (event_env, expr_env) ->
@@ -111,6 +111,11 @@ and propagate_effect relation event (event_env, expr_env) program =
             ( bind trigger_id event event_env
             , bind trigger_id (event_as_expr event) expr_env )
           >>= fun (event_env, expr_env) ->
+          preprocess_subprogram ~event_env ~expr_env spawn_prog
+          >>= fun ( event_env
+                  , expr_env
+                  , (spawn_events, spawn_insts, spawn_relations, spawn_annots)
+                  ) ->
           (* Evaluate annotations from spawned elements *)
           let open Instantiation in
           (* Instantiate template instances present in the spawn *)
