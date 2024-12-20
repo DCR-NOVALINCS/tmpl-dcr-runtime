@@ -4,7 +4,7 @@ open Printing
 open Repl.State
 open Cmdliner
 
-let main () =
+let run () =
   match Cmd.eval_value Runtime.cmd with
   | Ok (`Ok result) ->
       ignore

@@ -1,3 +1,3 @@
 open Cli
 
-let () = Exec.main ()
+let () = if !Sys.interactive then () else Main.run ()

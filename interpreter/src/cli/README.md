@@ -5,7 +5,7 @@ The module consists of the following components:
 
 | File                       | Description                                              |
 | -------------------------- | -------------------------------------------------------- |
-| [`exec.ml`](exec.ml)       | Contains the main entry point for the CLI execution.     |
+| [`main.ml`](main.ml)       | Contains the main entry point for the CLI execution.     |
 | [`options.ml`](options.ml) | Defines the options and configurations for the CLI.      |
 | [`runtime.ml`](runtime.ml) | Manages the runtime state and execution flow of the CLI. |
     

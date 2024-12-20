@@ -5,7 +5,7 @@ open Monads.ResultMonad
 open Printing
 open Env
 open Checkable
-open Repl.Exec
+open Repl.Main
 open Repl.State
 open Core
 open Api

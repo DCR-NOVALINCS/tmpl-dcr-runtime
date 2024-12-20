@@ -7,7 +7,7 @@ The module consists of the following components:
 | ---------------------------- | -------------------------------------------------------------- |
 | [`debug.ml`](./debug.ml)     | Provides debugging functionalities for the REPL.               |
 | [`errors.ml`](./errors.ml)   | Defines error handling utilities for the REPL.                 |
-| [`exec.ml`](./exec.ml)       | Handles the execution of commands within the REPL.             |
+| [`main.ml`](./main.ml)       | Handles the execution of commands within the REPL.             |
 | [`execute.ml`](./execute.ml) | Executes the event provided by the user in the REPL.           |
 | [`export.ml`](./export.ml)   | Handles exporting the current state of the graph to a file.    |
 | [`help.ml`](./help.ml)       | Implements the help command for listing available commands.    |

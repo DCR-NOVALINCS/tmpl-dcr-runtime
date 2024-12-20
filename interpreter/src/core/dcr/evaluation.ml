@@ -259,13 +259,13 @@ and eval_record_fields fields env =
     (fun (name, expr) -> eval_expr expr env >>= fun v -> return (name, v))
     fields
 
-and reference_of_event expr =
+and _reference_of_event expr =
   match expr.data with
   | EventRef event_ref -> return event_ref
   | _ ->
       should_not_happen ~module_path:"evaluation.ml" "Invalid event reference"
 
-and reference_of_expr expr =
+and _reference_of_expr expr =
   match expr.data with
   | Ref expr_ref -> return expr_ref
   | _ ->
