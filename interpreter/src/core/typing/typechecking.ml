@@ -8,7 +8,6 @@ open Common
 open Monads.ResultMonad
 open Env
 open Printing
-(* open Program_helper *)
 
 (* ┌──────────────────────────────────────────────────────────────────────────┐
    │ Aux functions, types and modules                                         │
@@ -41,7 +40,7 @@ module EventTypes = struct
     StringHashtbl.remove tbl label ;
     tbl
 
-  let show tbl =
+  let _show tbl =
     let f key value acc =
       let kind =
         let value_ty, event_type = value in
@@ -634,11 +633,6 @@ and typecheck_expr ?(ty_env = empty_env) ?(label_types = EventTypes.empty) expr
    Type Equality functions
    ============================================================================= *)
 
-(** {i (tail recursive)} [equal_types type_1 type_2] indicates whether type
-    expressions [type_1] and [type_2] are structurally equal .
-
-    Returns {b true} if the [type_1] and [type_2] are structurally equal, and
-    {b false} otherwise. *)
 and equal_types ty1 ty2 =
   let rec equal_types_aux = function
     | [] -> true

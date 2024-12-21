@@ -1,13 +1,9 @@
-tmpl f(a: A): B {
+tmpl f(a: A) {
     
 }
 
 (a: A)[?: Number]
 
-a -->> {
-    {{if @trigger.value > 0}} 
-        f(a) => b
-    {{else}} 
-        f(a) => b
-    {{/if}}
-}
+if a.value > 0:
+    f(a -> a)
+/if

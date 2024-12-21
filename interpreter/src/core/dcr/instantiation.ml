@@ -546,18 +546,20 @@ let instantiate ?(expr_env = empty_env) ?(event_env = empty_env) program =
   let template_decls = program.template_decls in
   bind_tmpls template_decls (expr_env, event_env, empty_env)
   >>= fun (expr_env, event_env, tmpl_env) ->
-  (* Evaluate template annotations from [root] program *)
-  let annotations = program.annotations in
+  (* Instantiate all the instantiations of the program *)
+  (* let insts = List.flatten [program.template_insts; annot_insts] in *)
+  let insts = program.template_insts in
+  instantiate_tmpls insts (expr_env, event_env, tmpl_env)
+  >>= fun ((events, _, relations, annots), event_env, expr_env) ->
+  (* Evaluate template annotations from the program *)
+  (* let annotations = program.annotations in *)
+  let annotations = List.flatten [program.annotations; annots] in
   Logger.debug "Evaluating annotations of the program" ;
   Logger.debug @@ Plain.unparse_annotations annotations ;
   evaluate_annotations annotations (expr_env, event_env, tmpl_env)
-  >>= fun ( (annot_events, annot_insts, annot_relations, _annot_annotations)
+  >>= fun ( (annot_events, _annot_insts, annot_relations, _annot_annotations)
           , event_env
           , expr_env ) ->
-  (* Instantiate all the instantiations of the program *)
-  let insts = List.flatten [program.template_insts; annot_insts] in
-  instantiate_tmpls insts (expr_env, event_env, tmpl_env)
-  >>= fun ((events, _, relations, _), event_env, expr_env) ->
   (* Append the result in the program *)
   return
     ( { program with

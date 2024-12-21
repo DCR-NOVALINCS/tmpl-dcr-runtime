@@ -16,11 +16,12 @@ type runtime_state =
   ; expr_env: expr env
   ; event_env: event env
   ; program: program
+  ; previous_state: runtime_state option
   ; output: string }
 
 let mk_runtime_state ?(output = "") ?(ty_env = empty_env)
     ?(expr_env = empty_env) ?(event_env = empty_env) program =
-  {ty_env; expr_env; event_env; program; output}
+  {ty_env; expr_env; event_env; program; previous_state= None; output}
 
 let empty_runtime_state = mk_runtime_state empty_program
 
@@ -32,7 +33,7 @@ let string_of_state state =
 let print_output ?(previous_state = empty_runtime_state) = function
   | Ok runtime_state ->
       CPrinter.cprintln (string_of_state runtime_state) ;
-      return runtime_state
+      return {runtime_state with previous_state= Some previous_state}
   | Error errors -> print_errors errors ; return previous_state
 
 (* =============================================================================
@@ -48,6 +49,9 @@ type cmd =
 let create_cmd (name, params, description) term cmds =
   (* Add both the default and shortened versions of the command to the list *)
   let cmd =
-    {params; description; callback= Cmd.v (Cmd.info ~man:[] name) term}
+    { params
+    ; description
+    ; callback=
+        Cmd.v (Cmd.info ~man:[`S "DESCRIPTION"; `P description] name) term }
   in
   (name, cmd) :: cmds

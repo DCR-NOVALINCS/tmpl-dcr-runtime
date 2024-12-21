@@ -1,0 +1,5 @@
+# Input Events
+(i: Input)[?]
+
+# Output Events
+(o: Output)[0]

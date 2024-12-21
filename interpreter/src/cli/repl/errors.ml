@@ -26,3 +26,10 @@ let invalid_view_combination ?(errors = []) ?hint mode1 mode2 =
             (keyword mode1) (keyword mode2)
       ; hint }
     :: errors )
+
+let invalid_number_rollback ?(errors = []) num =
+  fail
+    ( { location= Nowhere
+      ; message= "Invalid number " ^ keyword (string_of_int num)
+      ; hint= None }
+    :: errors )

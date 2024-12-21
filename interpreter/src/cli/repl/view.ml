@@ -28,8 +28,8 @@ let show_template_defs =
     & info ["t"; "templates"] ~docv:"TEMPLATES"
         ~doc:"Show the template definitions, only when the -a flag is active" )
 
-and view_cmd disabled show_value show_relations show_template_defs
-    {program; ty_env; event_env; expr_env; _} =
+and view_cmd disabled show_value show_relations show_template_defs state =
+  let {expr_env; event_env; program; _} = state in
   let view program =
     match disabled with
     | false ->
@@ -56,7 +56,7 @@ and view_cmd disabled show_value show_relations show_template_defs
   is_empty_string
     ~map:(fun _ -> CString.colorize ~format:Italic "No events to show.")
     output
-  >>= fun output -> return {program; ty_env; event_env; expr_env; output}
+  >>= fun output -> return {state with output}
 
 let term =
   Term.(

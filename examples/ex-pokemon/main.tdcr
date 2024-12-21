@@ -1,5 +1,5 @@
-tmpl pokemon( name: String, type: String ): Pokemon {
-    (p: Pokemon)[{ name: name, type: type }]
+tmpl pokemon( name: String, type: String, subtype: String ): Pokemon {
+    (p: Pokemon)[{ name: name, type: type, subtype: subtype }]
 } => p
 
 (ap: addPokemon)[?: { name: String, type: String }]

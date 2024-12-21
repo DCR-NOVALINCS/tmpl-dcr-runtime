@@ -31,5 +31,8 @@ let commands =
   create_cmd
     ("debug", [], "Prints the current state of the graph.")
     Debug.term visible
+  |> create_cmd
+       ("rollback", [], "Rollbacks a number of times in the program.")
+       Rollback.term
 
 let cmds_bbk_tree = Bktree.create @@ List.map (fun (name, _) -> name) commands

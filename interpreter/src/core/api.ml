@@ -129,7 +129,7 @@ and view ?(filter = fun event _ -> Some event)
   let* program = sort_events {program with events} in
   let open Unparser in
   return
-    (Plain.unparse ~should_print_events ~should_print_value
+    (Colorized.unparse ~should_print_events ~should_print_value
        ~should_print_executed_marking:true ~should_print_relations
        ~should_print_template_decls program )
 

@@ -8,76 +8,6 @@ type event_kind = type_expr' * event_type'
 
 type event_type_value = Undefined | Defined of event_kind
 
-module EventTypes : sig
-  module StringHashtbl : sig
-    type key = string
-
-    type 'a t = 'a Hashtbl.Make(String).t
-
-    val create : int -> 'a t
-
-    val clear : 'a t -> unit
-
-    val reset : 'a t -> unit
-
-    val copy : 'a t -> 'a t
-
-    val add : 'a t -> key -> 'a -> unit
-
-    val remove : 'a t -> key -> unit
-
-    val find : 'a t -> key -> 'a
-
-    val find_opt : 'a t -> key -> 'a option
-
-    val find_all : 'a t -> key -> 'a list
-
-    val replace : 'a t -> key -> 'a -> unit
-
-    val mem : 'a t -> key -> bool
-
-    val iter : (key -> 'a -> unit) -> 'a t -> unit
-
-    val filter_map_inplace : (key -> 'a -> 'a option) -> 'a t -> unit
-
-    val fold : (key -> 'a -> 'acc -> 'acc) -> 'a t -> 'acc -> 'acc
-
-    val length : 'a t -> int
-
-    val stats : 'a t -> Hashtbl.statistics
-
-    val to_seq : 'a t -> (key * 'a) Seq.t
-
-    val to_seq_keys : 'a t -> key Seq.t
-
-    val to_seq_values : 'a t -> 'a Seq.t
-
-    val add_seq : 'a t -> (key * 'a) Seq.t -> unit
-
-    val replace_seq : 'a t -> (key * 'a) Seq.t -> unit
-
-    val of_seq : (key * 'a) Seq.t -> 'a t
-  end
-
-  val size : int
-
-  val empty : event_type_value StringHashtbl.t
-
-  val reset : 'a StringHashtbl.t -> unit
-
-  val add : StringHashtbl.key * 'a -> 'a StringHashtbl.t -> 'a StringHashtbl.t
-
-  val find : StringHashtbl.key -> 'a StringHashtbl.t -> 'a option
-
-  val remove : StringHashtbl.key -> 'a StringHashtbl.t -> 'a StringHashtbl.t
-
-  val show : (type_expr' * event_type') StringHashtbl.t -> string
-
-  val to_list :
-       event_type_value StringHashtbl.t
-    -> (StringHashtbl.key * (type_expr' * event_type')) list
-end
-
 val typecheck :
      ?event_env:event' annotated env
   -> program
@@ -97,7 +27,7 @@ val typecheck :
 
 val typecheck_expr :
      ?ty_env:type_expr' env
-  -> ?label_types:event_type_value EventTypes.StringHashtbl.t
+  -> ?label_types:event_type_value Hashtbl.Make(String).t
   -> expr
   -> (type_expr', detailed_error list) result
 (** [typecheck_expr ?ty_env ?label_types expr] typechecks the [expr] by ensuring
@@ -113,4 +43,8 @@ val typecheck_expr :
       well-typed, or a list of errors if the expression is not well-typed. *)
 
 val equal_types : type_expr' -> type_expr' -> bool
-(** [equal_types ty1 ty2] checks if the two types [ty1] and [ty2] are equal. *)
+(** {i (tail recursive)} [equal_types type_1 type_2] indicates whether type
+    expressions [type_1] and [type_2] are structurally equal .
+
+    Returns {b true} if the [type_1] and [type_2] are structurally equal, and
+    {b false} otherwise. *)
