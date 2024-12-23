@@ -437,9 +437,12 @@ and evaluate_annotation annotation (event_env, expr_env, tmpl_env) =
   let evaluate_subprogram (events, insts, relations, annots)
       (expr_env, event_env, tmpl_env) =
     (* Instantiate inner templates *)
-    (* let insts = List.flatten [insts; annot_insts] in
-       instantiate_tmpls insts (expr_env, event_env, tmpl_env)
-        >>= fun ((inst_events, _, inst_relations, _), event_env, expr_env) -> *)
+    (* let insts = List.flatten [insts; ] in *)
+    instantiate_tmpls insts (expr_env, event_env, tmpl_env)
+    >>= fun ((inst_events, _, inst_relations, _), event_env, expr_env) ->
+    let events = List.append events inst_events in
+    let relations = List.append relations inst_relations in
+    (* Evaluate annotations in depth *)
     map (fun event -> instantiate_event ~eval:eval_expr event expr_env) events
     >>= fun events ->
     map

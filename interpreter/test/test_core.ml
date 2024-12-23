@@ -771,7 +771,7 @@ let annotation_set =
         in
         check_int "Expecting only one spawn relation from a 'b' event"
           (List.length spawn_relations_from_b)
-          (List.length program.relations) ;
+          1 ;
         return (program, event_env, expr_env) )
       expecting_ok ]
 
