@@ -9,7 +9,7 @@ open Unparser
 open Parsing.Lex_and_parse
 open Dcr
 open Evaluation
-open Runtime
+open Transition
 open Errors
 open Helper
 open Typing

@@ -12,9 +12,8 @@
   ![demo](assets/gifs/demo.gif)
 </div> 
 
-
 > [!WARNING]
-> This project is still in early development and may stay in this state... ~~forever?~~ 😅
+> This project is still in development.
 
 # Table of Contents
 
@@ -46,7 +45,7 @@ tmpl sub(n: Number, m: Number): Result {
   (r: Result)[n - m]
 } => r
 
-tmpl max(r1: Result, r2: Result): Result {
+tmpl max(r1: Result, r2: Result) {
   r1 -[r1.value > r2.value]->% r2
   r2 -[r2.value > r1.value]->% r1
 }
@@ -54,8 +53,8 @@ tmpl max(r1: Result, r2: Result): Result {
 (i: Input)[?: { l: Number, r: Number }]
 
 i -->> {
-  add(n = l, m = r) => result0
-  sub(n = l, m = r) => result1
+  add(n = @trigger.value.l, m = @trigger.value.r) => result0
+  sub(n = result0.value, m = @trigger.value.r) => result1
   max(r1 -> result0, r2 -> result1)
 }
 ```
@@ -99,10 +98,10 @@ To install the project you need to clone the repository and install the dependen
 git clone https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime.git
 ```
 
-After cloning the repository, make sure to install all the dependencies by running the following command in the `interpreter` directory of the project, where the `Makefile` and the `.opam` file are located.
+After cloning the repository, run the following command in the `interpreter` directory of the project, where the `Makefile` and the `.opam` file are located.
 
 ```bash
-make
+make setup
 ```
 
 If you don't trust some strange `Makefile` you can run the following command to install the dependencies manually.
@@ -128,7 +127,7 @@ And you should be ready to go. 😁
 
 ## Usage
 
-To run the program, you can run the following command in the `interpreter` directory of the project.
+To start the interpreter, you can run the following command in the `interpreter` folder and execute the following command:
 
 ```bash
 dune exec tmpl_dcr -- <filename.tdcr>
@@ -136,7 +135,7 @@ dune exec tmpl_dcr -- <filename.tdcr>
 
 Where `<filename>` is the name of the file that contains the DCR graph with templates.
 
-You can see some examples in the [`examples`](/examples/) directory of the project to see how to write a DCR graph with templates.
+You can see some examples in the [`examples`](/examples) directory of the project to see how to write a DCR graph with templates.
 
 >[!IMPORTANT] 
 > The file extension must be `.tdcr` in order to be recognized by the program.

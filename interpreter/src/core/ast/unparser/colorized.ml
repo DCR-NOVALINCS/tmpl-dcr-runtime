@@ -162,10 +162,11 @@ and unparse_event ?(indent = "") ?(abbreviated = true) ?(print_value = false)
     ?(print_executed = false) ?(buffer = Buffer.create 100) event =
   let unparse_info ?(indent = "") ?(buffer = Buffer.create 100) (id, label) =
     Buffer.add_string buffer @@ indent ;
-    Buffer.add_string buffer
-    @@ Printf.sprintf "(%s:%s)"
-         (colorize ~color:variable_color id.data)
-         (colorize ~color:new_type_color label.data) ;
+    Buffer.add_string buffer @@ colorize ~color:punctuation_color "(" ;
+    Buffer.add_string buffer @@ colorize ~color:White id.data ;
+    Buffer.add_string buffer @@ colorize ~color:punctuation_color ":" ;
+    Buffer.add_string buffer @@ colorize ~color:new_type_color label.data ;
+    Buffer.add_string buffer @@ colorize ~color:punctuation_color ")" ;
     ()
   in
   let unparse_io ?(indent = "") ?(buffer = Buffer.create 100) io =
@@ -194,10 +195,11 @@ and unparse_event ?(indent = "") ?(abbreviated = true) ?(print_value = false)
         ?(pending_mark = "!") ?(executed_mark = "✓") ~buffer marking =
       Buffer.add_string buffer @@ indent ;
       if print_executed && marking.executed.data then
-        Buffer.add_string buffer @@ executed_mark ;
-      if marking.pending.data then Buffer.add_string buffer @@ pending_mark ;
+        Buffer.add_string buffer @@ colorize ~color:Green executed_mark ;
+      if marking.pending.data then
+        Buffer.add_string buffer @@ colorize ~color:Red pending_mark ;
       if not marking.included.data then
-        Buffer.add_string buffer @@ excluded_mark ;
+        Buffer.add_string buffer @@ colorize ~color:Black excluded_mark ;
       ()
     in
     let unparse_marking_extended ?(indent = "") ?(buffer = Buffer.create 100)
@@ -282,16 +284,17 @@ and unparse_relation ?(indent = "") ?(abbreviated = true)
     | Milestone -> Magenta
   in
   let spawn_relation_color = BrightMagenta in
-  let unparse_relation_arrow ~arrow_start ~guard:(guard_expr, guard_buffer)
-      ?(buffer = Buffer.create 100) ~end_symbol _ =
+  let unparse_relation_arrow ~arrow_start ~color
+      ~guard:(guard_expr, guard_buffer) ?(buffer = Buffer.create 100)
+      ~end_symbol _ =
     Buffer.add_string buffer @@ arrow_start ;
     ( match guard_expr.data with
     | True -> ()
     | _ ->
-        Buffer.add_string buffer @@ "[" ;
+        Buffer.add_string buffer @@ colorize ~color "[" ;
         unparse_expr ~buffer:guard_buffer guard_expr |> ignore ;
         Buffer.add_buffer buffer guard_buffer ;
-        Buffer.add_string buffer @@ "]" ) ;
+        Buffer.add_string buffer @@ colorize ~color "]" ) ;
     Buffer.add_string buffer @@ end_symbol
   in
   let unparse_relation_type ?(indent = "") ?(buffer = Buffer.create 100) ~guard
@@ -311,7 +314,8 @@ and unparse_relation ?(indent = "") ?(abbreviated = true)
       | _ -> "->" )
       |> colorize ~color ~format:Bold
     in
-    unparse_relation_arrow ~arrow_start ~guard ~end_symbol:arrow_end ~buffer ()
+    unparse_relation_arrow ~color ~arrow_start ~guard ~end_symbol:arrow_end
+      ~buffer ()
     |> ignore
   in
   let guard_buffer = Buffer.create 100 in
@@ -330,7 +334,7 @@ and unparse_relation ?(indent = "") ?(abbreviated = true)
       let format = CString.F.Bold in
       let arrow_start = colorize ~color ~format "-" in
       let end_symbol = colorize ~color ~format "->>" in
-      unparse_relation_arrow ~arrow_start ~guard:(guard, guard_buffer)
+      unparse_relation_arrow ~color ~arrow_start ~guard:(guard, guard_buffer)
         ~end_symbol ~buffer ()
       |> ignore ;
       (* Buffer.add_string buffer @@ "-"; *)

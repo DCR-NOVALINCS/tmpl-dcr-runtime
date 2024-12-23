@@ -33,29 +33,25 @@ and is_enabled_by relation event (event_env, expr_env) =
         (* Check the value of the guard, if it evaluates to false, the event is
            enabled regardless of the type of the relations *)
         check_guard guard expr_env
-        >>= fun is_guard_check ->
-        if not is_guard_check then return true
+        >>= fun is_guard_true ->
+        if not is_guard_true then return true
         else
           (* Get the event that is on the left side *)
-          (* FIXME: Update event_env when altering any event marking *)
           match find_flat from.data event_env with
           | None -> return true
           | Some from_event -> (
-              (* Check the enabledness of the event, according the selected
-                 events and type of relation *)
-              let {marking= {data= from_marking; _}; _} = from_event.data in
-              let {marking= {data= dest_marking; _}; _} = event.data in
-              match op with
-              | Condition ->
-                  return
-                    ( from_marking.included.data && from_marking.executed.data
-                    && dest_marking.included.data )
-              | Milestone ->
-                  return
-                    ( (not from_marking.pending.data)
-                    && from_marking.included.data && dest_marking.included.data
-                    )
-              | _ -> return true ) )
+            (* Check the enabledness of the event, according the selected
+               events and type of relation *)
+            match op with
+            | Condition ->
+                return
+                  ( is_included from_event && is_executed from_event
+                  && is_included event )
+            | Milestone ->
+                return
+                  ( is_included from_event && is_executed from_event
+                  && not (is_pending event) )
+            | _ -> return true ) )
 
 (** [check_guard guard expr_env] checks if the [guard] is true with the
     environment of values [expr_env].
@@ -116,39 +112,39 @@ and propagate_effect relation event (event_env, expr_env) program =
                   , expr_env
                   , (spawn_events, spawn_insts, spawn_relations, spawn_annots)
                   ) ->
+          (* Rename the event ids to new ones, to prevent id clashing *)
+          fresh_event_ids spawn_events spawn_relations
+          >>= fun (spawn_events, spawn_relations) ->
           (* Evaluate annotations from spawned elements *)
           let open Instantiation in
           (* Instantiate template instances present in the spawn *)
-          mk_program ~template_decls:program.template_decls
-            ~annotations:spawn_annots ~template_insts:spawn_insts ()
+          mk_program ~template_decls:program.template_decls ~events:spawn_events
+            ~relations:spawn_relations ~annotations:spawn_annots
+            ~template_insts:spawn_insts ()
           |> instantiate ~expr_env ~event_env
-          >>= fun ( { events= inst_spawn_events
-                    ; relations= inst_spawn_relations
-                    ; _ }
+          >>= fun ( {events= spawn_events; relations= spawn_relations; _}
                   , event_env
                   , expr_env ) ->
-          (* Rename the event ids to new ones, to prevent id clashing *)
-          (* FIXME: Change alpha renaming position!!! *)
-          let spawn_events, spawn_relations =
-            ( List.flatten [inst_spawn_events; spawn_events]
-            , List.flatten [inst_spawn_relations; spawn_relations] )
-          in
-          fresh_event_ids spawn_events spawn_relations
-          >>= fun (spawn_events, spawn_relations) ->
           (* Update event values *)
           map (fun e -> update_event_io ~eval:eval_expr e expr_env) spawn_events
           >>= fun spawn_events ->
           (* Update relations *)
           map (fun r -> update_relation_guard r expr_env) spawn_relations
           >>= fun spawn_relations ->
+          return (end_scope event_env, end_scope expr_env)
+          >>= fun (event_env, expr_env) ->
+          preprocess_subprogram ~event_env ~expr_env
+            (spawn_events, [], spawn_relations, [])
+          >>= fun (event_env, expr_env, (spawn_events, _, spawn_relations, _)) ->
+          (* Rename the event ids to new ones, to prevent id clashing *)
           (* Put it all together *)
           return
             ( { program with
                 events= List.flatten [spawn_events; program.events]
               ; template_insts= []
               ; relations= List.flatten [spawn_relations; program.relations] }
-            , end_scope event_env
-            , end_scope expr_env )
+            , event_env
+            , expr_env )
   | ControlRelation (from, guard, dest, op) ->
       if not (from.data = id.data) then return (program, event_env, expr_env)
       else
@@ -157,11 +153,13 @@ and propagate_effect relation event (event_env, expr_env) program =
         if not is_guard_true then return (program, event_env, expr_env)
         else
           (* Get the event [dest] *)
-          find_flat dest.data event_env
-          |> Option.to_result
-               ~none:
-                 (event_not_found ~loc:dest.loc dest.data |> Result.get_error)
+          find_event dest event_env
           >>= fun dest_event ->
+          (* find_flat dest.data event_env
+             |> Option.to_result
+                  ~none:
+                    (event_not_found ~loc:dest.loc dest.data |> Result.get_error)
+             >>= fun dest_event -> *)
           (* According to [op], apply the effect on the marking for both
              events *)
           (* Order of applying the relations: response -> exclude -> include ->

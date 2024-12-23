@@ -10,7 +10,7 @@ open Syntax
 open Dcr
 open Helper
 open Instantiation
-open Runtime
+open Transition
 open Typing
 open Typechecking
 
@@ -65,7 +65,8 @@ let runtime_set =
              program ) ;
         execute ~event_id:"a" ~expr:Unit ~expr_env ~event_env program
         >>= fun (program, event_env, expr_env) ->
-        check_true "Event a should be executed" (is_executed "a" program) ;
+        let a = Option.get @@ get_event ~filter:(same_id "a") program in
+        check_true "Event a should be executed" (is_executed a) ;
         let b = Option.get (get_event ~filter:(same_id "b") program) in
         check_true "Event b should be enabled"
           ( is_enabled b program (event_env, expr_env)
@@ -115,7 +116,8 @@ let runtime_set =
           (List.length spawn_relations) ;
         execute ~event_id:"a" ~expr:Unit ~expr_env ~event_env program
         >>= fun (program, _event_env, _expr_env) ->
-        check_true "Event a should be executed" (is_executed "a" program) ;
+        let a = Option.get @@ get_event ~filter:(same_id "a") program in
+        check_true "Event a should be executed" (is_executed a) ;
         check_int "Expected 5 events" 5 (List.length program.events) ;
         check_int "Expected 4 relations" 4 (List.length program.relations) ;
         check_int "Not expecting instantiations to be done." 0

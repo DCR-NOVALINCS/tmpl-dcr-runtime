@@ -26,7 +26,7 @@ let show_template_defs =
   Arg.(
     value & flag
     & info ["t"; "templates"] ~docv:"TEMPLATES"
-        ~doc:"Show the template definitions, only when the -a flag is active" )
+        ~doc:"Show the template definitions" )
 
 and view_cmd disabled show_value show_relations show_template_defs state =
   let {expr_env; event_env; program; _} = state in
@@ -38,18 +38,11 @@ and view_cmd disabled show_value show_relations show_template_defs state =
           ~should_print_template_decls:show_template_defs ~event_env ~expr_env
           program
     | true ->
-        view_disabled ~should_print_value:show_value
-          ~should_print_relations:show_relations
-          ~should_print_template_decls:show_template_defs ~event_env ~expr_env
-          program
-    (* | true, false ->
         view
           ~filter:(fun event _ -> Some event)
-          ~should_print_events:true ~should_print_value:show_value
-          ~should_print_relations:show_relations
+          ~should_print_value:show_value ~should_print_relations:show_relations
           ~should_print_template_decls:show_template_defs ~event_env ~expr_env
-          program *)
-    (* | _ -> invalid_view_combination "all" "disabled" *)
+          program
   in
   view program
   >>= fun output ->

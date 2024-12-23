@@ -32,6 +32,7 @@ and execute_cmd event_id expr_str state =
       program
     ; event_env
     ; expr_env
+    ; previous_state= Some state
     ; output=
         Printf.sprintf "Executed event %s with expression %s\n"
           (keyword event_id)

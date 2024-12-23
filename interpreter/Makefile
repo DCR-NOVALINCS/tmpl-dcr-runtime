@@ -6,7 +6,7 @@ OUTPUT_DOC_PATH := docs
 OUTPUT_JS_PATH := ../server/src/runtime
 # OUTPUT_JS_PATH := .
 
-default:
+setup:
 	cd $(INTERPRETER_PATH)
 	opam update
 	opam install . --deps-only

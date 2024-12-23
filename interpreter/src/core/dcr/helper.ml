@@ -30,6 +30,10 @@ let rec update_event event program =
   in
   {program with events}
 
+(* =============================================================================
+   Marking functions
+    ============================================================================= *)
+
 and set_marking ?included ?pending ?executed ?value event =
   let {marking; _} = event.data in
   let {included= i; pending= p; executed= e; value= v} = marking.data in
@@ -43,6 +47,16 @@ and set_marking ?included ?pending ?executed ?value event =
   return
     { event with
       data= {event.data with marking= {marking with data= new_marking}} }
+
+and get_marking event =
+  let {marking= {data= marking; _}; _} = event.data in
+  marking
+
+and is_included event = get_marking event |> fun {included; _} -> included.data
+
+and is_executed event = get_marking event |> fun {executed; _} -> executed.data
+
+and is_pending event = get_marking event |> fun {pending; _} -> pending.data
 
 and update_event_io ?(eval = eval_expr) event expr_env =
   let {marking; io; _} = event.data in
@@ -150,7 +164,7 @@ and has_event ?(filter = fun _ -> true) program =
 and find_event id event_env =
   match find_flat id.data event_env with
   | Some event -> return event
-  | None -> id_not_found id
+  | None -> event_not_found ~loc:id.loc id.data
 
 and find_all_events ?(filter = fun _ -> true) program =
   let events = program.events in
@@ -160,32 +174,32 @@ and same_id id e =
   let id', _ = e.data.info in
   id'.data |> String.split_on_char '_' |> List.hd = id
 
-and is_executed id program =
-  let event = get_event ~filter:(same_id id) program in
-  match event with
-  | None -> raise (Invalid_argument "Event not found")
-  | Some event ->
-      let {marking; _} = event.data in
-      let {executed; _} = marking.data in
-      executed.data
+(* and is_executed id program =
+     let event = get_event ~filter:(same_id id) program in
+     match event with
+     | None -> raise (Invalid_argument "Event not found")
+     | Some event ->
+         let {marking; _} = event.data in
+         let {executed; _} = marking.data in
+         executed.data
 
-and is_pending id program =
-  let event = get_event ~filter:(same_id id) program in
-  match event with
-  | None -> raise (Invalid_argument "Event not found")
-  | Some event ->
-      let {marking; _} = event.data in
-      let {pending; _} = marking.data in
-      pending.data
+   and is_pending id program =
+     let event = get_event ~filter:(same_id id) program in
+     match event with
+     | None -> raise (Invalid_argument "Event not found")
+     | Some event ->
+         let {marking; _} = event.data in
+         let {pending; _} = marking.data in
+         pending.data
 
-and is_included id program =
-  let event = get_event ~filter:(same_id id) program in
-  match event with
-  | None -> raise (Invalid_argument "Event not found")
-  | Some event ->
-      let {marking; _} = event.data in
-      let {included; _} = marking.data in
-      included.data
+   and is_included id program =
+     let event = get_event ~filter:(same_id id) program in
+     match event with
+     | None -> raise (Invalid_argument "Event not found")
+     | Some event ->
+         let {marking; _} = event.data in
+         let {included; _} = marking.data in
+         included.data *)
 
 and get_relation ?(filter = fun _ -> true) id program =
   let relations = program.relations in
@@ -238,28 +252,7 @@ and append_subprograms subprograms =
   in
   return (events, template_insts, relations, annotations)
 
-and event_as_expr event =
-  (* let {marking; _} = event.data in *)
-  (* let {marking; io; _} = event.data in
-     let value =
-       match (marking.data, io.data) with
-       | _, Output expr -> expr
-       | {value; _}, Input _ -> !value
-     in *)
-  (* let _, label = info in *)
-  (* annotate ~loc:event.loc ~ty:!(marking.ty)
-     (Record [(annotate ~ty:!(marking.ty) "value", value)]) *)
-  annotate ~loc:event.loc (EventRef (ref event))
-
-(* and event_as_ty event =
-   let {io; _} = event.data in
-   let ty =
-     match io.data with
-     | Input ty -> ty.data
-     | Output expr -> (
-       match !(expr.ty) with None -> failwith "Type not found" | Some ty -> ty )
-   in
-   RecordTy [(annotate "value", annotate ty)] *)
+and event_as_expr event = annotate ~loc:event.loc (EventRef (ref event))
 
 and sort_events program =
   let events = program.events |> List.sort compare in
@@ -269,16 +262,16 @@ and sort_events program =
    Alpha-renaming functions
    ============================================================================= *)
 
-and r = Random.self_init ()
+let rec r = Random.self_init ()
 
 and count = ref 0
 
-and counter _ =
+and counter () =
   let res = !count in
   count := !count + 1 ;
   string_of_int res
 
-and nanoid ?(length = 12) _ =
+and nanoid ?(length = 12) () =
   let chars =
     "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
   in
@@ -286,19 +279,20 @@ and nanoid ?(length = 12) _ =
   let random_char () = String.get chars (Random.int chars_len) in
   String.init length (fun _ -> random_char ())
 
-and fresh ?(id_fn = counter) name = Printf.sprintf "%s_%s" name (id_fn ())
+and fresh ?(alpha_rename = counter) name =
+  Printf.sprintf "%s_%s" name (alpha_rename ())
 
-and fresh_event event =
-  let id, _ = event.data.info in
-  set_info ~id:(fresh id.data) event
+and fresh_event ?(alpha_rename = counter) event =
+  let {info= id, _; _} = event.data in
+  set_info ~id:(fresh ~alpha_rename id.data) event
 
-and fresh_event_ids ?(exclude = []) events relations =
+and fresh_event_ids ?(exclude = []) ?(alpha_rename = nanoid) events relations =
   let open Printing in
   let id_env = empty_env in
   fold_left
     (fun id_env event ->
       let id, _ = event.data.info in
-      let fresh_id = fresh id.data in
+      let fresh_id = fresh ~alpha_rename id.data in
       return (bind id.data fresh_id id_env) )
     id_env events
   >>= fun id_env ->

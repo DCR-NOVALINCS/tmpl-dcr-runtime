@@ -33,7 +33,7 @@ let string_of_state state =
 let print_output ?(previous_state = empty_runtime_state) = function
   | Ok runtime_state ->
       CPrinter.cprintln (string_of_state runtime_state) ;
-      return {runtime_state with previous_state= Some previous_state}
+      return runtime_state
   | Error errors -> print_errors errors ; return previous_state
 
 (* =============================================================================
