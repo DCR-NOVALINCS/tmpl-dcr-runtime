@@ -1,17 +1,17 @@
 # `4-control-relations`
 
-We have seen how to create events, its types and its data. 
-Now we will see how to affect the marking of the events using relations, more specifically the control relations.
+We have seen how to create events, their types and their data. 
+Now we will see how to affect the events' marking using relations, specifically the control relations.
 
-In DCR Graphs, there are five control relations that can affect the marking of events:
+In DCR Graphs, five control relations can affect the marking of events:
 
-| Relation  | Representation                                                      | Description                                                  |
-| --------- | ------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Include   | $a \color{forestgreen}\rightarrow\!\!+\space \color{default} b$     | When event `a` is executed, event `b` becomes included.      |
-| Exclude   | $a \color{red}\rightarrow\!\!\% \space \color{default} b$           | When event `a` is executed, event `b` becomes excluded.      |
-| Response  | $a \color{cyan}\space\bullet\!\!\rightarrow \color{default} b$      | When event `a` is executed, event `b` becomes pending.       |
-| Condition | $a \color{orange}\rightarrow\!\!\bullet \space \color{default} b$   | Event `a` must be executed before event `b` can be executed. |
-| Milestone | $a \color{magenta}\rightarrow\!\!\diamond \space \color{default} b$ | Event `a` must not be pending for event `b` to be executed.  |
+| Relation  | Representation | Description                                                  |
+| --------- | -------------- | ------------------------------------------------------------ |
+| Include   | `a` -->+ `b`   | When event `a` is executed, event `b` becomes included.      |
+| Exclude   | `a` -->% `b`   | When event `a` is executed, event `b` becomes excluded.      |
+| Response  | `a` *--> `b`   | When event `a` is executed, event `b` becomes pending.       |
+| Condition | `a` -->* `b`   | Event `a` must be executed before event `b` can be executed. |
+| Milestone | `a` --><> `b`  | Event `a` must not be pending for event `b` to be executed.  |
 
 **Next examples**
 
