@@ -3,7 +3,7 @@ open Monads.ResultMonad
 open Printing
 open Errors
 
-type options = {logger_level: string option}
+type t = {logger_level: string option}
 
 let set_logger logger_level =
   if Option.is_none logger_level then return (Logger.disable ())

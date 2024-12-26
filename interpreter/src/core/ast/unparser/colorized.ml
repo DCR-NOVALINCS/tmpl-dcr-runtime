@@ -163,7 +163,7 @@ and unparse_event ?(indent = "") ?(abbreviated = true) ?(print_value = false)
   let unparse_info ?(indent = "") ?(buffer = Buffer.create 100) (id, label) =
     Buffer.add_string buffer @@ indent ;
     Buffer.add_string buffer @@ colorize ~color:punctuation_color "(" ;
-    Buffer.add_string buffer @@ colorize ~color:White id.data ;
+    Buffer.add_string buffer @@ colorize ~color:variable_color id.data ;
     Buffer.add_string buffer @@ colorize ~color:punctuation_color ":" ;
     Buffer.add_string buffer @@ colorize ~color:new_type_color label.data ;
     Buffer.add_string buffer @@ colorize ~color:punctuation_color ")" ;
@@ -197,9 +197,9 @@ and unparse_event ?(indent = "") ?(abbreviated = true) ?(print_value = false)
       if print_executed && marking.executed.data then
         Buffer.add_string buffer @@ colorize ~color:Green executed_mark ;
       if marking.pending.data then
-        Buffer.add_string buffer @@ colorize ~color:Red pending_mark ;
+        Buffer.add_string buffer @@ colorize ~color:Cyan pending_mark ;
       if not marking.included.data then
-        Buffer.add_string buffer @@ colorize ~color:Black excluded_mark ;
+        Buffer.add_string buffer @@ colorize ~color:Red excluded_mark ;
       ()
     in
     let unparse_marking_extended ?(indent = "") ?(buffer = Buffer.create 100)
@@ -322,13 +322,13 @@ and unparse_relation ?(indent = "") ?(abbreviated = true)
   Buffer.add_string buffer @@ indent ;
   ( match relation.data with
   | ControlRelation (from, guard, dest, t) ->
-      Buffer.add_string buffer @@ colorize ~color:Default from.data ;
+      Buffer.add_string buffer @@ colorize ~color:variable_color from.data ;
       Buffer.add_string buffer @@ " " ;
       unparse_relation_type ~buffer ~guard:(guard, guard_buffer) t |> ignore ;
       Buffer.add_string buffer @@ " " ;
-      Buffer.add_string buffer @@ colorize ~color:Default dest.data
+      Buffer.add_string buffer @@ colorize ~color:variable_color dest.data
   | SpawnRelation (from, guard, subprogram) ->
-      Buffer.add_string buffer @@ colorize ~color:Default from.data ;
+      Buffer.add_string buffer @@ colorize ~color:variable_color from.data ;
       Buffer.add_string buffer @@ " " ;
       let color = spawn_relation_color in
       let format = CString.F.Bold in
