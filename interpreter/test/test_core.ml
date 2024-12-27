@@ -766,7 +766,7 @@ let annotation_set =
         check_int "Expecting 2 events with sub-id 'b'" 2 (List.length bs) ;
         let* spawn_relations_from_b =
           find_all_relations
-            ~filter:(fun r from _ -> is_spawn r && from.data = "b")
+            ~filter:(fun r from _ -> is_spawn r && String.contains from.data 'b')
             program
         in
         check_int "Expecting only one spawn relation from a 'b' event"

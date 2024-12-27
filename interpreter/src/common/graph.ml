@@ -40,7 +40,7 @@ module Make (S : Spec) = struct
 
   let find_node id g = NodeMap.find_opt id g
 
-  let keys g = NodeMap.bindings g |> List.map fst
+  let keys g = NodeMap.bindings g |> List.map fst |> List.sort_uniq S.compare
 
   let edges g = NodeMap.bindings g |> List.map snd |> List.concat
 end

@@ -59,7 +59,7 @@ let rec execute ~event_id ?(expr = Unit) ?(ty_env = empty_env)
         return (program, event_env, expr_env)
 
 and execute_output_event event expr_env =
-  let {info; io; _} = event.data in
+  let {info; io; marking; _} = event.data in
   ( match io.data with
   | Output expr -> return expr
   | _ ->
@@ -67,7 +67,11 @@ and execute_output_event event expr_env =
       something_went_wrong ~loc:id.loc
         ("Is not a output event" ^ keyword id.data) )
   >>= fun expr ->
-  eval_expr expr expr_env >>= fun value -> set_marking ~value event
+  eval_expr expr expr_env
+  >>= fun v ->
+  let {value; _} = marking.data in
+  value := v ;
+  set_marking ~value:v event
 
 and execute_input_event event expr (ty_env, expr_env) =
   let {info; io; _} = event.data in

@@ -1,0 +1,17 @@
+(a: A)[?: Boolean]
+
+a -->> {
+    (b: B) [?: Number]
+
+    if @trigger.value:
+        b -->> {
+            (c: C)[@trigger.value]
+
+            foreach i in @range(1, @trigger.value):
+                c -->> {
+                    (d: D)[i + @trigger.value]
+                }
+            /foreach
+        }
+    /if
+}

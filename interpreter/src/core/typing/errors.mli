@@ -37,3 +37,9 @@ val property_not_found_type :
   -> string annotated
   -> type_expr'
   -> ('a, detailed_error list) result
+
+val missing_exported_event_types :
+     ?errors:detailed_error list
+  -> expected:event_id list
+  -> event_id list
+  -> ('a, detailed_error list) result

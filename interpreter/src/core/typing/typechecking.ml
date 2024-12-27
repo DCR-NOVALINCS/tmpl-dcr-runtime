@@ -151,11 +151,6 @@ and typecheck_template_decl template_decl
             ( match EventTypes.find label.data label_types with
             | None ->
                 (* FIXME: In case of not found the label in this point of the program, what to do? *)
-                (* missing_label
-                   ~available_labels:
-                     ( EventTypes.to_list label_types
-                     |> List.map (fun (x, _) -> annotate x) )
-                   label *)
                 let label_types =
                   EventTypes.add (label.data, Undefined) label_types
                 in
@@ -234,7 +229,12 @@ and typecheck_template_decl template_decl
     || not (List.length exported_events = List.length export_types)
   then
     (* Error when the number of exported events does not match the number of export types *)
-    todo "error message for excess or less of exported events"
+    missing_exported_event_types ~expected:export_types
+      (List.map
+         (fun e ->
+           let {info= id, _; _} = e.data in
+           id )
+         exported_events )
   else
     return @@ List.combine exported_events export_types
     >>= fun exported_type_mapping ->
@@ -387,7 +387,12 @@ and typecheck_inst inst (ty_env, event_env, tmpl_ty_env, label_types) =
           fold_left
             (fun (ty_env, event_env, label_types) (x, label) ->
               ( match EventTypes.find label.data label_types with
-              | None -> todo "error message for not found label"
+              | None ->
+                  missing_label
+                    ~available_labels:
+                      ( EventTypes.to_list label_types
+                      |> List.map (fun (x, _) -> annotate x) )
+                    label
               | Some Undefined ->
                   let label_types = EventTypes.remove label.data label_types in
                   return

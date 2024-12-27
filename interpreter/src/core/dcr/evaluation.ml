@@ -300,9 +300,18 @@ and partial_eval_expr expr expr_env =
       >>= fun v -> return {expr with data= UnaryOp (v, op)}
   | Identifier id -> find_id id expr_env
   (* | Trigger -> find_id {expr with data= trigger_id} expr_env *)
-  | PropDeref (e, p) ->
+  | PropDeref (e, p) -> (
       partial_eval_expr e expr_env
-      >>= fun v -> return {expr with data= PropDeref (v, p)}
+      >>= fun v ->
+      match v.data with
+      | Record fields -> (
+          let fields =
+            List.map (fun (name, expr) -> (name.data, expr)) fields
+          in
+          match List.assoc_opt p.data fields with
+          | None -> property_not_found p v
+          | Some v -> return v )
+      | _ -> return {expr with data= PropDeref (v, p)} )
   | List elems ->
       map (fun elem -> partial_eval_expr elem expr_env) elems
       >>| fun elems -> {expr with data= List elems}

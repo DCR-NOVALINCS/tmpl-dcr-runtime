@@ -97,3 +97,16 @@ let property_not_found_type ?(errors = []) ?(loc = Nowhere) p ty =
           Some "Ensure the property is declared and in scope. Check for typos."
       }
     :: errors )
+
+let missing_exported_event_types ?(errors = []) ~expected got =
+  fail
+    ( { location= Nowhere
+      ; message=
+          Printf.sprintf "Missing exported event types. Expected %s, but got %s"
+            (String.concat ", " (deannotate_list expected))
+            (String.concat ", " (deannotate_list got))
+      ; hint=
+          Some
+            "Ensure the exported event types are declared and in scope. Check for typos."
+      }
+    :: errors )
