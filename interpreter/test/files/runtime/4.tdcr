@@ -1,10 +1,21 @@
-tmpl copy(e: A): A {
-    (e1: A)[e.value]
-} => e1
+tmpl is_positive(n: Number = 0): Output {
+    (o: Output)[n > 0]
+} => o
 
-(a: A)[0]
-(c: Copy)[?: A]
+tmpl is_negative(n: Number = 0): Output {
+    (o: Output)[n < 0]
+} => o
+
+tmpl check_sign(c: Number): Output, Output {
+    is_negative(n = c) => negative
+    is_positive(n = c) => positive
+
+    negative -[negative.value]->% positive
+    positive -[positive.value]->% negative
+} => negative, positive
+
+(c: C)[?: Number]
 
 c -->> {
-    copy(e = a) => a1
+    check_sign(c = @trigger.value) => negative, positive
 }

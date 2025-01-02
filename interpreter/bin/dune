@@ -6,8 +6,12 @@
  (libraries cli)
  (modules main))
 
+(executable
+ (name sandbox)
+ (public_name test)
+ (libraries ast dcr common))
+
 (documentation
  (package tmpl_dcr))
 
 ; TODO: Executable for the server version of the interpreter.
-; TODO: Executable for the web version of the interpreter.

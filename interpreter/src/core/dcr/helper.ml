@@ -44,9 +44,9 @@ and set_marking ?included ?pending ?executed ?value event =
        ~executed:(Option.value ~default:e.data executed)
        ~value:(Option.value ~default:!v value).data ()
   >>= fun new_marking ->
-  return
-    { event with
-      data= {event.data with marking= {marking with data= new_marking}} }
+  let marking = {marking with data= new_marking} in
+  let event = {event with data= {event.data with marking}} in
+  return event
 
 and get_marking event =
   let {marking= {data= marking; _}; _} = event.data in
@@ -58,12 +58,14 @@ and is_executed event = get_marking event |> fun {executed; _} -> executed.data
 
 and is_pending event = get_marking event |> fun {pending; _} -> pending.data
 
+and current_value event = get_marking event |> fun {value; _} -> !value
+
 and update_event_io ?(eval = eval_expr) event expr_env =
-  let {marking; io; _} = event.data in
+  let {io; _} = event.data in
   match io.data with
   | Input _ ->
-      eval !(marking.data.value) expr_env
-      >>= fun value -> set_marking ~value event
+      let value = current_value event in
+      eval value expr_env >>= fun value -> set_marking ~value event
   | Output expr ->
       eval expr expr_env
       >>= fun value ->
@@ -71,6 +73,14 @@ and update_event_io ?(eval = eval_expr) event expr_env =
       >>= fun event ->
       return
         {event with data= {event.data with io= {io with data= Output value}}}
+
+and update_event_info ?(eval = eval_expr) event expr_env =
+  let {info= id, _; _} = event.data in
+  eval (annotate ~loc:id.loc (Identifier id)) expr_env
+  >>= fun id ->
+  match id.data with
+  | Identifier id -> set_info ~id:id.data event
+  | _ -> return event
 
 and set_info ?id ?label event =
   let e_id, e_label = event.data.info in
@@ -244,10 +254,10 @@ and append_subprograms subprograms =
     List.fold_left
       (fun (events, template_insts, relations, annotations)
            (events', template_insts', relations', annotations') ->
-        ( events @ events'
-        , template_insts @ template_insts'
-        , relations @ relations'
-        , annotations @ annotations' ) )
+        ( List.append events events'
+        , List.append template_insts template_insts'
+        , List.append relations relations'
+        , List.append annotations annotations' ) )
       ([], [], [], []) subprograms
   in
   return (events, template_insts, relations, annotations)
@@ -262,9 +272,9 @@ and sort_events program =
    Alpha-renaming functions
    ============================================================================= *)
 
-let rec r = Random.self_init ()
+let _ = Random.self_init ()
 
-and count = ref 0
+let rec count = ref 0
 
 and counter () =
   let res = !count in
@@ -286,7 +296,7 @@ and fresh_event ?(alpha_rename = counter) event =
   let {info= id, _; _} = event.data in
   set_info ~id:(fresh ~alpha_rename id.data) event
 
-and fresh_event_ids ?(exclude = []) ?(alpha_rename = nanoid) events relations =
+and fresh_event_ids ?(exclude = []) ?(alpha_rename = counter) events relations =
   let open Printing in
   let id_env = empty_env in
   fold_left
@@ -300,7 +310,14 @@ and fresh_event_ids ?(exclude = []) ?(alpha_rename = nanoid) events relations =
   Logger.debug (Printf.sprintf "Id Env: %s" (string_of_env (fun x -> x) id_env)) ;
   (* Exclude all unwanted events *)
   let module StringSet = Set.Make (String) in
-  let exclude = StringSet.of_list exclude in
+  let already_alpha_renamed, _ =
+    List.partition_map
+      (fun e ->
+        let id, _ = e.data.info in
+        if String.contains id.data '_' then Left id.data else Right e )
+      events
+  in
+  let exclude = StringSet.of_list (List.append exclude already_alpha_renamed) in
   let event_ids =
     List.map
       (fun e ->
@@ -355,5 +372,7 @@ and bind_events ~f events env =
   fold_left
     (fun env event ->
       let id, _ = event.data.info in
-      return (bind id.data (f event) env) )
+      match find_flat id.data env with
+      | None -> return (bind id.data (f event) env)
+      | _ -> return env )
     env events

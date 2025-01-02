@@ -50,6 +50,18 @@ module ResultMonad : sig
   val ( let+ ) : ('a, 'b) result -> ('a -> 'c) -> ('c, 'b) result
   (** [( let+ ) m f] is a syntactic sugar for [apply] in monadic let binding. *)
 
+  val compose :
+       ('a, 'b) result
+    -> ('a -> ('c, 'b) result)
+    -> ('c -> ('d, 'b) result)
+    -> ('d, 'b) result
+
+  val ( >=> ) :
+       ('a, 'b) result
+    -> ('a -> ('c, 'b) result)
+    -> ('c -> ('d, 'b) result)
+    -> ('d, 'b) result
+
   val bind_error : ('a, 'b) result -> ('b -> ('a, 'c) result) -> ('a, 'c) result
   (** [bind_error m f] applies the function [f] to the value inside [m] if [m]
       is [Error], otherwise returns the [Ok] value.

@@ -19,13 +19,13 @@ tmpl base_approver(sa: setRequestApproved, sr: setRequestRefused): approveReques
 tmpl managerApprover(r: Request, set_approved: setRequestApproved, set_reproved: setRequestRefused): approveRequest, refuseRequest {
     (m: Manager)[{ request: r.value.id }]
 
-    base_approver(sa -> set_approved, sr -> set_reproved) => mar, mrr
+    base_approver(sa = set_approved, sr = set_reproved) => mar, mrr
 } => mar, mrr
 
 tmpl directorApprover(r: Request, set_approved: setRequestApproved, set_reproved: setRequestRefused): approveRequest, refuseRequest {
     (d: Director)[{ request: r.value.id }]
     
-    base_approver(sa -> set_approved, sr -> set_reproved) => dar, drr
+    base_approver(sa = set_approved, sr = set_reproved) => dar, drr
 
     dar *--> set_approved
     drr *--> set_reproved
@@ -42,21 +42,21 @@ ar -->> {
         aa -->> {
             if @trigger.value.type == "manager":
                 managerApprover(
-                    r -> requestData, 
-                    set_approved -> setApproved, 
-                    set_reproved -> setReproved
+                    r = requestData, 
+                    set_approved = setApproved, 
+                    set_reproved = setReproved
                 ) => approveRequest, refuseRequest
             else:
                 if @trigger.value.type == "director":
                     directorApprover(
-                        r -> requestData, 
-                        set_approved -> setApproved, 
-                        set_reproved -> setReproved
+                        r = requestData, 
+                        set_approved = setApproved, 
+                        set_reproved = setReproved
                     ) => approveRequest, refuseRequest
                 else:
                     base_approver(
-                        sa -> setApproved, 
-                        sr -> setReproved
+                        sa = setApproved, 
+                        sr = setReproved
                     ) => approveRequest, refuseRequest
                 /if
             /if

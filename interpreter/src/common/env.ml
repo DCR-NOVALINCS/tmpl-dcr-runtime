@@ -1,6 +1,6 @@
 open Printing
 
-type 'a env = Empty | Scope of (string * 'a) list * 'a env [@@deriving show]
+type 'a env = Empty | Scope of (string * 'a) list * 'a env
 
 exception Not_found of string
 
@@ -21,9 +21,9 @@ and bind x v env =
   match env with
   | Empty -> raise Empty_env
   | Scope (binds, sl) ->
-      if List.mem_assoc x binds then
-        let _ = Logger.warn (Printf.sprintf "Duplicate binding for %s" x) in
-        Scope ((x, v) :: binds, sl) (* raise (Duplicate_binding x) *)
+      if List.mem_assoc x binds then (
+        Logger.warn (Printf.sprintf "Duplicate binding for %s" (keyword x)) ;
+        Scope ((x, v) :: binds, sl) (* raise (Duplicate_binding x) *) )
       else Scope ((x, v) :: binds, sl)
 
 and bind_at_depth x v n env =
@@ -37,7 +37,9 @@ and bind_at_depth x v n env =
 
 and find_flat x env =
   match env with
-  | Empty -> None
+  | Empty ->
+      Logger.warn (Printf.sprintf "Key %s not found" (keyword x)) ;
+      None
   | Scope (binds, sl) -> (
     match List.assoc_opt x binds with
     | None -> find_flat x sl
@@ -53,6 +55,12 @@ and flatten env =
     | Scope (binds, sl) -> flatten' sl (List.append binds acc)
   in
   flatten' env []
+
+(* and map f env =
+   match env with
+   | Empty -> Empty
+   | Scope (binds, sl) ->
+       Scope (List.map (fun (k, v) -> (k, f v)) binds, map f sl) *)
 
 and string_of_env v_fmt env =
   let rec string_of_scope sc =

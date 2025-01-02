@@ -1,7 +1,7 @@
+open Errors
 open Ast
 open Syntax
 open Error
-open Errors
 open Unparser
 open Common
 open Env
@@ -88,22 +88,21 @@ let rec eval_expr expr env =
   | Record fields ->
       eval_record_fields fields env
       >>| fun fields -> {expr with data= Record fields}
-  | EventRef event_ref ->
-      let event = !event_ref in
-      let {io; _} = event.data in
-      ( match io.data with
-      | Output expr -> eval_expr expr env
-      | Input _ -> value_from_input_event event )
-      >>= fun value ->
-      let fields = [(annotate "value", value)] in
-      return {expr with data= Record fields}
-
+  | EventRef _event_ref -> return expr
+(* let event = !event_ref in
+   let {io; _} = event.data in
+   ( match io.data with
+   | Output expr -> eval_expr expr env
+   | Input _ -> value_from_input_event event )
+   >>= fun value ->
+   let fields = [(annotate "value", value)] in
+   return {expr with data= Record fields} *)
 (* let {marking; _} = event.data in
    let fields =
      [(annotate "value", annotate ~loc:event.loc !(marking.data.value).data)]
    in
    return {expr with data= Record fields} *)
-(* | _ -> invalid_expr () *)
+(* | _ -> invalid_expr expr *)
 
 and eval_binop v1 v2 op =
   match op with
@@ -324,7 +323,7 @@ and partial_eval_expr expr expr_env =
   | Record fields ->
       partial_eval_record_fields fields expr_env
       >>| fun fields -> {expr with data= Record fields}
-  | EventRef event_ref ->
+  (* | EventRef event_ref ->
       let event = !event_ref in
       let {io; _} = event.data in
       ( match io.data with
@@ -332,6 +331,6 @@ and partial_eval_expr expr expr_env =
       | Input _ -> value_from_input_event event )
       >>= fun value ->
       let fields = [(annotate "value", value)] in
-      return {expr with data= Record fields}
+      return {expr with data= Record fields} *)
   (* TODO: Put more cases *)
   | _ -> return expr

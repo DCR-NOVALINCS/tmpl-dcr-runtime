@@ -17,11 +17,18 @@ type runtime_state =
   ; event_env: event env
   ; program: program
   ; previous_state: runtime_state option
-  ; output: string }
+  ; output: string
+  ; history: string array }
 
 let mk_runtime_state ?(output = "") ?(ty_env = empty_env)
     ?(expr_env = empty_env) ?(event_env = empty_env) program =
-  {ty_env; expr_env; event_env; program; previous_state= None; output}
+  { ty_env
+  ; expr_env
+  ; event_env
+  ; program
+  ; previous_state= None
+  ; output
+  ; history= Array.make 10 "" }
 
 let empty_runtime_state = mk_runtime_state empty_program
 

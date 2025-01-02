@@ -12,4 +12,4 @@ tmpl f(e: A, m: Number = 5): C {
 } => c
 
 (a: A)[?]
-f(e -> a) => c
+f(e = a) => c

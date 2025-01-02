@@ -53,19 +53,16 @@ and unparse_template_decl ?(indent = "") ?(abbreviated = true)
     ?(should_print_template_insts = true) ?(should_print_relations = true)
     ?(buffer = Buffer.create 100) template_decl =
   let unparse_template_param ?(indent = "") ?(separator = ": ")
-      ?(buffer = Buffer.create 100) (id, tmpl_ty) =
+      ?(buffer = Buffer.create 100) (id, ty, default) =
     Buffer.add_string buffer @@ indent ;
     Buffer.add_string buffer @@ id.data ;
     Buffer.add_string buffer @@ separator ;
-    match tmpl_ty with
-    | ExprParam (ty, expr_opt) -> (
-        unparse_ty ~buffer ty.data |> ignore ;
-        match expr_opt with
-        | None -> ()
-        | Some expr ->
-            Buffer.add_string buffer @@ " = " ;
-            unparse_expr ~buffer expr |> ignore )
-    | EventParam label -> Buffer.add_string buffer @@ label.data
+    unparse_ty ~buffer ~indent ty.data |> ignore ;
+    match default with
+    | None -> ()
+    | Some value ->
+        Buffer.add_string buffer @@ " = " ;
+        unparse_expr ~buffer ~indent value |> ignore
   in
   let {id; params; export_types; graph; export; _} = template_decl in
   (* let buffer = Buffer.create 100 in *)
@@ -204,24 +201,18 @@ and unparse_template_insts ?(indent = "") ?(buffer = Buffer.create 100)
 
 and unparse_template_inst ?(indent = "") ?(buffer = Buffer.create 100) inst =
   let unparse_arg ?(indent = "") ?(separator = " = ")
-      ?(buffer = Buffer.create 100) (arg_name, arg_ty) =
+      ?(buffer = Buffer.create 100) (arg_name, arg_expr) =
     Buffer.add_string buffer @@ indent ;
     Buffer.add_string buffer @@ arg_name.data ;
     Buffer.add_string buffer @@ separator ;
-    match arg_ty with
-    | ExprArg expr -> unparse_expr ~buffer expr |> ignore
-    | EventArg label -> Buffer.add_string buffer @@ label.data
+    unparse_expr ~buffer arg_expr |> ignore
   in
   let {tmpl_id; args; x} = inst in
   Buffer.add_string buffer @@ indent ;
   Buffer.add_string buffer @@ tmpl_id.data ;
   Buffer.add_string buffer @@ "(" ;
   unparse_list ~buffer ~separator:", "
-    (fun ~buffer (arg_name, arg_ty) ->
-      let separator =
-        match arg_ty with ExprArg _ -> " = " | EventArg _ -> " -> "
-      in
-      unparse_arg ~buffer ~separator (arg_name, arg_ty) )
+    (fun ~buffer arg -> unparse_arg ~buffer ~separator:" = " arg)
     args ;
   Buffer.add_string buffer @@ ")" ;
   unparse_list ~buffer ~initial:" => " ~separator:", "

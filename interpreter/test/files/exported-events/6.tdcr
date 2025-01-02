@@ -11,12 +11,12 @@ tmpl and(e1: A, e2: A): A, A {
 (a1: A)[?]
 (a2: A)[?]
 
-and(e1 -> a1, e2 -> a2) => a3, a4
-and(e1 -> a3, e2 -> a4) => a5, a6
-and(e1 -> a5, e2 -> a6) => a7, a8
-and(e1 -> a7, e2 -> a8) => a9, a10
-and(e1 -> a9, e2 -> a10) => a11, a12
-and(e1 -> a11, e2 -> a12) => a13, a14
-and(e1 -> a13, e2 -> a14) => a15, a16
-and(e1 -> a15, e2 -> a16) => a17, a18
-and(e1 -> a17, e2 -> a18) => a19, a20
+and(e1 = a1, e2 = a2) => a3, a4
+and(e1 = a3, e2 = a4) => a5, a6
+and(e1 = a5, e2 = a6) => a7, a8
+and(e1 = a7, e2 = a8) => a9, a10
+and(e1 = a9, e2 = a10) => a11, a12
+and(e1 = a11, e2 = a12) => a13, a14
+and(e1 = a13, e2 = a14) => a15, a16
+and(e1 = a15, e2 = a16) => a17, a18
+and(e1 = a17, e2 = a18) => a19, a20

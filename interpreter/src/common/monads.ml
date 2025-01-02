@@ -18,6 +18,12 @@ module ResultMonad = struct
 
   let ( let+ ) = apply
 
+  let compose m f g =
+    let m = bind m f in
+    bind m g
+
+  let ( >=> ) = compose
+
   let bind_error m f = match m with Error e -> f e | Ok _ as ok -> ok
 
   let ( >>! ) = bind_error

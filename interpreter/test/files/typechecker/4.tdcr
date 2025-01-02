@@ -5,6 +5,6 @@ tmpl f(n: Number, e: A): B, A {
 
 (a: A)[?]
 
-f(n = 1, e -> a) => b1
+f(n = 1, e = a) => b1
 
 b -[b.value > 0]->% a

@@ -7,4 +7,4 @@
 tmpl i(e: E): E { } => e
 
 (dummy: E)[?]
-i(e -> dummy) => renamed_dummy
+i(e = dummy) => renamed_dummy

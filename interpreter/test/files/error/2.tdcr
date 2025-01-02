@@ -14,5 +14,5 @@ tmpl i2(b: B): A {
     b -->% a
 } => a
 
-i1(a -> a_i2) => b_i1
-i2(b -> b_i1) => a_i2
+i1(a = a_i2) => b_i1
+i2(b = b_i1) => a_i2

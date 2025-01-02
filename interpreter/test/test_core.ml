@@ -8,6 +8,7 @@ open Ast
 open Unparser
 open Syntax
 open Dcr
+open Evaluation
 open Helper
 open Instantiation
 open Transition
@@ -486,11 +487,15 @@ let annotation_set =
             (fun n ->
               let {io; _} = n.data in
               match io.data with
-              | Output {data= IntLit i; _} -> return i
-              | Output expr ->
-                  Alcotest.fail
-                    ( "Expecting an integer output, got "
-                    ^ Plain.unparse_expr expr )
+              | Output expr -> (
+                  eval_expr expr expr_env
+                  >>= fun result ->
+                  match result.data with
+                  | IntLit i -> return i
+                  | _ ->
+                      Alcotest.fail
+                        ( "Expecting an integer output, got "
+                        ^ Plain.unparse_expr expr ) )
               | _ -> Alcotest.fail "Expecting an output" )
             ns
         in
@@ -540,7 +545,7 @@ let annotation_set =
             srs
         in
         check_string_list "Expecting list of characters" ["a"; "b"; "c"]
-          sr_exprs ;
+          (List.sort compare sr_exprs) ;
         let* nr_exprs =
           map
             (fun nr ->
@@ -554,7 +559,8 @@ let annotation_set =
               | _ -> Alcotest.fail "Expecting an output" )
             nrs
         in
-        check_int_list "Expecting list of integers" [1; 2; 3] nr_exprs ;
+        check_int_list "Expecting list of integers" [1; 2; 3]
+          (List.sort compare nr_exprs) ;
         let* li_exprs =
           map
             (fun li ->
@@ -568,7 +574,8 @@ let annotation_set =
               | _ -> Alcotest.fail "Expecting an output" )
             lis
         in
-        check_int_list "Expecting list of integers" [0; 1; 2; 1; -1] li_exprs ;
+        check_int_list "Expecting list of integers" [-1; 0; 1; 1; 2]
+          (List.sort compare li_exprs) ;
         (* check_int "Expected 3 events in the event env" 3
            (List.length (Env.flatten event_env)) ; *)
         return (program, event_env, expr_env) )

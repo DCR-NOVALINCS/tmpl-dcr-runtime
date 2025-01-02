@@ -7,3 +7,5 @@ let sanitize_input input =
 
 let is_empty_string ?(map = fun s -> s) s =
   if String.trim s = "" then return (map s) else return s
+
+let id x = Obj.magic x

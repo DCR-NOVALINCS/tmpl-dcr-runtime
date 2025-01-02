@@ -42,3 +42,17 @@ let event_not_enabled ?(errors = []) event =
             "Check any relations or conditions that might be blocking this event."
       }
     :: errors )
+
+let param_not_found ?(errors = []) p =
+  fail
+    ( { location= p.loc
+      ; message= Printf.sprintf "Parameter %s not found" (keyword p.data)
+      ; hint= Some "Ensure the parameter is declared and in scope." }
+    :: errors )
+
+let invalid_expr ?(errors = []) e =
+  fail
+    ( { location= e.loc
+      ; message= "Invalid expression"
+      ; hint= Some "Ensure the expression is well-formed." }
+    :: errors )

@@ -134,7 +134,7 @@ and template_param_type' =
   | EventParam of event_label
 [@@deriving yojson]
 
-and template_param' = string annotated * template_param_type'
+and template_param' = string annotated * type_expr * expr option
 [@@deriving yojson]
 
 and template_def =
@@ -151,7 +151,7 @@ and template_def =
 and template_arg_type = ExprArg of expr | EventArg of event_id
 [@@deriving yojson]
 
-and template_arg = string annotated * template_arg_type [@@deriving yojson]
+and template_arg = string annotated * expr [@@deriving yojson]
 
 and template_instance = template_instance' annotated [@@deriving yojson]
 
@@ -272,9 +272,16 @@ let mk_program ?(template_decls = []) ?(events = []) ?(template_insts = [])
     ?(relations = []) ?(annotations = []) _ =
   {template_decls; events; template_insts; relations; annotations}
 
+let to_program (events, insts, relations, annots) =
+  mk_program ~events ~template_insts:insts ~relations ~annotations:annots ()
+
 let mk_subprogram ?(events = []) ?(template_insts = []) ?(relations = [])
     ?(annotations = []) _ =
   (events, template_insts, relations, annotations)
+
+let to_subprogram program =
+  mk_subprogram ~events:program.events ~template_insts:program.template_insts
+    ~relations:program.relations ~annotations:program.annotations ()
 
 let empty_program = mk_program ()
 

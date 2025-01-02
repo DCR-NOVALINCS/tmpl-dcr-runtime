@@ -104,7 +104,7 @@ After cloning the repository, run the following command in the `interpreter` dir
 make setup
 ```
 
-If you don't trust some strange `Makefile` you can run the following command to install the dependencies manually.
+If you don't trust some strange `Makefile` you can run the following command to install the dependencies manually under the `interpreter` directory.
 
 ```bash
 opam install . --deps-only

@@ -65,6 +65,8 @@ val flatten : 'a env -> (string * 'a) list
     @param env the environment to flatten
     @return a list of all the bindings in the environment *)
 
+(* val map : ('a -> 'b) -> 'a env -> 'b env *)
+
 val string_of_env : ('a -> string) -> 'a env -> string
 (** [string_of_env v_fmt env] returns a string representation of the environment
     [env]

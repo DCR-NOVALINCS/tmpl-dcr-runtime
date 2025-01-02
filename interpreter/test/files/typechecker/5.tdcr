@@ -5,8 +5,8 @@ tmpl f(n: Number, e: A): B {
 
 tmpl g(n: Number): A, B {
     (a: A)[?: Number]
-    f(n = 0, e -> a) => b
+    f(n = 0, e = a) => b
 } => a, b
 
 (a: A)[?: Number]
-g(n = 0, e -> a) => a2, b
+g(n = 0) => a2, b

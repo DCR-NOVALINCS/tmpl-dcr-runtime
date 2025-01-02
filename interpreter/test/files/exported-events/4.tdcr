@@ -5,7 +5,7 @@ tmpl g(n: Number, e: A) {
 
 tmpl f(num: Number): A {
   (a: A)[?]
-  g(n = num, e -> a)
+  g(n = num, e = a)
 } => a
 
 (a: A)[?]

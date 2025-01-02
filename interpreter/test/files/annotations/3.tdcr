@@ -6,8 +6,7 @@ tmpl g(n: Number, e: A) {
 (a: A)[?: Number]
 
 a -->> {
-  # g(n = @trigger.value, e -> a) - when @trigger.value > 0
   if @trigger.value > 0:
-    g(n = @trigger.value, e -> a)
+    g(n = @trigger.value, e = a)
   /if
 }

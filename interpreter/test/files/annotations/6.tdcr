@@ -5,5 +5,5 @@ tmpl f(a: A) {
 (a: A)[?: Number]
 
 if a.value > 0:
-    f(a -> a)
+    f(a = a)
 /if

@@ -10,6 +10,7 @@ open Parsing.Lex_and_parse
 open Dcr
 open Evaluation
 open Transition
+open Instantiation
 open Errors
 open Helper
 open Typing
@@ -19,6 +20,21 @@ open Common
 open Monads.ResultMonad
 open Env
 open Printing
+
+(* =============================================================================
+   Initialization functions
+   ============================================================================= *)
+
+let initialize program =
+  preprocess_program program
+  >>= fun (event_env, expr_env, program) ->
+  typecheck ~event_env program
+  >>= fun (ty_env, event_env) ->
+  Logger.success "Typechecked successfully" ;
+  instantiate ~expr_env ~event_env program
+  >>= fun (program, event_env, expr_env) ->
+  Logger.success "Instantiated successfully" ;
+  return (program, (ty_env, expr_env, event_env))
 
 (* =============================================================================
    Execute functions
