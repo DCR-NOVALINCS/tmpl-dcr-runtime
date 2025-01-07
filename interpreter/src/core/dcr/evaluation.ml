@@ -270,7 +270,15 @@ and partial_eval_expr expr expr_env =
           match List.assoc_opt p.data fields with
           | None -> property_not_found p v
           | Some v -> return v )
-      | _ -> return {expr with data= PropDeref (v, p)} )
+      | EventRef _event_ref -> (
+        (* let event = !event_ref in *)
+        (* let {marking; io; _} = event.data in *)
+        match p.data with "value" -> return expr | _ -> property_not_found p v )
+      | Trigger -> return expr
+      | _ ->
+          should_not_happen ~module_path:"evaluation.ml"
+            ("Tried to dereference a non-record value " ^ Plain.unparse_expr v)
+      )
   | List elems ->
       map (fun elem -> partial_eval_expr elem expr_env) elems
       >>| fun elems -> {expr with data= List elems}
@@ -283,14 +291,5 @@ and partial_eval_expr expr expr_env =
   | Record fields ->
       partial_eval_record_fields fields expr_env
       >>| fun fields -> {expr with data= Record fields}
-  (* | EventRef event_ref ->
-      let event = !event_ref in
-      let {io; _} = event.data in
-      ( match io.data with
-      | Output expr -> partial_eval_expr expr expr_env
-      | Input _ -> value_from_input_event event )
-      >>= fun value ->
-      let fields = [(annotate "value", value)] in
-      return {expr with data= Record fields} *)
   (* TODO: Put more cases *)
   | _ -> return expr
