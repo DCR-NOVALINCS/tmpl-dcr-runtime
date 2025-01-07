@@ -6,11 +6,6 @@
  (libraries cli)
  (modules main))
 
-(executable
- (name sandbox)
- (public_name test)
- (libraries ast dcr common))
-
 (documentation
  (package tmpl_dcr))
 

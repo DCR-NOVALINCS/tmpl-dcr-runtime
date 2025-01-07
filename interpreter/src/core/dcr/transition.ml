@@ -120,10 +120,14 @@ and propagate_effects event (event_env, expr_env) program =
             >>= fun (event_env, expr_env) ->
             preprocess_subprogram ~event_env ~expr_env
               (spawn_events, [], spawn_relations, [])
-            >>= fun (event_env, expr_env, (spawn_events, _, spawn_relations, _)) ->
+            >>= fun ( event_env
+                    , expr_env
+                    , (spawn_events, spawn_insts, spawn_relations, spawn_annots)
+                    ) ->
             (* Rename the event ids to new ones, to prevent id clashing *)
-            fresh_event_ids spawn_events spawn_relations
-            >>= fun (spawn_events, spawn_relations) ->
+            fresh_event_ids
+              (spawn_events, spawn_insts, spawn_relations, spawn_annots)
+            >>= fun (spawn_events, _spawn_insts, spawn_relations, _spawn_annots) ->
             (* Put it all together *)
             return
               ( { program with

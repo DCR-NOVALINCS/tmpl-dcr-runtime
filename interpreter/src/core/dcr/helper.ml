@@ -3,12 +3,11 @@ open Syntax
 open Error
 open Unparser
 open Evaluation
-
-(* open Errors *)
+open Errors
 open Common
 open Monads.ResultMonad
 open Env
-(* open Printing *)
+open Printing
 
 (* =============================================================================
    Updating event functions
@@ -264,9 +263,20 @@ and append_subprograms subprograms =
 
 and event_as_expr event = annotate ~loc:event.loc (EventRef (ref event))
 
+(* =============================================================================
+   Sorting functions
+   ============================================================================= *)
+
 and sort_events program =
   let events = program.events |> List.sort compare in
   return {program with events}
+
+and sort_relations program =
+  let relations = program.relations |> List.sort compare in
+  return {program with relations}
+
+and sort_program program =
+  sort_events program >>= fun program -> sort_relations program
 
 (* =============================================================================
    Alpha-renaming functions
@@ -296,7 +306,8 @@ and fresh_event ?(alpha_rename = counter) event =
   let {info= id, _; _} = event.data in
   set_info ~id:(fresh ~alpha_rename id.data) event
 
-and fresh_event_ids ?(exclude = []) ?(alpha_rename = counter) events relations =
+and fresh_event_ids ?(exclude = []) ?(alpha_rename = counter)
+    (events, insts, relations, annots) =
   let open Printing in
   let id_env = empty_env in
   fold_left
@@ -317,7 +328,9 @@ and fresh_event_ids ?(exclude = []) ?(alpha_rename = counter) events relations =
         if String.contains id.data '_' then Left id.data else Right e )
       events
   in
-  let exclude = StringSet.of_list (List.append exclude already_alpha_renamed) in
+  let exclude_set =
+    StringSet.of_list (List.append exclude already_alpha_renamed)
+  in
   let event_ids =
     List.map
       (fun e ->
@@ -326,7 +339,7 @@ and fresh_event_ids ?(exclude = []) ?(alpha_rename = counter) events relations =
       events
   in
   let event_ids_set = StringSet.of_list event_ids in
-  let included = StringSet.diff event_ids_set exclude in
+  let included = StringSet.diff event_ids_set exclude_set in
   (* Alpha rename all the events *)
   map
     (fun event ->
@@ -336,6 +349,26 @@ and fresh_event_ids ?(exclude = []) ?(alpha_rename = counter) events relations =
       | _ -> return event )
     events
   >>= fun events ->
+  (* Alpha rename all the instances *)
+  map
+    (fun inst ->
+      let {args; _} = inst.data in
+      map
+        (fun (arg_id, arg) ->
+          match arg.data with
+          | Identifier id -> (
+            match
+              (find_flat id.data id_env, StringSet.mem id.data included)
+            with
+            | Some fresh_id, true ->
+                return
+                  (arg_id, {arg with data= Identifier {id with data= fresh_id}})
+            | _ -> return (arg_id, arg) )
+          | _ -> return (arg_id, arg) )
+        args
+      >>= fun args -> return {inst with data= {inst.data with args}} )
+    insts
+  >>= fun insts ->
   (* Alpha rename all the relations *)
   map
     (fun relation ->
@@ -362,7 +395,27 @@ and fresh_event_ids ?(exclude = []) ?(alpha_rename = counter) events relations =
             {relation with data= ControlRelation (from_id, guard, dest_id, op)}
       )
     relations
-  >>= fun relations -> return (events, relations)
+  >>= fun relations ->
+  (* Alpha rename all the annotations *)
+  map
+    (fun annot ->
+      match annot with
+      | IfElse {condition; then_branch; else_branch} ->
+          let* then_branch =
+            fresh_event_ids ~alpha_rename ~exclude then_branch
+          in
+          let* else_branch =
+            match else_branch with
+            | Some else_branch ->
+                fresh_event_ids ~alpha_rename else_branch >>| fun x -> Some x
+            | None -> return None
+          in
+          return (IfElse {condition; then_branch; else_branch})
+      | Foreach (id, expr, body) ->
+          let* body = fresh_event_ids ~alpha_rename ~exclude body in
+          return (Foreach (id, expr, body)) )
+    annots
+  >>= fun annots -> return (events, insts, relations, annots)
 
 (* =============================================================================
    Binding functions
@@ -372,7 +425,102 @@ and bind_events ~f events env =
   fold_left
     (fun env event ->
       let id, _ = event.data.info in
-      match find_flat id.data env with
-      | None -> return (bind id.data (f event) env)
-      | _ -> return env )
+      return (bind id.data (f event) env) )
     env events
+
+(* =============================================================================
+   Aux functions
+   ============================================================================= *)
+
+and update_ids id_mapping (events, insts, relations, annotations) =
+  (* Aux functions *)
+  let update id =
+    match List.assoc_opt id.data id_mapping with
+    | Some new_id -> return new_id
+    | None -> return id
+  in
+  let update_expr expr =
+    match expr.data with
+    | Identifier id -> (
+      match List.assoc_opt id.data id_mapping with
+      | Some new_id -> return {expr with data= Identifier new_id}
+      | None -> return expr )
+    | _ -> return expr
+  in
+  (* Update each component of the subprogram *)
+  let update_events events =
+    map
+      (fun event ->
+        let {info= id, label; _} = event.data in
+        update id
+        >>= fun new_id ->
+        return {event with data= {event.data with info= (new_id, label)}} )
+      events
+  and update_insts insts =
+    let update_args args =
+      map
+        (fun (arg_id, arg) ->
+          Logger.debug
+            (Printf.sprintf "Updating arg %s" (Plain.unparse_expr arg)) ;
+          update_expr arg >>= fun arg -> return (arg_id, arg) )
+        args
+    in
+    map
+      (fun inst ->
+        let {args; _} = inst.data in
+        update_args args
+        >>= fun args -> return {inst with data= {inst.data with args}} )
+      insts
+  and update_relations relations =
+    map
+      (fun relation ->
+        match relation.data with
+        | ControlRelation (from, guard, dest, op) ->
+            let* from = update from in
+            let* dest = update dest in
+            return {relation with data= ControlRelation (from, guard, dest, op)}
+        | SpawnRelation (from, guard, subprogram) ->
+            let* from = update from in
+            let* subprogram = update_ids id_mapping subprogram in
+            return {relation with data= SpawnRelation (from, guard, subprogram)}
+        )
+      relations
+  and update_annotations annots =
+    let update_annotation annot =
+      match annot with
+      | IfElse {condition; then_branch; else_branch} ->
+          let* condition = update_expr condition in
+          let* then_branch = update_ids id_mapping then_branch in
+          let* else_branch =
+            if Option.is_some else_branch then
+              let* else_branch =
+                update_ids id_mapping (Option.get else_branch)
+              in
+              return (Some else_branch)
+            else return None
+          in
+          return (IfElse {condition; then_branch; else_branch})
+      | Foreach (id, expr, body) ->
+          let* expr = update_expr expr in
+          let* body = update_ids id_mapping body in
+          return (Foreach (id, expr, body))
+    in
+    map update_annotation annots
+  in
+  let* events = update_events events in
+  let* insts = update_insts insts in
+  let* relations = update_relations relations in
+  let* annotations = update_annotations annotations in
+  return (events, insts, relations, annotations)
+
+(* =============================================================================
+   Aux functions
+   ============================================================================= *)
+
+and eval_bool expr env =
+  eval_expr expr env
+  >>= fun value ->
+  match value.data with
+  | True -> return true
+  | False -> return false
+  | _ -> invalid_expr expr

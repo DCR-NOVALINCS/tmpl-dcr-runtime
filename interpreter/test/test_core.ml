@@ -19,13 +19,14 @@ open Typechecking
    Runtime/DCR Section
    ============================================================================= *)
 
-let tests_folder = "test/files"
+let tests_folder_path = "test/files"
 
-let file name = Printf.sprintf "%s/%s" tests_folder name
+let test_folder name = Printf.sprintf "%s/%s" tests_folder_path name
 
 let runtime_set =
   (* Note: The following tests assume that the programs are typed correctly. *)
-  [ make_test "0.tdcr" (file "runtime/0.tdcr")
+  [ make_test "0.tdcr"
+      (test_folder "runtime/0.tdcr")
       (fun program (event_env, expr_env) ->
         (* Testing the number of elements before instantiating *)
         check_int "Expected 1 event" 1 (List.length program.events) ;
@@ -74,7 +75,8 @@ let runtime_set =
           |> function Ok b -> b | _ -> false ) ;
         return program )
       expecting_ok
-  ; make_test "1.tdcr" (file "runtime/1.tdcr")
+  ; make_test "1.tdcr"
+      (test_folder "runtime/1.tdcr")
       (fun program (event_env, expr_env) ->
         instantiate ~expr_env ~event_env program
         >>= fun (program, event_env, expr_env) ->
@@ -102,7 +104,8 @@ let runtime_set =
         execute ~event_id:"a" ~expr:(IntLit 2) ~expr_env ~event_env program
         >>= fun program -> return program )
       expecting_ok
-  ; make_test "2.tdcr" (file "runtime/2.tdcr")
+  ; make_test "2.tdcr"
+      (test_folder "runtime/2.tdcr")
       (fun program (event_env, expr_env) ->
         check_int "Expected 1 event" 1 (List.length program.events) ;
         check_int "Expected 0 template instantiation" 0
@@ -127,7 +130,8 @@ let runtime_set =
         check_int "Expecting 4 events with sub-id 'b'" 4 (List.length bs) ;
         return program )
       expecting_ok
-  ; make_test "3.tdcr" (file "runtime/3.tdcr")
+  ; make_test "3.tdcr"
+      (test_folder "runtime/3.tdcr")
       (fun program (event_env, expr_env) ->
         check_int "Expected 1 event" 1 (List.length program.events) ;
         check_int "Expected 0 template instantiation" 0
@@ -226,19 +230,42 @@ let fun_to_test program (event_env, expr_env) =
   typecheck ~event_env program >>= fun _ -> return (program, event_env, expr_env)
 
 let typecheck_set =
-  [ make_test "0.tdcr" (file "typechecker/0.tdcr") fun_to_test expecting_ok
-  ; make_test "1.tdcr" (file "typechecker/1.tdcr") fun_to_test expecting_ok
-  ; make_test "2.tdcr" (file "typechecker/2.tdcr") fun_to_test expecting_ok
-  ; make_test "3.tdcr" (file "typechecker/3.tdcr") fun_to_test expecting_error
-  ; make_test "4.tdcr" (file "typechecker/4.tdcr") fun_to_test expecting_error
-  ; make_test "5.tdcr" (file "typechecker/5.tdcr") fun_to_test expecting_ok
-  ; make_test "6.tdcr" (file "typechecker/6.tdcr") fun_to_test expecting_error
-  ; make_test "7.tdcr" (file "typechecker/7.tdcr") fun_to_test expecting_ok
-  ; make_test "8.tdcr" (file "typechecker/8.tdcr") fun_to_test expecting_ok
-  ; make_test "9.tdcr" (file "typechecker/9.tdcr") fun_to_test expecting_ok
-  ; make_test "10.tdcr" (file "typechecker/10.tdcr") fun_to_test expecting_ok
-  ; make_test "11.tdcr" (file "typechecker/11.tdcr") fun_to_test expecting_error
-  ]
+  [ make_test "0.tdcr"
+      (test_folder "typechecker/0.tdcr")
+      fun_to_test expecting_ok
+  ; make_test "1.tdcr"
+      (test_folder "typechecker/1.tdcr")
+      fun_to_test expecting_ok
+  ; make_test "2.tdcr"
+      (test_folder "typechecker/2.tdcr")
+      fun_to_test expecting_ok
+  ; make_test "3.tdcr"
+      (test_folder "typechecker/3.tdcr")
+      fun_to_test expecting_error
+  ; make_test "4.tdcr"
+      (test_folder "typechecker/4.tdcr")
+      fun_to_test expecting_error
+  ; make_test "5.tdcr"
+      (test_folder "typechecker/5.tdcr")
+      fun_to_test expecting_ok
+  ; make_test "6.tdcr"
+      (test_folder "typechecker/6.tdcr")
+      fun_to_test expecting_error
+  ; make_test "7.tdcr"
+      (test_folder "typechecker/7.tdcr")
+      fun_to_test expecting_ok
+  ; make_test "8.tdcr"
+      (test_folder "typechecker/8.tdcr")
+      fun_to_test expecting_ok
+  ; make_test "9.tdcr"
+      (test_folder "typechecker/9.tdcr")
+      fun_to_test expecting_ok
+  ; make_test "10.tdcr"
+      (test_folder "typechecker/10.tdcr")
+      fun_to_test expecting_ok
+  ; make_test "11.tdcr"
+      (test_folder "typechecker/11.tdcr")
+      fun_to_test expecting_error ]
 
 (* =============================================================================
    Export Events Section
@@ -247,7 +274,7 @@ let typecheck_set =
 let export_events_set =
   (* Note: we assume that some programs are typed correctly *)
   [ make_test "0.tdcr"
-      (file "exported-events/0.tdcr")
+      (test_folder "exported-events/0.tdcr")
       (fun program (event_env, expr_env) ->
         (* typecheck ~event_env program
            >>= fun (_ty_env, event_env) -> *)
@@ -274,42 +301,36 @@ let export_events_set =
         in
         check_int "Expecting 1 condition relation from 'a'" 1
           (List.length condition_relations_a) ;
-        let* condition_relations_a1 =
+        let* condition_relations_a1_to_a2 =
           find_all_relations
-            ~filter:(fun r from _ -> is_ctrl Condition r && from.data = "a1")
+            ~filter:(fun r from dest ->
+              is_ctrl Condition r && from.data = "a1" && dest.data = "a2" )
             program
         in
         check_int "Expecting 1 condition relation from 'a1'" 1
-          (List.length condition_relations_a1) ;
-        let* condition_relations_a2 =
-          find_all_relations
-            ~filter:(fun r from _ -> is_ctrl Condition r && from.data = "a2")
-            program
-        in
-        check_int "Expecting 1 condition relation from 'a2'" 1
-          (List.length condition_relations_a2) ;
+          (List.length condition_relations_a1_to_a2) ;
         return (program, event_env, expr_env) )
       expecting_ok
   ; make_test "1.tdcr"
-      (file "exported-events/1.tdcr")
+      (test_folder "exported-events/1.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
         >>= fun (_ty_env, event_env) -> return (program, event_env, expr_env) )
       expecting_error
   ; make_test "2.tdcr"
-      (file "exported-events/2.tdcr")
+      (test_folder "exported-events/2.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
         >>= fun (_ty_env, event_env) -> return (program, event_env, expr_env) )
       expecting_error
   ; make_test "3.tdcr"
-      (file "exported-events/3.tdcr")
+      (test_folder "exported-events/3.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
         >>= fun _ -> return (program, event_env, expr_env) )
       expecting_error
   ; make_test "4.tdcr"
-      (file "exported-events/4.tdcr")
+      (test_folder "exported-events/4.tdcr")
       (fun program (event_env, expr_env) ->
         (* typecheck ~event_env program
            >>= fun (_ty_env, event_env) -> *)
@@ -327,7 +348,7 @@ let export_events_set =
         return (program, event_env, expr_env) )
       expecting_ok
   ; make_test "5.tdcr"
-      (file "exported-events/5.tdcr")
+      (test_folder "exported-events/5.tdcr")
       (fun program (event_env, expr_env) ->
         (* typecheck ~event_env program
            >>= fun (_ty_env, event_env) -> *)
@@ -353,7 +374,12 @@ let export_events_set =
             (fun a1 ->
               let {io; _} = a1.data in
               match io.data with
-              | Output {data= Record fields; _} -> (
+              | Output expr -> (
+                  eval_expr expr expr_env
+                  >>= fun expr ->
+                  let fields =
+                    match expr.data with Record fields -> fields | _ -> []
+                  in
                   let* fields =
                     return @@ List.map (fun (k, v) -> (k.data, v)) fields
                   in
@@ -370,10 +396,12 @@ let export_events_set =
             (fun b1 ->
               let {io; _} = b1.data in
               match io.data with
-              | Output {data= expr; _} -> (
-                match expr with
-                | IntLit 1 -> return ()
-                | _ -> Alcotest.fail "Expecting 0 output" )
+              | Output expr -> (
+                  eval_expr expr expr_env
+                  >>= fun expr ->
+                  match expr.data with
+                  | IntLit 1 -> return ()
+                  | _ -> Alcotest.fail "Expecting 0 output" )
               | _ -> Alcotest.fail "Expecting an output" )
             b1s
         in
@@ -382,7 +410,12 @@ let export_events_set =
             (fun a2 ->
               let {io; _} = a2.data in
               match io.data with
-              | Output {data= Record fields; _} -> (
+              | Output expr -> (
+                  eval_expr expr expr_env
+                  >>= fun expr ->
+                  let fields =
+                    match expr.data with Record fields -> fields | _ -> []
+                  in
                   let* fields =
                     return @@ List.map (fun (k, v) -> (k.data, v)) fields
                   in
@@ -399,7 +432,7 @@ let export_events_set =
         return (program, event_env, expr_env) )
       expecting_ok
   ; make_test "6.tdcr"
-      (file "exported-events/6.tdcr")
+      (test_folder "exported-events/6.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
         >>= fun (_ty_env, event_env) ->
@@ -445,7 +478,7 @@ let export_events_set =
 
 let annotation_set =
   [ make_test "0.tdcr"
-      (file "annotations/0.tdcr")
+      (test_folder "annotations/0.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
         >>= fun (_ty_env, event_env) ->
@@ -462,7 +495,7 @@ let annotation_set =
         return (program, event_env, expr_env) )
       expecting_ok
   ; make_test "1.tdcr"
-      (file "annotations/1.tdcr")
+      (test_folder "annotations/1.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
         >>= fun (_ty_env, event_env) ->
@@ -581,7 +614,7 @@ let annotation_set =
         return (program, event_env, expr_env) )
       expecting_ok
   ; make_test "2.tdcr"
-      (file "annotations/2.tdcr")
+      (test_folder "annotations/2.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
         >>= fun (_ty_env, event_env) ->
@@ -627,7 +660,7 @@ let annotation_set =
         return (program, event_env, expr_env) )
       expecting_ok
   ; make_test "3.tdcr"
-      (file "annotations/3.tdcr")
+      (test_folder "annotations/3.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
         >>= fun (_ty_env, event_env) ->
@@ -684,7 +717,7 @@ let annotation_set =
         return (program, event_env, expr_env) )
       expecting_ok
   ; make_test "4.tdcr"
-      (file "annotations/4.tdcr")
+      (test_folder "annotations/4.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
         >>= fun (_ty_env, event_env) ->
@@ -738,7 +771,7 @@ let annotation_set =
         return (program, event_env, expr_env) )
       expecting_ok
   ; make_test "5.tdcr"
-      (file "annotations/5.tdcr")
+      (test_folder "annotations/5.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
         >>= fun (_ty_env, event_env) ->

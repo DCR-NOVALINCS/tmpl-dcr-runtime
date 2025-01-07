@@ -136,6 +136,10 @@ and unparse_program_json program =
   let open Yojson.Safe in
   return (pretty_to_string (yojson_of_program program))
 
+and unparse_program_dot program =
+  let open Unparser in
+  return (Dot.unparse program)
+
 (* =============================================================================
    Visualization functions
    ============================================================================= *)

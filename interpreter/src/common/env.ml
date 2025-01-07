@@ -26,14 +26,14 @@ and bind x v env =
         Scope ((x, v) :: binds, sl) (* raise (Duplicate_binding x) *) )
       else Scope ((x, v) :: binds, sl)
 
-and bind_at_depth x v n env =
+and bind_at_depth x v depth env =
   let rec bind_at_depth' x v n i env =
-    match (env, i) with
-    | Empty, _ -> raise Empty_env
-    | scope, i when i = n -> bind x v scope
-    | Scope (binds, sl), i -> Scope (binds, bind_at_depth' x v n (i + 1) sl)
+    match env with
+    | Empty -> raise Empty_env
+    | scope when i = n -> bind x v scope
+    | Scope (binds, sl) -> Scope (binds, bind_at_depth' x v n (i + 1) sl)
   in
-  bind_at_depth' x v n 0 env
+  bind_at_depth' x v depth 0 env
 
 and find_flat x env =
   match env with
@@ -63,14 +63,14 @@ and flatten env =
        Scope (List.map (fun (k, v) -> (k, f v)) binds, map f sl) *)
 
 and string_of_env v_fmt env =
-  let rec string_of_scope sc =
-    match sc with
-    | [] -> ""
-    | (x, v) :: [] -> string_of_bind x v
-    | (x, v) :: sc ->
-        Printf.sprintf "%s; %s" (string_of_bind x v) (string_of_scope sc)
-  and string_of_bind x v = Printf.sprintf "%s = %s" x (v_fmt v) in
-  match env with
-  | Empty -> ""
-  | Scope (sc, sl) ->
-      "{ " ^ string_of_scope sc ^ " }" ^ "\n" ^ string_of_env v_fmt sl
+  let rec string_of_bind (x, v) = Printf.sprintf "%s = %s" x (v_fmt v)
+  and string_of_env' depth env =
+    match env with
+    | Empty -> ""
+    | Scope (binds, sl) ->
+        let binds_str = List.map string_of_bind binds in
+        let binds_str = String.concat ", " binds_str in
+        let sl_str = string_of_env' (depth + 1) sl in
+        Printf.sprintf "%d: { %s }\n%s" depth binds_str sl_str
+  in
+  string_of_env' 0 env

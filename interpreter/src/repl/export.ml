@@ -27,7 +27,7 @@ and export_cmd filenames modes state =
       match mode with
       | "tdcr" -> unparse_program_tdcr program
       | "json" -> unparse_program_json program
-      (* | "dot" -> unparse_program_dot program *)
+      | "dot" -> unparse_program_dot program
       | _ -> invalid_export_mode mode
     in
     unparse_fn

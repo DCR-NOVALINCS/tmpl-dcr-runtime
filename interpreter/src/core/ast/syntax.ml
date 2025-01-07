@@ -127,13 +127,12 @@ and 'a record_field = string annotated * 'a [@@deriving yojson]
 (* =============================================================================
    Program Section: template definitions
    ============================================================================= *)
-and template_param_type = template_param_type' annotated [@@deriving yojson]
+(* and template_param_type = template_param_type' annotated [@@deriving yojson]
 
-and template_param_type' =
-  | ExprParam of type_expr * expr option
-  | EventParam of event_label
-[@@deriving yojson]
-
+   and template_param_type' =
+     | ExprParam of type_expr * expr option
+     | EventParam of event_label
+   [@@deriving yojson] *)
 and template_param' = string annotated * type_expr * expr option
 [@@deriving yojson]
 
@@ -148,9 +147,8 @@ and template_def =
 (* =============================================================================
    Program Section: template instantiations
    ============================================================================= *)
-and template_arg_type = ExprArg of expr | EventArg of event_id
-[@@deriving yojson]
-
+(* and template_arg_type = ExprArg of expr | EventArg of event_id
+   [@@deriving yojson] *)
 and template_arg = string annotated * expr [@@deriving yojson]
 
 and template_instance = template_instance' annotated [@@deriving yojson]
