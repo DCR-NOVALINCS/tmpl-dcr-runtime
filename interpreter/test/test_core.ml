@@ -173,7 +173,7 @@ let runtime_set =
             (fun o ->
               let {io; _} = o.data in
               match io.data with
-              | Output value -> value.data = False
+              | Output value -> value.data = BoolLit false
               | _ -> false )
             (List.append positives negatives)
         in
@@ -211,13 +211,13 @@ let runtime_set =
         in
         check_string_list
           "Expecting all instantiated 'positive' to have value True and False, respectively"
-          [ Plain.unparse_expr (annotate True)
-          ; Plain.unparse_expr (annotate False) ]
+          [ Plain.unparse_expr (annotate (BoolLit true))
+          ; Plain.unparse_expr (annotate (BoolLit false)) ]
           all_positive_true ;
         check_string_list
           "Expecting all instantiated 'negative' to have both False value"
-          [ Plain.unparse_expr (annotate False)
-          ; Plain.unparse_expr (annotate False) ]
+          [ Plain.unparse_expr (annotate (BoolLit false))
+          ; Plain.unparse_expr (annotate (BoolLit false)) ]
           all_negative_false ;
         return program )
       expecting_ok ]
@@ -539,8 +539,7 @@ let annotation_set =
             (fun b ->
               let {io; _} = b.data in
               match io.data with
-              | Output {data= True; _} -> return true
-              | Output {data= False; _} -> return false
+              | Output {data= BoolLit b; _} -> return b
               | Output expr ->
                   Alcotest.fail
                     ( "Expecting a boolean output, got "

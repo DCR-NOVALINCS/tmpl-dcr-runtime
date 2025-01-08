@@ -520,7 +520,4 @@ and update_ids id_mapping (events, insts, relations, annotations) =
 and eval_bool expr env =
   eval_expr expr env
   >>= fun value ->
-  match value.data with
-  | True -> return true
-  | False -> return false
-  | _ -> invalid_expr expr
+  match value.data with BoolLit b -> return b | _ -> invalid_expr expr

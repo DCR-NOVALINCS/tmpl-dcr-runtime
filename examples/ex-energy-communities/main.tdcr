@@ -1,0 +1,51 @@
+# --- Energy Communities (EDP Use case) ---------------- #
+#                                                        #                                     #
+#                                                        #
+# ------------------------------------------------------ #
+
+tmpl base_plan(c: Number, p: Number): Plan, calculateMonthlyCost {
+    (plan: Plan)[{ consumption: c, production: p }]
+    (cmc: calculateMonthlyCost)[?: { isPeakTime: Boolean, rate: Number }]
+} => plan, cmc
+
+# Fixed plan template
+tmpl fixed_plan(consumption: Number, production: Number) {
+    base_plan(c = consumption, p = production) => plan, cmc
+
+    cmc -->> {
+        (c: MonthlyCost)[{ cost: (plan.value.consumption - plan.value.production) * 2 }]
+    }
+}
+
+# Time of use plan template
+tmpl time_of_use_plan(consumption: Number, production: Number) {
+    base_plan(c = consumption, p = production) => plan, cmc
+
+    cmc -->> {
+        if @trigger.value.isPeakTime:
+            # Peak time
+            (c: MonthlyCost)[{ cost: (plan.value.consumption - plan.value.production) * 2 }]
+        else:
+            # Off peak time
+            (c: MonthlyCost)[{ cost: (plan.value.consumption - plan.value.production) * 2 * 4 / 5 }]
+            # consumption - production * rate * 0.8
+        /if
+    }
+}
+
+(ap: addProsumer)[?: String]
+
+ap -->> {
+    (p: ProsumerInfo)[@trigger.value]
+
+    # if @trigger.value.type == "fixed":
+    #     fixed_plan(consumption = @trigger.value.consumption, production = @trigger.value.production)
+    # else:
+    #     time_of_use_plan(consumption = @trigger.value.consumption, production = @trigger.value.production)
+    # /if
+    if @trigger.value == "fixed":
+        fixed_plan(consumption = 1, production = 2)
+    else:
+        time_of_use_plan(consumption = 1, production = 2)
+    /if
+}

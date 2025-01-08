@@ -278,7 +278,7 @@ and unparse_relation ?(indent = "") ?(abbreviated = true)
       ~end_symbol _ =
     Buffer.add_string buffer @@ arrow_start ;
     ( match guard_expr.data with
-    | True -> ()
+    | BoolLit true -> ()
     | _ ->
         Buffer.add_string buffer @@ colorize ~color "[" ;
         unparse_expr ~buffer:guard_buffer guard_expr |> ignore ;
@@ -440,11 +440,9 @@ and unparse_expr ?(indent = "") ?(buffer = Buffer.create 100) expr =
   ( match expr.data with
   | Unit ->
       Buffer.add_string buffer @@ colorize ~color:(literal_color "()") "()"
-  | True ->
-      Buffer.add_string buffer @@ colorize ~color:(literal_color "true") "true"
-  | False ->
-      Buffer.add_string buffer
-      @@ colorize ~color:(literal_color "false") "false"
+  | BoolLit b ->
+      let b_str = string_of_bool b in
+      Buffer.add_string buffer @@ colorize ~color:(literal_color b_str) b_str
   | IntLit i ->
       Buffer.add_string buffer
       @@ colorize ~color:(literal_color (string_of_int i)) (string_of_int i)

@@ -88,8 +88,7 @@ and expr = expr' annotated [@@deriving yojson]
 
 and expr' =
   | Unit
-  | True
-  | False
+  | BoolLit of bool
   | IntLit of int
   | StringLit of string
   | Parenthesized of expr
@@ -249,7 +248,7 @@ let default_marking_pend_excl = mk_marking ~pending:true ~included:false ()
 let mk_event ?(marking = default_marking) info io =
   annotate {info; io; marking= annotate marking}
 
-let mk_ctrl_relation ~from ?(guard = annotate True) ~dest t =
+let mk_ctrl_relation ~from ?(guard = annotate (BoolLit true)) ~dest t =
   annotate @@ ControlRelation (from, guard, dest, t)
 
 let mk_ctrl_relations left_ids expr right_ids t =
@@ -260,7 +259,7 @@ let mk_ctrl_relations left_ids expr right_ids t =
         right_ids )
     left_ids
 
-let mk_spawn_relation ~from ?(guard = annotate True) subprogram =
+let mk_spawn_relation ~from ?(guard = annotate (BoolLit true)) subprogram =
   annotate @@ SpawnRelation (from, guard, subprogram)
 
 let mk_spawn_relations left_ids expr prog =

@@ -231,42 +231,42 @@ plain_group_ctrl_relation_decl:
   INCLUDE; 
   right_ids=separated_nonempty_list(COMMA, id);
   // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
-  { mk_ctrl_relations left_ids (annotate True) right_ids Include }
+  { mk_ctrl_relations left_ids (annotate (BoolLit true)) right_ids Include }
 
   // Exclude
   | left_ids=separated_nonempty_list(COMMA, id);
   EXCLUDE;
   right_ids=separated_nonempty_list(COMMA, id);
   // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
-  { mk_ctrl_relations left_ids (annotate True) right_ids Exclude }
+  { mk_ctrl_relations left_ids (annotate (BoolLit true)) right_ids Exclude }
 
   // Condition
   | left_ids=separated_nonempty_list(COMMA, id);
   CONDITION;
   right_ids=separated_nonempty_list(COMMA, id);
   // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
-  { mk_ctrl_relations left_ids (annotate True) right_ids Condition }
+  { mk_ctrl_relations left_ids (annotate (BoolLit true)) right_ids Condition }
 
   // Response
   | left_ids=separated_nonempty_list(COMMA, id);
   RESPONSE;
   right_ids=separated_nonempty_list(COMMA, id);
   // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
-  { mk_ctrl_relations left_ids (annotate True) right_ids Response }
+  { mk_ctrl_relations left_ids (annotate (BoolLit true)) right_ids Response }
 
   // Milestone
   | left_ids=separated_nonempty_list(COMMA, id);
   MILESTONE;
   right_ids=separated_nonempty_list(COMMA, id);
   // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
-  { mk_ctrl_relations left_ids (annotate True) right_ids Milestone }
+  { mk_ctrl_relations left_ids (annotate (BoolLit true)) right_ids Milestone }
 
   // Spawn 
   | left_ids=separated_nonempty_list(COMMA, id); 
   SPAWN; 
   prog=delimited(LBRACE, plain_program_spawn, RBRACE);
   // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;   
-  { mk_spawn_relations left_ids (annotate True) prog }
+  { mk_spawn_relations left_ids (annotate (BoolLit true)) prog }
 
   // ==== Guarded relations ==== 
   // Include
@@ -399,8 +399,8 @@ plain_term:
 fact: mark_loc_ty(plain_fact) { $1 }
 plain_fact:
 | plain_property_deref                                                          { $1 }
-| TRUE                                                                          { True }
-| FALSE                                                                         { False }
+| TRUE                                                                          { BoolLit true }
+| FALSE                                                                         { BoolLit false }
 | plain_integer                                                                 { IntLit($1) }
 | STR                                                                           { StringLit($1) }
 | id                                                                            { Identifier($1) } 

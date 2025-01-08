@@ -36,7 +36,7 @@ ar -->> {
                     id = @trigger.value.id,
                     position = @trigger.value.position,
                     plantType = plantType,
-                    wp -> watering
+                    wp = watering
                 )
             /if
         }

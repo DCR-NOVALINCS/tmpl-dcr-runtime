@@ -25,10 +25,10 @@ let fixme ?(loc = Nowhere) message =
 
 let something_went_wrong ?(loc = Nowhere) message = fixme ~loc message
 
-let should_not_happen ?(errors = []) ?(module_path = "?") ?(line = "?") message
-    =
+let should_not_happen ?(errors = []) ?(loc = Nowhere) ?(module_path = "?")
+    ?(line = "?") message =
   fail
-    ( { location= Nowhere
+    ( { location= loc
       ; message= "This should not happen: " ^ message
       ; hint= Some (Printf.sprintf "Check module %s, line %s" module_path line)
       }

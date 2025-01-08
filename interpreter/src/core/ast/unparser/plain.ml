@@ -238,7 +238,7 @@ and unparse_relation ?(indent = "") ?(abbreviated = true)
       ?(buffer = Buffer.create 100) ~end_symbol _ =
     Buffer.add_string buffer @@ arrow_start ;
     ( match guard_expr.data with
-    | True -> ()
+    | BoolLit true -> ()
     | _ ->
         Buffer.add_string buffer @@ "[" ;
         unparse_expr ~buffer:guard_buffer guard_expr |> ignore ;
@@ -386,8 +386,9 @@ and unparse_expr ?(indent = "") ?(buffer = Buffer.create 100) expr =
   in
   ( match expr.data with
   | Unit -> Buffer.add_string buffer @@ "()"
-  | True -> Buffer.add_string buffer @@ "true"
-  | False -> Buffer.add_string buffer @@ "false"
+  | BoolLit b ->
+      let b_str = string_of_bool b in
+      Buffer.add_string buffer @@ b_str
   | IntLit i -> Buffer.add_string buffer @@ string_of_int i
   | StringLit s ->
       Buffer.add_string buffer @@ "\"" ;

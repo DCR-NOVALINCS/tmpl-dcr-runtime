@@ -668,7 +668,7 @@ and typecheck_expr ?(ty_env = empty_env) ?(label_types = EventTypes.empty) expr
   let {data; ty; loc} = expr in
   ( match data with
   | Unit -> return UnitTy
-  | True | False -> return BoolTy
+  | BoolLit _ -> return BoolTy
   | IntLit _ -> return IntTy
   | StringLit _ -> return StringTy
   | Parenthesized e -> typecheck_expr ~ty_env e
@@ -788,7 +788,7 @@ and _collect_expr_dependencies expr (_ty_env, event_env) =
 and default_value ty' =
   match ty' with
   | UnitTy -> Unit
-  | BoolTy -> False
+  | BoolTy -> BoolLit false
   | IntTy -> IntLit 0
   | StringTy -> StringLit ""
   | RecordTy fields ->

@@ -1,20 +1,16 @@
 open Ast
 open Syntax
-open Error
 open Evaluation
-
-(* open Errors *)
 open Helper
 open Common
 open Monads.ResultMonad
 open Env
-(* open Misc.Printing *)
 
 (* =============================================================================
    Enabledness functions
    ============================================================================= *)
 
-let rec is_enabled event program (event_env, expr_env) =
+let is_enabled event program (event_env, expr_env) =
   let relations = program.relations in
   let enabled = is_included event in
   let id, _ = event.data.info in
@@ -24,7 +20,7 @@ let rec is_enabled event program (event_env, expr_env) =
     | ControlRelation (from, guard, dest, op) -> (
         if not (id.data = dest.data) then return true
         else
-          is_true guard expr_env
+          eval_bool guard expr_env
           >>= fun is_guard_true ->
           if not is_guard_true then return true
           else
@@ -48,21 +44,6 @@ let rec is_enabled event program (event_env, expr_env) =
       >>| fun is_enabled_by_relation -> enabled && is_enabled_by_relation )
     enabled relations
 
-(** [check_guard guard expr_env] checks if the [guard] is true with the
-    environment of values [expr_env].
-    @param guard The guard to be checked.
-    @param expr_env The environment of values to be used for evaluation.
-    @return result with {b true} if the guard is true, {b false} otherwise. *)
-and is_true expr expr_env =
-  eval_expr expr expr_env
-  >>= fun value ->
-  match value.data with
-  | True -> return true
-  | False -> return false
-  | _ ->
-      should_not_happen ~module_path:"runtime.ml"
-        "Expecting boolean in the guard expression"
-
 (* =============================================================================
    Effect propagation functions
    ============================================================================= *)
@@ -82,7 +63,7 @@ and propagate_effects event (event_env, expr_env) program =
     | SpawnRelation (from, guard, spawn_prog) ->
         if not (from.data = id.data) then return (program, event_env, expr_env)
         else
-          is_true guard expr_env
+          eval_bool guard expr_env
           >>= fun is_guard_true ->
           if not is_guard_true then return (program, event_env, expr_env)
           else
@@ -140,7 +121,7 @@ and propagate_effects event (event_env, expr_env) program =
     | ControlRelation (from, guard, dest, op) ->
         if not (from.data = id.data) then return (program, event_env, expr_env)
         else
-          is_true guard expr_env
+          eval_bool guard expr_env
           >>= fun is_guard_true ->
           if not is_guard_true then return (program, event_env, expr_env)
           else

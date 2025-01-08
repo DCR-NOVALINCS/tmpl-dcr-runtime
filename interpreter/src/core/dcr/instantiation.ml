@@ -35,7 +35,7 @@ and bind_args (args, params) (expr_env, event_env, tmpl_env) =
     match value.data with
     | EventRef event_ref ->
         let event_env = bind id.data !event_ref event_env in
-        let expr_env = bind id.data (event_as_expr !event_ref) expr_env in
+        let expr_env = bind id.data value expr_env in
         return (expr_env, event_env)
     | _ ->
         let expr_env = bind id.data expr expr_env in
@@ -49,7 +49,8 @@ and bind_args (args, params) (expr_env, event_env, tmpl_env) =
         @@ Printf.sprintf "Binding default value for %s with %s"
              (keyword pid.data)
              (Colorized.unparse_expr expr) ;
-        bind_arg (pid, expr) (expr_env, event_env)
+        let* value = eval_expr expr expr_env in
+        bind_arg (pid, value) (expr_env, event_env)
     | _ -> return (expr_env, event_env)
   in
   fold_left
@@ -89,6 +90,10 @@ and instantiate_insts insts ?(eval = eval_expr) (expr_env, event_env, tmpl_env)
             ; graph= events_ti, insts_ti, relations_ti, annots_ti
             ; _ } =
           tmpl
+        in
+        (* Bind the arguments of the template *)
+        let* expr_env, event_env, tmpl_env =
+          bind_args (args, params) (expr_env, event_env, tmpl_env)
         in
         let export' = deannotate_list export in
         (* Rename exported events, affecting the whole program *)
@@ -132,10 +137,6 @@ and instantiate_insts insts ?(eval = eval_expr) (expr_env, event_env, tmpl_env)
                 ( bind id.data (event_as_expr event) expr_env
                 , bind id.data event event_env ) )
             (expr_env, event_env) other_events
-        in
-        (* Bind the arguments of the template *)
-        let* expr_env, event_env, tmpl_env =
-          bind_args (args, params) (expr_env, event_env, tmpl_env)
         in
         Logger.success
         @@ Printf.sprintf "Bound events in expr env:\n%s"
