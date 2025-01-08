@@ -342,7 +342,7 @@ plain_type_expr:
 | STRTY                                                                         { StringTy }
 | INTTY                                                                         { IntTy    }
 | BOOLTY                                                                        { BoolTy   }
-| plain_id                                                                      { EventTy($1) }
+| id                                                                      { EventTy($1) }
 | delimited(LBRACE, plain_record_type_field_list, RBRACE)                       { RecordTy($1) }
 | LISTTY; item_type=delimited(LBRACKET, plain_type_expr, RBRACKET)              { ListTy(item_type) }
 ;

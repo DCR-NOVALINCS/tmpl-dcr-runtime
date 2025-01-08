@@ -82,7 +82,7 @@ let mk_template_ty_from template_def =
     List.partition_map
       (fun (id, ty, _) ->
         match ty.data with
-        | EventTy label -> Right (id.data, annotate ~loc:ty.loc label)
+        | EventTy label -> Right (id.data, label)
         | _ -> Left (id.data, ty) )
       (* (fun (id, param_type) ->
          match param_type with
@@ -155,17 +155,18 @@ and typecheck_template_decl template_decl
       let* event_env, label_types =
         match ty with
         | EventTy label ->
-            ( match EventTypes.find label label_types with
+            ( match EventTypes.find label.data label_types with
             | None ->
                 (* FIXME: In case of not found the label in this point of the program, what to do? *)
                 let label_types =
-                  EventTypes.add (label, Undefined) label_types
+                  EventTypes.add (label.data, Undefined) label_types
                 in
                 return
                   ( Output (annotate ~ty:(Some UnitTy) (default_value UnitTy))
                   , label_types )
             | Some Undefined ->
-                Logger.debug @@ Printf.sprintf "Label %s is undefined" label ;
+                Logger.debug
+                @@ Printf.sprintf "Label %s is undefined" label.data ;
                 return
                   ( Output (annotate ~ty:(Some UnitTy) (default_value UnitTy))
                   , label_types )
@@ -180,7 +181,7 @@ and typecheck_template_decl template_decl
                     , label_types )
                   (* FIXME: Get a value of the output event *) ) )
             >>= fun (event_io, label_types) ->
-            let event = mk_event (pid, annotate label) (annotate event_io) in
+            let event = mk_event (pid, label) (annotate event_io) in
             return (bind pid.data event event_env)
             >>= fun event_env -> return (event_env, label_types)
         | _ -> return (event_env, label_types)
@@ -292,9 +293,8 @@ and typecheck_template_decl template_decl
       (fun (event, label_ty) ->
         let {info= _, label; _} = event.data in
         if label.data = label_ty.data then return ()
-        else
-          type_mismatch ~loc:label_ty.loc [EventTy label_ty.data]
-            [EventTy label.data] )
+        else type_mismatch ~loc:label_ty.loc [EventTy label_ty] [EventTy label]
+        )
       exported_type_mapping
     >>= fun _ ->
     return (mk_template_ty_from template_decl)
@@ -638,6 +638,17 @@ and typecheck_expr ?(ty_env = empty_env) ?(label_types = EventTypes.empty) expr
         match List.assoc_opt p.data fields with
         | Some ty -> return ty.data
         | None -> property_not_found_type p r_ty )
+    | EventTy label -> (
+      match EventTypes.find label.data label_types with
+      | None ->
+          missing_label
+            (* ~available_labels:(EventTypes.to_list label_types) *)
+            label
+      | Some Undefined -> return UnitTy
+      | Some (Defined (value_ty, event_type)) -> (
+        match event_type with
+        | InputType -> return value_ty
+        | OutputType -> return value_ty ) )
     | _ -> type_mismatch ~loc:expr.loc [RecordTy []] [r_ty]
   (* Typechecking a list *)
   and typecheck_list lst ty_env =
@@ -716,7 +727,8 @@ and equal_types ty1 ty2 =
       | UnitTy, UnitTy | BoolTy, BoolTy | IntTy, IntTy | StringTy, StringTy ->
           (equal_types_aux [@tailcall]) rest
       | EventTy label1, EventTy label2 ->
-          String.equal label1 label2 && (equal_types_aux [@tailcall]) rest
+          String.equal label1.data label2.data
+          && (equal_types_aux [@tailcall]) rest
       | RecordTy fields1, RecordTy fields2 ->
           List.compare_lengths fields1 fields2 = 0
           &&

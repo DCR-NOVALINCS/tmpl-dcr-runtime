@@ -79,7 +79,7 @@ and type_expr' =
   | StringTy
   | IntTy
   | BoolTy
-  | EventTy of string
+  | EventTy of string annotated
   | RecordTy of type_expr record_field list
   | ListTy of type_expr'
 [@@deriving yojson]

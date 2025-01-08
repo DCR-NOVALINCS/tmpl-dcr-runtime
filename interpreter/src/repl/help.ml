@@ -16,7 +16,7 @@ let help_cmd commands state =
            Printf.sprintf "- %s %s: %-15s"
              (CString.colorize ~color:Green name)
              (String.concat " "
-                (List.map (fun s -> keyword (Printf.sprintf "<%s>" s)) params) )
+                (List.map (fun s -> keyword (Printf.sprintf "%s" s)) params) )
              description )
     |> String.concat "\n"
   in

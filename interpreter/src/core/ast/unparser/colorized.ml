@@ -397,7 +397,7 @@ and unparse_ty ?(indent = "") ?(buffer = Buffer.create 100) ty =
   | IntTy -> Buffer.add_string buffer @@ colorize ~color:type_color "Number"
   | BoolTy -> Buffer.add_string buffer @@ colorize ~color:type_color "Boolean"
   | StringTy -> Buffer.add_string buffer @@ colorize ~color:type_color "String"
-  | EventTy s -> Buffer.add_string buffer @@ colorize ~color:type_color s
+  | EventTy s -> Buffer.add_string buffer @@ colorize ~color:type_color s.data
   | RecordTy fields ->
       Buffer.add_string buffer @@ "{ " ;
       unparse_list ~buffer ~separator:", "

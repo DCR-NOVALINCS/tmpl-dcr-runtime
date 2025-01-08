@@ -347,7 +347,7 @@ and unparse_ty ?(indent = "") ?(buffer = Buffer.create 100) ty =
   | IntTy -> Buffer.add_string buffer @@ "Number"
   | BoolTy -> Buffer.add_string buffer @@ "Boolean"
   | StringTy -> Buffer.add_string buffer @@ "String"
-  | EventTy s -> Buffer.add_string buffer @@ s
+  | EventTy s -> Buffer.add_string buffer @@ s.data
   | RecordTy fields ->
       Buffer.add_string buffer @@ "{ " ;
       unparse_list ~buffer ~separator:", "
