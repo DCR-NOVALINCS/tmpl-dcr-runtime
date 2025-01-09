@@ -120,18 +120,29 @@ let rec eval_expr expr env =
 and eval_binop v1 v2 op env =
   let rec eval_eq v1 v2 =
     match (v1, v2) with
-    | IntLit i1, IntLit i2 -> i1 = i2
-    | StringLit s1, StringLit s2 -> s1 = s2
-    | BoolLit b1, BoolLit b2 -> b1 = b2
-    | _ -> false
-  and eval_neq v1 v2 = not (eval_eq v1 v2)
+    | IntLit i1, IntLit i2 -> return (i1 = i2)
+    | StringLit s1, StringLit s2 -> return (s1 = s2)
+    | BoolLit b1, BoolLit b2 -> return (b1 = b2)
+    | _ -> should_not_happen "Invalid comparison"
+  and eval_neq v1 v2 = eval_eq v1 v2
   and eval_gt v1 v2 =
-    match (v1, v2) with IntLit i1, IntLit i2 -> i1 > i2 | _ -> false
+    match (v1, v2) with
+    | IntLit i1, IntLit i2 -> return (i1 > i2)
+    | _ -> should_not_happen "Invalid comparison"
   and eval_lt v1 v2 =
-    match (v1, v2) with IntLit i1, IntLit i2 -> i1 < i2 | _ -> false
-  and eval_lt_eq v1 v2 = eval_lt v1 v2 || eval_eq v1 v2
-  and eval_gt_eq v1 v2 = eval_gt v1 v2 || eval_eq v1 v2
-  and map_bool_value b = BoolLit b in
+    match (v1, v2) with
+    | IntLit i1, IntLit i2 -> return (i1 < i2)
+    | _ -> should_not_happen "Invalid comparison"
+  and eval_lt_eq v1 v2 =
+    let* is_lower = eval_lt v1 v2 in
+    let* is_eq = eval_eq v1 v2 in
+    return (is_lower || is_eq)
+  and eval_gt_eq v1 v2 =
+    let* is_greater = eval_gt v1 v2 in
+    let* is_eq = eval_eq v1 v2 in
+    return (is_greater || is_eq)
+    (* and map_bool_value b = BoolLit b  *)
+  in
   let* v1 = eval_expr v1 env in
   let* v2 = eval_expr v2 env in
   match (v1.data, v2.data, op) with
@@ -140,23 +151,23 @@ and eval_binop v1 v2 op env =
   | IntLit i1, IntLit i2, Mult -> return {v1 with data= IntLit (i1 * i2)}
   | IntLit i1, IntLit i2, Div -> return {v1 with data= IntLit (i1 / i2)}
   | v1', v2', Eq ->
-      let value = eval_eq v1' v2' |> map_bool_value in
-      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) value)
+      let* value = eval_eq v1' v2' in
+      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) (BoolLit value))
   | v1', v2', NotEq ->
-      let value = eval_neq v1' v2' |> map_bool_value in
-      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) value)
+      let* value = eval_neq v1' v2' in
+      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) (BoolLit value))
   | v1', v2', GreaterThan ->
-      let value = eval_gt v1' v2' |> map_bool_value in
-      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) value)
+      let* value = eval_gt v1' v2' in
+      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) (BoolLit value))
   | v1', v2', GreaterOrEqual ->
-      let value = eval_gt_eq v1' v2' |> map_bool_value in
-      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) value)
+      let* value = eval_gt_eq v1' v2' in
+      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) (BoolLit value))
   | v1', v2', LessThan ->
-      let value = eval_lt v1' v2' |> map_bool_value in
-      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) value)
+      let* value = eval_lt v1' v2' in
+      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) (BoolLit value))
   | v1', v2', LessOrEqual ->
-      let value = eval_lt_eq v1' v2' |> map_bool_value in
-      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) value)
+      let* value = eval_lt_eq v1' v2' in
+      return (annotate ~loc:v1.loc ~ty:(Some BoolTy) (BoolLit value))
   | BoolLit b1, BoolLit b2, And -> return {v1 with data= BoolLit (b1 && b2)}
   | BoolLit b1, BoolLit b2, Or -> return {v1 with data= BoolLit (b1 || b2)}
   | _ ->

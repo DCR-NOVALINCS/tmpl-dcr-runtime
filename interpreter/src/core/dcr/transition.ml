@@ -115,7 +115,7 @@ and propagate_effects event (event_env, expr_env) program =
                   events= List.flatten [spawn_events; program.events]
                 ; template_insts= []
                 ; relations= List.flatten [spawn_relations; program.relations]
-                }
+                ; annotations= [] }
               , event_env
               , expr_env )
     | ControlRelation (from, guard, dest, op) ->

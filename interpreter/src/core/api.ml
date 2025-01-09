@@ -66,7 +66,7 @@ let rec execute ~event_id ?(expr = Unit) ?(ty_env = empty_env)
         ^ Plain.unparse_events program.events ;
         (* Debug event_env *)
         Logger.debug @@ "Event Env after executing event:\n"
-        ^ string_of_env (fun e -> Plain.unparse_events [e]) event_env ;
+        ^ string_of_env Colorized.unparse_event event_env ;
         (* Propagate relation effects that this event is apart of. *)
         propagate_effects event (event_env, expr_env) program
         >>= fun (program, _, _) ->
