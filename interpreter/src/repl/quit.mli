@@ -1,3 +1,7 @@
+(** {3 Quit command}
+
+    The quit command exits the REPL. *)
+
 open Cmdliner
 
 val term : (State.runtime_state -> 'a) Term.t

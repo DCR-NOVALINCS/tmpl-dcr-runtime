@@ -1,8 +1,5 @@
 open State
 open Errors
-
-(* open Common *)
-(* open Printing *)
 open Common
 open Monads.ResultMonad
 open Printing
@@ -10,12 +7,6 @@ open Env
 open Checkable
 open Core
 open Api
-
-(* open Typing.Typechecking
-   open Dcr
-   open Instantiation
-   open Helper
-   open Unparser *)
 open Cmdliner
 
 let commands =

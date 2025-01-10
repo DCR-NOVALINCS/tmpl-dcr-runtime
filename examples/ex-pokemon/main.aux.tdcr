@@ -1,0 +1,14 @@
+tmpl pokemon( name: String, type: String ): Pokemon {
+    (p: Pokemon)[{ name: name, type: type }]
+} => p
+
+(ap: addPokemon)[?: { name: String, type: String }]
+(b: Battle)[?: { p1: Pokemon, p2: Pokemon }]
+
+ap -->> {
+    pokemon(name = @trigger.value.name, type = @trigger.value.type) => p
+}
+
+b -->> {
+    (bl: BattleLog)[{ winner: @trigger.value.p1.name }]
+}

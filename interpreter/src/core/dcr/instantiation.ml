@@ -28,9 +28,10 @@ let rec bind_tmpls tmpls (expr_env, event_env, tmpl_env) =
     (expr_env, event_env, tmpl_env)
     tmpls
 
-and bind_args (args, params) (expr_env, event_env, tmpl_env) =
+and bind_args (args, params) ?(eval = partial_eval_expr)
+    (expr_env, event_env, tmpl_env) =
   let rec bind_arg (id, expr) (expr_env, event_env) =
-    eval_expr expr expr_env
+    eval expr expr_env
     >>= fun value ->
     match value.data with
     | EventRef event_ref ->
@@ -49,7 +50,7 @@ and bind_args (args, params) (expr_env, event_env, tmpl_env) =
         @@ Printf.sprintf "Binding default value for %s with %s"
              (keyword pid.data)
              (Colorized.unparse_expr expr) ;
-        let* value = eval_expr expr expr_env in
+        let* value = eval expr expr_env in
         bind_arg (pid, value) (expr_env, event_env)
     | _ -> return (expr_env, event_env)
   in
@@ -73,8 +74,8 @@ and bind_args (args, params) (expr_env, event_env, tmpl_env) =
    Instantiation
    ============================================================================= *)
 
-and instantiate_insts insts ?(eval = eval_expr) (expr_env, event_env, tmpl_env)
-    =
+and instantiate_insts insts ?(eval = partial_eval_expr)
+    (expr_env, event_env, tmpl_env) =
   let instantiate_inst inst program (expr_env, event_env, tmpl_env) =
     let {tmpl_id; x; args; _} = inst.data in
     match find_flat tmpl_id.data tmpl_env with
@@ -149,24 +150,25 @@ and instantiate_insts insts ?(eval = eval_expr) (expr_env, event_env, tmpl_env)
           instantiate_insts insts_ti (expr_env, event_env, tmpl_env)
         in
         (* Instantiate inner annotations *)
-        let* annot_program, (expr_env, event_env, tmpl_env) =
-          instantiate_annotations annots_ti (expr_env, event_env, tmpl_env)
-        in
+        (* let* annot_program, (expr_env, event_env, tmpl_env) =
+             instantiate_annotations annots_ti (expr_env, event_env, tmpl_env)
+           in *)
         (* Partially Evaluate subprogram *)
         let events_ti = List.append exported_events other_events in
-        let* (events_ti, _, relations_ti, _), (expr_env, event_env, tmpl_env) =
+        let* ( (events_ti, _, relations_ti, annots_ti)
+             , (expr_env, event_env, tmpl_env) ) =
           evaluate_subprogram ~eval
-            (events_ti, [], relations_ti, [])
+            (events_ti, [], relations_ti, annots_ti)
             (expr_env, event_env, tmpl_env)
         in
         (* Fresh event identifiers *)
         let* result =
           fresh_event_ids ~exclude:(deannotate_list x)
-            (events_ti, [], relations_ti, [])
+            (events_ti, [], relations_ti, annots_ti)
         in
         (* Append all results *)
         let* program =
-          append_subprograms [program; result; inst_program; annot_program]
+          append_subprograms [program; result; inst_program (* annot_program *)]
         in
         let program_events, _, _, _ = program in
         Logger.success
@@ -184,8 +186,8 @@ and instantiate_insts insts ?(eval = eval_expr) (expr_env, event_env, tmpl_env)
     (empty_subprogram, (expr_env, event_env, tmpl_env))
     insts
 
-and evaluate_subprogram ?(eval = eval_expr) (events, insts, relations, annots)
-    (expr_env, event_env, tmpl_env) =
+and evaluate_subprogram ?(eval = partial_eval_expr)
+    (events, insts, relations, annots) (expr_env, event_env, tmpl_env) =
   let evaluate_event event =
     (* Update IO *)
     update_event_io event expr_env

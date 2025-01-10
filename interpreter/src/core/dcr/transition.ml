@@ -82,11 +82,12 @@ and propagate_effects event (event_env, expr_env) program =
             (* Evaluate annotations from spawned elements *)
             let open Instantiation in
             (* Instantiate template instances present in the spawn *)
-            mk_program ~template_decls:program.template_decls
-              ~events:spawn_events ~relations:spawn_relations
+            mk_program
+              ~template_decls:program.template_decls
+                (* ~events:spawn_events ~relations:spawn_relations *)
               ~annotations:spawn_annots ~template_insts:spawn_insts ()
             |> instantiate ~expr_env ~event_env
-            >>= fun ( {events= spawn_events; relations= spawn_relations; _}
+            >>= fun ( {events= inst_events; relations= inst_relations; _}
                     , event_env
                     , expr_env ) ->
             (* Update event values *)
@@ -99,12 +100,12 @@ and propagate_effects event (event_env, expr_env) program =
             >>= fun spawn_relations ->
             return (end_scope event_env, end_scope expr_env)
             >>= fun (event_env, expr_env) ->
-            preprocess_subprogram ~event_env ~expr_env
-              (spawn_events, [], spawn_relations, [])
-            >>= fun ( event_env
-                    , expr_env
-                    , (spawn_events, spawn_insts, spawn_relations, spawn_annots)
-                    ) ->
+            (* preprocess_subprogram ~event_env ~expr_env
+                 (spawn_events, [], spawn_relations, [])
+               >>= fun ( event_env
+                       , expr_env
+                       , (spawn_events, spawn_insts, spawn_relations, spawn_annots)
+                       ) -> *)
             (* Rename the event ids to new ones, to prevent id clashing *)
             fresh_event_ids
               (spawn_events, spawn_insts, spawn_relations, spawn_annots)
@@ -112,9 +113,12 @@ and propagate_effects event (event_env, expr_env) program =
             (* Put it all together *)
             return
               ( { program with
-                  events= List.flatten [spawn_events; program.events]
+                  events=
+                    List.flatten [spawn_events; inst_events; program.events]
                 ; template_insts= []
-                ; relations= List.flatten [spawn_relations; program.relations]
+                ; relations=
+                    List.flatten
+                      [spawn_relations; inst_relations; program.relations]
                 ; annotations= [] }
               , event_env
               , expr_env )

@@ -2,7 +2,7 @@
 
 This tutorial will guide you through the process of creating and executing a DCR graph with templates using the `t-dcr` CLI.
 
-| Example                                                |     |
+|                                                        |     |
 | ------------------------------------------------------ | --- |
 | [`0-hello`](0-hello/README.md)                         |     |
 | [`1-events`](1-events/README.md)                       |     |
