@@ -193,51 +193,6 @@ and typecheck_template_decl template_decl
         typecheck_param param (ty_env, event_env, label_types) )
       (ty_env, event_env, label_types)
       params
-    (* fold_right
-       (fun (ty_env, event_env, label_types) (id, param_type) ->
-         match param_type with
-         | ExprParam (ty, _) ->
-             Logger.debug "Binding expr: " ;
-             Logger.debug @@ Plain.unparse_ty ty.data ;
-             return (bind id.data ty.data ty_env)
-             >>= fun ty_env -> return (ty_env, event_env, label_types)
-         | EventParam label ->
-             Logger.debug "Binding event: " ;
-             Logger.debug label.data ;
-             ( match EventTypes.find label.data label_types with
-             | None ->
-                 (* FIXME: In case of not found the label in this point of the program, what to do? *)
-                 let label_types =
-                   EventTypes.add (label.data, Undefined) label_types
-                 in
-                 return
-                   ( Output (annotate ~ty:(Some UnitTy) (default_value UnitTy))
-                   , label_types )
-             | Some Undefined ->
-                 Logger.debug
-                 @@ Printf.sprintf "Label %s is undefined" label.data ;
-                 return
-                   ( Output (annotate ~ty:(Some UnitTy) (default_value UnitTy))
-                   , label_types )
-                 (* return (Input (annotate UnitTy), label_types, label :: remaining) *)
-             | Some (Defined (value_ty, event_type)) -> (
-               match event_type with
-               | InputType -> return (Input (annotate value_ty), label_types)
-               | OutputType ->
-                   return
-                     ( Output
-                         (annotate ~ty:(Some value_ty) (default_value value_ty))
-                     , label_types )
-                   (* FIXME: Get a value of the output event *) ) )
-             >>= fun (event_io, label_types) ->
-             let event = mk_event (id, label) (annotate event_io) in
-             return
-               ( bind id.data event event_env
-               , bind id.data (event_as_ty event) ty_env )
-             >>= fun (event_env, ty_env) ->
-             return (ty_env, event_env, label_types) )
-       (ty_env, event_env, label_types)
-       params *)
   in
   Logger.info ("Typechecking template: " ^ keyword id.data) ;
   (* Begin new scope *)

@@ -65,6 +65,9 @@ module ResultMonad = struct
   let partition f l = List.partition f l |> return
 
   let partition_map f l = List.partition_map f l |> return
+
+  let for_all f l =
+    fold_left (fun acc x -> f x >>= fun v -> return (v && acc)) true l
 end
 
 module OptionMonad = struct

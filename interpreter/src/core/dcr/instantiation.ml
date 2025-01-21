@@ -28,19 +28,17 @@ let rec bind_tmpls tmpls (expr_env, event_env, tmpl_env) =
     (expr_env, event_env, tmpl_env)
     tmpls
 
-and bind_args (args, params) ?(eval = partial_eval_expr)
-    (expr_env, event_env, tmpl_env) =
+and bind_args (args, params) ?(eval = eval_expr) (expr_env, event_env, tmpl_env)
+    =
   let rec bind_arg (id, expr) (expr_env, event_env) =
     eval expr expr_env
     >>= fun value ->
+    let expr_env = bind id.data value expr_env in
     match value.data with
     | EventRef event_ref ->
         let event_env = bind id.data !event_ref event_env in
-        let expr_env = bind id.data value expr_env in
         return (expr_env, event_env)
-    | _ ->
-        let expr_env = bind id.data expr expr_env in
-        return (expr_env, event_env)
+    | _ -> return (expr_env, event_env)
   and bind_param param (expr_env, event_env) =
     let pid, _, default = param in
     match (find_flat pid.data expr_env, default) with
@@ -190,7 +188,7 @@ and evaluate_subprogram ?(eval = partial_eval_expr)
     (events, insts, relations, annots) (expr_env, event_env, tmpl_env) =
   let evaluate_event event =
     (* Update IO *)
-    update_event_io event expr_env
+    update_event_io ~eval event expr_env
   and evaluate_inst inst =
     let {args; _} = inst.data
     (* Update arguments *)
@@ -279,14 +277,13 @@ and evaluate_subprogram ?(eval = partial_eval_expr)
    Annotation Evaluation
    ========================================================================== *)
 
-and instantiate_annotations annots ?(eval = partial_eval_expr)
+and instantiate_annotations annots ?(eval = eval_expr)
     (expr_env, event_env, tmpl_env) =
   let evaluate_annotation_body body (expr_env, event_env, tmpl_env) =
     let events, insts, relations, annots = body in
     (* Instantiate inner templates *)
     let* inst_program, (expr_env, event_env, tmpl_env) =
-      instantiate_insts ~eval:partial_eval_expr insts
-        (expr_env, event_env, tmpl_env)
+      instantiate_insts ~eval insts (expr_env, event_env, tmpl_env)
     in
     (* Instantiate inner annotations *)
     let* annot_program, (expr_env, event_env, tmpl_env) =
@@ -294,7 +291,7 @@ and instantiate_annotations annots ?(eval = partial_eval_expr)
     in
     (* Partially Evaluate subprogram *)
     let* (events, _, relations, _), _ =
-      evaluate_subprogram
+      evaluate_subprogram ~eval
         (events, [], relations, [])
         (expr_env, event_env, tmpl_env)
     in
@@ -309,13 +306,15 @@ and instantiate_annotations annots ?(eval = partial_eval_expr)
     in
     ( match annot with
     | IfElse {condition; then_branch; else_branch} ->
-        let* is_true = eval_bool condition expr_env in
+        Logger.info "Evaluating IfElse annotation" ;
+        let* is_true = eval_bool ~eval:eval_expr condition expr_env in
         let branch =
           if is_true then then_branch
           else Option.value ~default:empty_subprogram else_branch
         in
         evaluate_annotation_body branch (expr_env, event_env, tmpl_env)
     | Foreach (id, expr, body) ->
+        Logger.info "Evaluating Foreach annotation" ;
         let* value = eval_expr expr expr_env in
         ( match value.data with
         | List items ->
@@ -342,11 +341,12 @@ and instantiate_annotations annots ?(eval = partial_eval_expr)
                 in
                 (* Instantiate inner annotations *)
                 let* annot_program, (expr_env, event_env, tmpl_env) =
-                  instantiate_annotations annots (expr_env, event_env, tmpl_env)
+                  instantiate_annotations ~eval annots
+                    (expr_env, event_env, tmpl_env)
                 in
                 (* Partially Evaluate subprogram *)
                 let* (events, _, relations, _), _ =
-                  evaluate_subprogram
+                  evaluate_subprogram ~eval
                     (events, [], relations, [])
                     (expr_env, event_env, tmpl_env)
                 in
@@ -390,9 +390,7 @@ and instantiate_sub (events, insts, relations, annots)
   let annots = List.append annots inst_annots in
   ( if List.length annots = 0 then
       return (empty_subprogram, (expr_env, event_env, tmpl_env))
-    else
-      instantiate_annotations ~eval:partial_eval_expr annots
-        (expr_env, event_env, tmpl_env) )
+    else instantiate_annotations annots (expr_env, event_env, tmpl_env) )
   >>= fun (annot_program, (expr_env, event_env, _tmpl_env)) ->
   (* Append the result in the program and envs *)
   let* events, _, relations, _ =

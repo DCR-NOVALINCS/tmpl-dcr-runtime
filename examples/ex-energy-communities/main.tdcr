@@ -1,8 +1,9 @@
-# --- Energy Communities (EDP Use case) ---------------- #
+# --- Energy Communities (EDP-ish Use case) ------------ #
 # TODO: description                                      #
 #                                                        #
 # ------------------------------------------------------ #
 
+# Base plan template, used to create more specific plans
 tmpl base_plan(c: Number, p: Number): Plan, calculateMonthlyCost {
     (plan: Plan)[{ consumption: c, production: p }]
     (cmc: calculateMonthlyCost)[?: { isPeakTime: Boolean, rate: Number }]
@@ -35,10 +36,12 @@ tmpl time_of_use_plan(consumption: Number, production: Number) {
     }
 }
 
-(ap: addProsumer)[?: String]
+# ------------------------------------------------------- #
+
+(ap: addProsumer)[?: { id: String, consumption: Number, production: Number, type: String }]
 
 ap -->> {
-    (p: ProsumerInfo)[@trigger.value]
+    (p: ProsumerInfo)[@trigger.value.id]
 
     if @trigger.value.type == "fixed":
         fixed_plan(consumption = @trigger.value.consumption, production = @trigger.value.production)

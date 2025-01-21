@@ -17,7 +17,6 @@ let rec eval_expr expr env =
   Logger.debug
     (Printf.sprintf "Evaluating fully the expression %s"
        (Colorized.unparse_expr expr) ) ;
-  (* let open Misc.Printing in *)
   match expr.data with
   | Unit | BoolLit _ | IntLit _ | StringLit _ -> return expr
   | Ref expr_ref -> eval_expr !expr_ref env
@@ -219,57 +218,96 @@ and _reference_of_expr expr =
    Expression Partial Evaluation functions
    ============================================================================= *)
 
-(* See more: https://link.springer.com/chapter/10.1007/3-540-11980-9_13 *)
 and partial_eval_expr expr expr_env =
-  let rec partial_eval' (expr, is_dynamic) expr_env =
-    match expr.data with
-    | Parenthesized e -> partial_eval' (e, is_dynamic) expr_env
-    | BinaryOp (e1, e2, op) ->
-        partial_eval' (e1, is_dynamic) expr_env
-        >>= fun (v1, is_dynamic1) ->
-        partial_eval' (e2, is_dynamic) expr_env
-        >>= fun (v2, is_dynamic2) ->
-        if is_dynamic1 || is_dynamic2 then return (expr, true)
-        else eval_binop v1 v2 op expr_env >>= fun v -> return (v, false)
-    | UnaryOp (e, op) ->
-        partial_eval' (e, is_dynamic) expr_env
-        >>= fun (v, is_dynamic) ->
-        if is_dynamic then return (expr, true)
-        else eval_unop v op expr_env >>= fun v -> return (v, false)
-    | Identifier id -> find_id id expr_env >>= fun v -> return (v, false)
-    | Trigger -> return (expr, true)
-    | List items ->
-        map (fun item -> partial_eval' (item, is_dynamic) expr_env) items
-        >>= fun items ->
-        if List.exists (fun (_, is_dynamic) -> is_dynamic) items then
-          return (expr, true)
-        else
-          let items, _ = List.split items in
-          return ({expr with data= List items}, is_dynamic)
-    | Record fields ->
-        map
-          (fun (name, expr) ->
-            partial_eval' (expr, is_dynamic) expr_env
-            >>= fun v -> return (name, v) )
-          fields
-        >>= fun fields ->
-        if List.exists (fun (_, (_, is_dynamic)) -> is_dynamic) fields then
-          return (expr, true)
-        else
-          let fields =
-            List.map (fun (name, (expr, _)) -> (name, expr)) fields
-          in
-          return ({expr with data= Record fields}, is_dynamic)
-    | _ -> return (expr, is_dynamic)
-  in
-  let* value, is_dynamic = partial_eval' (expr, false) expr_env in
-  if is_dynamic then
-    Logger.debug
-      (Printf.sprintf "Expression %s is dynamic" (Colorized.unparse_expr value))
-  else
-    Logger.debug
-      (Printf.sprintf "Expression %s is static" (Colorized.unparse_expr value)) ;
-  return value
+  (* Logger.debug
+     (Printf.sprintf "Evaluating partially the expression %s"
+        (Colorized.unparse_expr expr) ) ; *)
+  ( match expr.data with
+  | Ref expr_ref -> partial_eval_expr !expr_ref expr_env
+  | Parenthesized e -> partial_eval_expr e expr_env
+  | BinaryOp (e1, e2, op) ->
+      partial_eval_expr e1 expr_env
+      >>= fun v1 ->
+      partial_eval_expr e2 expr_env
+      >>= fun v2 -> return {expr with data= BinaryOp (v1, v2, op)}
+  | UnaryOp (e, op) ->
+      partial_eval_expr e expr_env
+      >>= fun v -> return {expr with data= UnaryOp (v, op)}
+  | Identifier id -> (
+    match find_flat id.data expr_env with
+    | None -> return expr
+    | Some v -> partial_eval_expr v expr_env )
+  | PropDeref (e, p) ->
+      partial_eval_expr e expr_env
+      >>= fun v -> return {expr with data= PropDeref (v, p)}
+  | List elems ->
+      map (fun elem -> partial_eval_expr elem expr_env) elems
+      >>| fun elems -> {expr with data= List elems}
+  | Record fields ->
+      map
+        (fun (name, expr) ->
+          partial_eval_expr expr expr_env >>= fun v -> return (name, v) )
+        fields
+      >>| fun fields -> {expr with data= Record fields}
+  | _ -> return expr )
+  >>= fun v ->
+  Logger.debug
+    (Printf.sprintf "Result of evaluating partially of\n| %s is\n| %s"
+       (Colorized.unparse_expr expr)
+       (Colorized.unparse_expr v) ) ;
+  return v
+
+(* and partial_eval_expr expr expr_env =
+   Logger.debug
+     (Printf.sprintf "Evaluating partially the expression %s"
+        (Colorized.unparse_expr expr) ) ;
+   let rec partial_eval' (expr, is_dynamic) expr_env =
+     match expr.data with
+     | Parenthesized e -> partial_eval' (e, is_dynamic) expr_env
+     | BinaryOp (e1, e2, op) ->
+         partial_eval' (e1, is_dynamic) expr_env
+         >>= fun (v1, is_dynamic1) ->
+         partial_eval' (e2, is_dynamic) expr_env
+         >>= fun (v2, is_dynamic2) ->
+         if is_dynamic1 || is_dynamic2 then return (expr, true)
+         else eval_binop v1 v2 op expr_env >>= fun v -> return (v, false)
+     | UnaryOp (e, op) ->
+         partial_eval' (e, is_dynamic) expr_env
+         >>= fun (v, is_dynamic) ->
+         if is_dynamic then return (expr, true)
+         else eval_unop v op expr_env >>= fun v -> return (v, false)
+     | Identifier id -> find_id id expr_env >>= fun v -> return (v, false)
+     | Trigger -> return (expr, true)
+     | List items ->
+         map (fun item -> partial_eval' (item, is_dynamic) expr_env) items
+         >>= fun items ->
+         if List.exists (fun (_, is_dynamic) -> is_dynamic) items then
+           return (expr, true)
+         else
+           let items, _ = List.split items in
+           return ({expr with data= List items}, is_dynamic)
+     | Record fields ->
+         map
+           (fun (name, expr) ->
+             partial_eval' (expr, is_dynamic) expr_env
+             >>= fun v -> return (name, v) )
+           fields
+         >>= fun fields ->
+         if List.exists (fun (_, (_, is_dynamic)) -> is_dynamic) fields then
+           return (expr, true)
+         else
+           let fields =
+             List.map (fun (name, (expr, _)) -> (name, expr)) fields
+           in
+           return ({expr with data= Record fields}, is_dynamic)
+     | _ -> return (expr, is_dynamic)
+   in
+   let* value, is_dynamic = partial_eval' (expr, false) expr_env in
+   Logger.debug
+     (Printf.sprintf "Expression %s is %s"
+        (Colorized.unparse_expr value)
+        (if is_dynamic then "dynamic" else "static") ) ;
+   return value *)
 
 (* let partial_eval_record_fields fields expr_env =
      map

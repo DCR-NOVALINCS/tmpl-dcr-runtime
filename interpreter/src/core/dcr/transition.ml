@@ -5,6 +5,7 @@ open Helper
 open Common
 open Monads.ResultMonad
 open Env
+open Printing
 
 (* =============================================================================
    Enabledness functions
@@ -82,6 +83,15 @@ and propagate_effects event (event_env, expr_env) program =
             (* Evaluate annotations from spawned elements *)
             let open Instantiation in
             (* Instantiate template instances present in the spawn *)
+            Logger.debug "Instantiating template instances in spawn" ;
+            let* trigger_event =
+              match find_flat trigger_id event_env with
+              | None -> failwith "Trigger event not found"
+              | Some e -> return e
+            in
+            Logger.debug
+              (Printf.sprintf "Trigger value is not nil, it's %s"
+                 (Unparser.Colorized.unparse_event trigger_event) ) ;
             mk_program
               ~template_decls:program.template_decls
                 (* ~events:spawn_events ~relations:spawn_relations *)

@@ -168,13 +168,15 @@ let runtime_set =
         let* negatives = find_all_events ~filter:(same_id "negative") program in
         check_int "Expecting 1 event with sub-id 'negative'" 1
           (List.length negatives) ;
-        let all_contain_false_value =
-          List.for_all
+        let* all_contain_false_value =
+          for_all
             (fun o ->
               let {io; _} = o.data in
               match io.data with
-              | Output value -> value.data = BoolLit false
-              | _ -> false )
+              | Output value ->
+                  let* value = eval_expr value expr_env in
+                  return (value.data = BoolLit false)
+              | _ -> return false )
             (List.append positives negatives)
         in
         check_true "Expecting all instantiated 'o' to have value False"
@@ -196,16 +198,24 @@ let runtime_set =
             (fun o ->
               let {io; _} = o.data in
               match io.data with
-              | Output value -> Left (Plain.unparse_expr value)
+              | Output value -> (
+                  eval_expr value expr_env
+                  |> function
+                  | Ok value -> Either.left (Plain.unparse_expr value)
+                  | _ -> failwith "Error evaluating expression" )
               | _ -> Right o )
             positives
         in
-        let all_negative_false, _ =
-          List.partition_map
+        let* all_negative_false, _ =
+          partition_map
             (fun o ->
               let {io; _} = o.data in
               match io.data with
-              | Output value -> Left (Plain.unparse_expr value)
+              | Output value -> (
+                  eval_expr value expr_env
+                  |> function
+                  | Ok value -> Either.left (Plain.unparse_expr value)
+                  | _ -> failwith "Error evaluating expression" )
               | _ -> Right o )
             negatives
         in
