@@ -2,7 +2,7 @@
 <div align="center">
   <h1>tmpl-dcr-runtime</h1>
   <p>
-    Templates in Dynamic Conditional Response Graphs.
+    Templates in Dynamic Conditional Response (DCR) Graphs.
   </p>
 
 
@@ -55,7 +55,7 @@ tmpl max(r1: Result, r2: Result) {
 i -->> {
   add(n = @trigger.value.l, m = @trigger.value.r) => result0
   sub(n = result0.value, m = @trigger.value.r) => result1
-  max(r1 -> result0, r2 -> result1)
+  max(r1 = result0, r2 = result1)
 }
 ```
 

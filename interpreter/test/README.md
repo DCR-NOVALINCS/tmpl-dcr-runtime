@@ -1,6 +1,6 @@
 # Tests
 
-This directory contains all the tests for the project. 
+This directory contains all the tests for the project. In order to run the tests, you need to have the project built before-hand (see [here](../../README.md)).
 
 ## Running the tests
 
@@ -10,7 +10,7 @@ To run all tests, you can run the following command in the `interpreter` directo
 make check
 ```
 
-Or you can run the following command to run the tests manually.
+Or you can run the following command if you don't trust some random `Makefile`.
 
 ```bash
 dune runtest
@@ -26,4 +26,4 @@ In this directory, the tests are divided into the following categories:
 - `runtime`: tests for the runtime/transitions of the DCR graph.
 - `typechecker`: tests for the typechecker.
 
-**Note:** Some `annotations` tests are not working properly because of the way that the `if` and `foreach` annotations evaluate the expressions in the DCR graph that are dynamic (e.g. from `@trigger`). 
+**Note:** Some `annotations` tests are not working properly because of the way that the `if` and `foreach` annotations evaluate the expressions that are dynamic (e.g. from `@trigger`).

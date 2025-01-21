@@ -18,8 +18,12 @@ tmpl base_approver(sa: setRequestApproved, sr: setRequestRefused): approveReques
 
 tmpl managerApprover(r: Request, set_approved: setRequestApproved, set_reproved: setRequestRefused): approveRequest, refuseRequest {
     (m: Manager)[{ request: r.value.id }]
+    (rr: reviewRequest)[?]
 
     base_approver(sa = set_approved, sr = set_reproved) => mar, mrr
+
+    rr -->* mar, mrr
+
 } => mar, mrr
 
 tmpl directorApprover(r: Request, set_approved: setRequestApproved, set_reproved: setRequestRefused): approveRequest, refuseRequest {

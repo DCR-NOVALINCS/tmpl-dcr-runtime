@@ -109,7 +109,9 @@ and propagate_effects event (event_env, expr_env) program =
             (* Rename the event ids to new ones, to prevent id clashing *)
             fresh_event_ids
               (spawn_events, spawn_insts, spawn_relations, spawn_annots)
-            >>= fun (spawn_events, _spawn_insts, spawn_relations, _spawn_annots) ->
+            >>= fun (spawn_events, _, spawn_relations, _) ->
+            fresh_event_ids (inst_events, [], inst_relations, [])
+            >>= fun (inst_events, _, inst_relations, _) ->
             (* Put it all together *)
             return
               ( { program with

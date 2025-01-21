@@ -1,5 +1,5 @@
 # --- Energy Communities (EDP Use case) ---------------- #
-#                                                        #                                     #
+# TODO: description                                      #
 #                                                        #
 # ------------------------------------------------------ #
 
@@ -13,7 +13,7 @@ tmpl fixed_plan(consumption: Number, production: Number) {
     base_plan(c = consumption, p = production) => plan, cmc
 
     cmc -->> {
-        (c: MonthlyCost)[{ cost: (plan.value.consumption - plan.value.production) * 2 }]
+        (c: MonthlyCost)[{ cost: (plan.value.consumption - plan.value.production) * @trigger.value.rate }]
     }
 }
 
@@ -24,11 +24,13 @@ tmpl time_of_use_plan(consumption: Number, production: Number) {
     cmc -->> {
         if @trigger.value.isPeakTime:
             # Peak time
-            (c: MonthlyCost)[{ cost: (plan.value.consumption - plan.value.production) * 2 }]
+            # cost = consumption - production * rate
+            (c: MonthlyCost)[{ cost: (plan.value.consumption - plan.value.production) * @trigger.value.rate }]
         else:
             # Off peak time
-            (c: MonthlyCost)[{ cost: (plan.value.consumption - plan.value.production) * 2 * 4 / 5 }]
-            # consumption - production * rate * 0.8
+            # cost = consumption - production * rate * 0.8
+            # Note: 0.8 = 8 / 10 = 4 / 5
+            (c: MonthlyCost)[{ cost: (plan.value.consumption - plan.value.production) * @trigger.value.rate * 4 / 5 }]
         /if
     }
 }
@@ -38,14 +40,9 @@ tmpl time_of_use_plan(consumption: Number, production: Number) {
 ap -->> {
     (p: ProsumerInfo)[@trigger.value]
 
-    # if @trigger.value.type == "fixed":
-    #     fixed_plan(consumption = @trigger.value.consumption, production = @trigger.value.production)
-    # else:
-    #     time_of_use_plan(consumption = @trigger.value.consumption, production = @trigger.value.production)
-    # /if
-    if @trigger.value == "fixed":
-        fixed_plan(consumption = 1, production = 2)
+    if @trigger.value.type == "fixed":
+        fixed_plan(consumption = @trigger.value.consumption, production = @trigger.value.production)
     else:
-        time_of_use_plan(consumption = 1, production = 2)
+        time_of_use_plan(consumption = @trigger.value.consumption, production = @trigger.value.production)
     /if
 }

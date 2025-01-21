@@ -1,3 +1,8 @@
+(** {1 Errors}
+
+    This module provides functions to handle errors that occur during lexing and
+    parsing. *)
+
 open Ast
 open Error
 open Lexing
