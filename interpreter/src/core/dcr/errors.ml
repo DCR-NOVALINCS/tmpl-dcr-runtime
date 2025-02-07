@@ -56,3 +56,7 @@ let invalid_expr ?(errors = []) e =
       ; message= "Invalid expression"
       ; hint= Some "Ensure the expression is well-formed." }
     :: errors )
+
+let unknown_error ?(errors = []) msg =
+  fail
+    ({location= Nowhere; message= "Unknown error: " ^ msg; hint= None} :: errors)

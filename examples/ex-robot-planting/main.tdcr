@@ -21,14 +21,12 @@ tmpl plant(id: String, position: { x: Number, y: Number }, plantType: { typename
 }
 
 %(pts: PlantTypes)[[{ typename: "apple" }, { typename: "orange" }, { typename: "banana" }]]
-
 (ar: addRobot)[?: { id: String }]
 
 ar -->> {
     robot(id = @trigger.value.id) => watering, collectFruit, trim
 
     (ap: addPlant)[?: { id: String, typename: String, position: { x: Number, y: Number } }]
-    
     foreach plantType in pts.value:
         ap -->> {
             if plantType.typename == @trigger.value.typename:

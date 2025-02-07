@@ -496,8 +496,10 @@ and unparse_expr ?(indent = "") ?(buffer = Buffer.create 100) expr =
         fields ;
       Buffer.add_string buffer @@ " }"
   | EventRef event_ref ->
-      Buffer.add_string buffer "ref " ;
-      unparse_events ~indent ~buffer [!event_ref] |> ignore
+      let {info= id, _; _} = !event_ref.data in
+      Buffer.add_string buffer @@ colorize ~color:variable_color id.data
+      (* Buffer.add_string buffer "ref " ;
+      unparse_events ~indent ~buffer [!event_ref] |> ignore *)
   | _ -> Buffer.add_string buffer @@ "..." ) ;
   Buffer.contents buffer
 

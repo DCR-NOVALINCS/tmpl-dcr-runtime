@@ -36,13 +36,13 @@ let rec update_event event program =
 and set_marking ?included ?pending ?executed ?value event =
   let {marking; _} = event.data in
   let {included= i; pending= p; executed= e; value= v} = marking.data in
-  return
-  @@ mk_marking
-       ~included:(Option.value ~default:i.data included)
-       ~pending:(Option.value ~default:p.data pending)
-       ~executed:(Option.value ~default:e.data executed)
-       ~value:(Option.value ~default:!v value).data ()
-  >>= fun new_marking ->
+  let new_marking =
+    mk_marking
+      ~included:(Option.value ~default:i.data included)
+      ~pending:(Option.value ~default:p.data pending)
+      ~executed:(Option.value ~default:e.data executed)
+      ~value:(Option.value ~default:!v value).data ()
+  in
   let marking = {marking with data= new_marking} in
   let event = {event with data= {event.data with marking}} in
   return event
@@ -306,6 +306,132 @@ and fresh_event ?(alpha_rename = counter) event =
   let {info= id, _; _} = event.data in
   set_info ~id:(fresh ~alpha_rename id.data) event
 
+and fresh_events ?(exclude = []) ?(alpha_rename = counter)
+    (events, insts, relations, annots) =
+  let ids =
+    List.filter_map
+      (fun e ->
+        let id, _ = e.data.info in
+        if List.mem id.data exclude then None else Some id.data )
+      events
+  in
+  let id_mapping =
+    List.map
+      (fun id ->
+        let already_freshed = String.contains id '_' in
+        if already_freshed then (id, id) else (id, fresh ~alpha_rename id)
+        (* (id, fresh ~alpha_rename id)  *) )
+      ids
+  in
+  (* Id substitution strategies *)
+  let rec substitution id =
+    Option.value (List.assoc_opt id id_mapping) ~default:id
+  and substitution_expr expr =
+    let result =
+      match expr.data with
+      | Identifier id ->
+          {expr with data= Identifier {id with data= substitution id.data}}
+      | Parenthesized expr ->
+          let expr = substitution_expr expr in
+          {expr with data= Parenthesized expr}
+      | UnaryOp (expr, op) ->
+          let expr = substitution_expr expr in
+          {expr with data= UnaryOp (expr, op)}
+      | BinaryOp (l, r, op) ->
+          let l = substitution_expr l in
+          let r = substitution_expr r in
+          {expr with data= BinaryOp (l, r, op)}
+      | List exprs ->
+          let exprs = List.map substitution_expr exprs in
+          {expr with data= List exprs}
+      | Record fields ->
+          let fields =
+            List.map
+              (fun (id, expr) ->
+                let expr = substitution_expr expr in
+                (id, expr) )
+              fields
+          in
+          {expr with data= Record fields}
+      | PropDeref (expr, prop) ->
+          let expr = substitution_expr expr in
+          {expr with data= PropDeref (expr, prop)}
+      | Range (s, e) ->
+          let s = substitution_expr s in
+          let e = substitution_expr e in
+          {expr with data= Range (s, e)}
+      | _ -> expr
+    in
+    Logger.debug
+      (Printf.sprintf "Substituted expr %s -> %s" (Plain.unparse_expr expr)
+         (Plain.unparse_expr result) ) ;
+    result
+  and substitution_subprogram (events, insts, relations, annots) =
+    (* Change all occurences in insts, relations and annots *)
+    let* events =
+      map
+        (fun e ->
+          let {info= id, _; io; _} = e.data in
+          let* e = set_info ~id:(substitution id.data) e in
+          match io.data with
+          | Input _ -> return e
+          | Output expr ->
+              let expr = substitution_expr expr in
+              return {e with data= {e.data with io= {io with data= Output expr}}} )
+        events
+    in
+    let insts =
+      List.map
+        (fun i ->
+          let {args; _} = i.data in
+          let args =
+            List.map (fun (id, expr) -> (id, substitution_expr expr)) args
+          in
+          {i with data= {i.data with args}} )
+        insts
+    in
+    let* relations =
+      map
+        (fun r ->
+          match r.data with
+          | ControlRelation (from, guard, dest, t) ->
+              let from = {from with data= substitution from.data} in
+              let guard = substitution_expr guard in
+              let dest = {dest with data= substitution dest.data} in
+              return {r with data= ControlRelation (from, guard, dest, t)}
+          | SpawnRelation (from, guard, subprogram) ->
+              let from = {from with data= substitution from.data} in
+              let guard = substitution_expr guard in
+              let* subprogram = substitution_subprogram subprogram in
+              (* TODO: substitution on the subprogram *)
+              return {r with data= SpawnRelation (from, guard, subprogram)} )
+        relations
+    in
+    let* annots =
+      map
+        (fun a ->
+          match a with
+          | IfElse {condition; then_branch; else_branch} ->
+              let condition = substitution_expr condition in
+              let* then_branch = substitution_subprogram then_branch in
+              let* else_branch =
+                match else_branch with
+                | None -> return None
+                | Some else_branch ->
+                    let* else_branch = substitution_subprogram else_branch in
+                    return (Some else_branch)
+              in
+              return @@ IfElse {condition; then_branch; else_branch}
+          | Foreach (id, expr, body) ->
+              let expr = substitution_expr expr in
+              let* body = substitution_subprogram body in
+              return @@ Foreach (id, expr, body) )
+        annots
+    in
+    return (events, insts, relations, annots)
+  in
+  substitution_subprogram (events, insts, relations, annots)
+
 and fresh_event_ids ?(exclude = []) ?(alpha_rename = counter)
     (events, insts, relations, annots) =
   let open Printing in
@@ -392,8 +518,7 @@ and fresh_event_ids ?(exclude = []) ?(alpha_rename = counter)
           replace_id dest_id
           >>= fun dest_id ->
           return
-            {relation with data= ControlRelation (from_id, guard, dest_id, op)}
-      )
+            {relation with data= ControlRelation (from_id, guard, dest_id, op)} )
     relations
   >>= fun relations ->
   (* Alpha rename all the annotations *)
@@ -482,8 +607,7 @@ and update_ids id_mapping (events, insts, relations, annotations) =
         | SpawnRelation (from, guard, subprogram) ->
             let* from = update from in
             let* subprogram = update_ids id_mapping subprogram in
-            return {relation with data= SpawnRelation (from, guard, subprogram)}
-        )
+            return {relation with data= SpawnRelation (from, guard, subprogram)} )
       relations
   and update_annotations annots =
     let update_annotation annot =

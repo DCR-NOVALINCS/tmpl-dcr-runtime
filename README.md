@@ -122,8 +122,7 @@ And finally, you can build the project by running the following command.
 make build
 ```
 
-Or `dune build`.
-And you should be ready to go. 😁 
+Or `dune build`. And you should be ready to go. 😁 
 
 ## Usage
 

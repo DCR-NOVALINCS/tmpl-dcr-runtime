@@ -161,7 +161,8 @@ and instantiate_insts insts ?(eval = partial_eval_expr)
         in
         (* Fresh event identifiers *)
         let* result =
-          fresh_event_ids ~exclude:(deannotate_list x)
+          (* fresh_event_ids ~exclude:(deannotate_list x) *)
+          fresh_events ~exclude:(deannotate_list x)
             (events_ti, [], relations_ti, annots_ti)
         in
         (* Append all results *)
@@ -296,7 +297,8 @@ and instantiate_annotations annots ?(eval = eval_expr)
         (expr_env, event_env, tmpl_env)
     in
     (* Fresh event identifiers *)
-    let* body = fresh_event_ids (events, [], relations, []) in
+    (* let* body = fresh_event_ids (events, [], relations, []) in *)
+    let* body = fresh_events (events, [], relations, []) in
     let* body = append_subprograms [body; inst_program; annot_program] in
     return body
   in
@@ -345,16 +347,22 @@ and instantiate_annotations annots ?(eval = eval_expr)
                     (expr_env, event_env, tmpl_env)
                 in
                 (* Partially Evaluate subprogram *)
-                let* (events, _, relations, _), _ =
+                let* body, _ =
                   evaluate_subprogram ~eval
                     (events, [], relations, [])
                     (expr_env, event_env, tmpl_env)
                 in
                 (* Fresh event identifiers *)
-                let* body = fresh_event_ids (events, [], relations, []) in
+                (* let* body = fresh_event_ids (events, [], relations, []) in *)
                 let* body =
                   append_subprograms [body; inst_program; annot_program]
                 in
+                let* body = fresh_events body in
+                Logger.success
+                  (Printf.sprintf
+                     "Result subprogram of the foreach annotation iteration %s body:\n%s"
+                     (keyword (Colorized.unparse_expr item))
+                     (Colorized.unparse_subprogram body) ) ;
                 return body )
               items
         | _ ->
@@ -385,7 +393,8 @@ and instantiate_sub (events, insts, relations, annots)
       return (empty_subprogram, (expr_env, event_env, tmpl_env))
     else instantiate_insts insts (expr_env, event_env, tmpl_env) )
   >>= fun ( (inst_events, _, inst_relations, inst_annots)
-          , (expr_env, event_env, tmpl_env) ) ->
+          , (expr_env, event_env, tmpl_env) )
+      ->
   (* Evaluate template annotations from the program *)
   let annots = List.append annots inst_annots in
   ( if List.length annots = 0 then

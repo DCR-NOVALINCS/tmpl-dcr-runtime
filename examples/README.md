@@ -8,7 +8,7 @@ This tutorial will guide you through the process of creating and executing a DCR
 - [`3-marking`](3-marking/README.md)
 - [`4-control-relations`](4-control-relations/README.md)
 - [`5-spawn-relation`](5-spawn-relation/README.md)
-- [`6-enabledness`](6-enabledness/README.md)      
+- [`6-enabledness`](6-enabledness/README.md)
 - [`7-templates`](7-templates/README.md)
 - [`8-export-events`](8-export-events/README.md)
 - [`9-template-params-&-instantiations`](9-template-params-&-instantiations/README.md)

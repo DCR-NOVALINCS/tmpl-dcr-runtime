@@ -1,12 +1,13 @@
+open Helper
 open Ast
 open Syntax
 open Error
 open Common
 open Env
 
-type event_kind = type_expr' * event_type'
+(* type event_kind = type_expr' * event_type'
 
-type event_type_value = Undefined | Defined of event_kind
+type event_type_value = Undefined | Defined of event_kind *)
 
 val typecheck :
      ?event_env:event' annotated env

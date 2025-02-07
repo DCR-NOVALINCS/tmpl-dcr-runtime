@@ -1,0 +1,58 @@
+# ---- Review request process -------------------------- #
+#                                                        #
+# This scenario models the process of a code base inte-  #
+# gration request. The process starts with a pull re-    #
+# quest and goes through a sequence of review requests,  #
+# approvals, and changes requests (reporved).            #
+# The process ends when the request is approved or       #
+# changes are requested.                                 #
+#                                                        #
+# ------------------------------------------------------ #
+
+(pr: pullRequest)[?]
+
+# Initialize review with 5 reviewers
+pr -->> {
+  # Review request events (steps before final decision)
+  (rr1: reviewRequest)[?]
+  (rr2: reviewRequest)[?]
+  (rr3: reviewRequest)[?]
+  (rr4: reviewRequest)[?]
+  (rr5: reviewRequest)[?]
+
+  # Decision events
+  # Approve events
+  (a1: approve)[?]
+  (a2: approve)[?]
+  (a3: approve)[?]
+  (a4: approve)[?]
+  (a5: approve)[?]
+
+  # Request / Reprove changes events
+  (r1: requestChanges)[?]
+  (r2: requestChanges)[?]
+  (r3: requestChanges)[?]
+  (r4: requestChanges)[?]
+  (r5: requestChanges)[?]
+
+  # Set final state of the request (approved or changes requested)
+  (sa: setApproved)[?]
+  %(sr: setChangesRequested)[?]
+
+  # First steps must be done before the decision
+  rr1 -->* a1, r1
+  rr2 -->* a2, r2
+  rr3 -->* a3, r3
+  rr4 -->* a4, r4
+  rr5 -->* a5, r5
+
+  # Decision restrictions, simulating a AND condition
+  a1, a2, a3, a4, a5 -->* sa
+  r1, r2, r3, r4, r5 -->+ sr
+
+  #  Decision made, remove all events
+  sr -->% sr, sa
+  sa -->% sa, sr
+  sa, sr -->% a1, r1, rr1, a2, r2, rr2, a3, r3, rr3, a4, r4, rr4, a5, r5, rr5
+}
+

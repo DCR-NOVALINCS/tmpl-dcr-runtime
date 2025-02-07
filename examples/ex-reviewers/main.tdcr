@@ -1,0 +1,28 @@
+# ---- Review request process -------------------------- #
+# TODO: description                                      #
+#                                                        #
+# ------------------------------------------------------ #
+
+tmpl approver(): review, approve, reprove {
+  (rv: review)[?]
+  (a: approve)[?]
+  (r: reprove)[?]
+
+  rv -->* a, r
+} => rv, a, r
+
+(pr: pullRequest)[?: Number]
+
+pr -->> {
+  (sa: setApproved)[?]
+  %(sr: setChangesRequested)[?]
+
+  foreach i in @range(1, @trigger.value):
+    approver() => review, approve, reprove
+
+    approve -->* sa
+    reprove -->+ sr
+    sa, sr -->% approve, reprove, review , sa, sr
+  /foreach
+}
+
