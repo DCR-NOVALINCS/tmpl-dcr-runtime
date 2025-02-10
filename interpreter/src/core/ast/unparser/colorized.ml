@@ -500,7 +500,7 @@ and unparse_expr ?(indent = "") ?(buffer = Buffer.create 100) expr =
       Buffer.add_string buffer @@ colorize ~color:variable_color id.data
       (* Buffer.add_string buffer "ref " ;
       unparse_events ~indent ~buffer [!event_ref] |> ignore *)
-  | _ -> Buffer.add_string buffer @@ "..." ) ;
+  | _ -> failwith "unparse_expr: not implemented" ) ;
   Buffer.contents buffer
 
 and unparse_pos ?(indent = "") ?(separator = ":") ?(buffer = Buffer.create 100)

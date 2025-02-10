@@ -2,12 +2,15 @@
 #                                                        #
 # This scenario models the process of a code base inte-  #
 # gration request. The process starts with a pull re-    #
-# quest and goes through a sequence of review requests,  #
-# approvals, and changes requests (reporved).            #
-# The process ends when the request is approved or       #
-# changes are requested.                                 #
+# quest and each request is reviewed by 5 reviewers.     #
+# Each reviewer should review before making a decision,  #
+# i.e approve or make changes (reprove) the request. The #
+# final decision is made by the setApproved or           #
+# setChangesRequested events.                            #
 #                                                        #
 # ------------------------------------------------------ #
+
+# ---- Process ------------------------------------------ #
 
 (pr: pullRequest)[?]
 
@@ -46,7 +49,7 @@ pr -->> {
   rr4 -->* a4, r4
   rr5 -->* a5, r5
 
-  # Decision restrictions, simulating a AND condition
+  # Decision restrictions, simulating a AND gate
   a1, a2, a3, a4, a5 -->* sa
   r1, r2, r3, r4, r5 -->+ sr
 

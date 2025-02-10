@@ -5,6 +5,8 @@ open Monads.ResultMonad
 open Ast
 open Syntax
 open Error
+open Typing
+open Helper
 open Cmdliner
 
 (* =============================================================================
@@ -13,22 +15,23 @@ open Cmdliner
 
 type runtime_state =
   { ty_env: type_expr' env
+  ; label_types: event_type_value Hashtbl.Make(String).t
   ; expr_env: expr env
   ; event_env: event env
   ; program: program
   ; previous_state: runtime_state option
-  ; output: string
-  ; history: string array }
+  ; output: string }
 
 let mk_runtime_state ?(output = "") ?(ty_env = empty_env)
-    ?(expr_env = empty_env) ?(event_env = empty_env) program =
+    ?(label_types = EventTypes.empty) ?(expr_env = empty_env)
+    ?(event_env = empty_env) program =
   { ty_env
+  ; label_types
   ; expr_env
   ; event_env
   ; program
   ; previous_state= None
-  ; output
-  ; history= Array.make 10 "" }
+  ; output }
 
 let empty_runtime_state = mk_runtime_state empty_program
 

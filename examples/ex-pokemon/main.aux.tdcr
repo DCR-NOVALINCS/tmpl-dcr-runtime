@@ -10,5 +10,5 @@ ap -->> {
 }
 
 b -->> {
-    (bl: BattleLog)[{ winner: @trigger.value.p1.name }]
+    (bl: BattleLog)[{ winner: @trigger.value.p1.value.name }]
 }

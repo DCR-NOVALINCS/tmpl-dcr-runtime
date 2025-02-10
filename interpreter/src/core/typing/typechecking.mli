@@ -12,7 +12,11 @@ type event_type_value = Undefined | Defined of event_kind *)
 val typecheck :
      ?event_env:event' annotated env
   -> program
-  -> (type_expr' env * event' annotated env, detailed_error list) result
+  -> ( type_expr' env
+       * event' annotated env
+       * event_type_value Hashtbl.Make(String).t
+     , detailed_error list )
+     result
 (** [typecheck ?event_env program] typechecks the [program] by ensuring that:
     - All event expressions are well-typed according to the [event_env].
     - Template instance expressions are well-typed according to the [event_env]

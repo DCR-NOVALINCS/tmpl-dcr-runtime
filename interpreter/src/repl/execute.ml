@@ -19,17 +19,19 @@ and expr =
     & info [] ~docv:"EXPR_STRING" ~doc:"The expression to execute" )
 
 and execute_cmd event_id expr_str state =
-  let {ty_env; expr_env; event_env; program; _} = state in
+  let {ty_env; label_types; expr_env; event_env; program; _} = state in
   Logger.debug
   @@ Printf.sprintf "Executing event %s with expression %s" event_id
        (String.concat " " expr_str) ;
-  parse_expression_from_string expr_str
-  >>= fun expr ->
-  execute ~ty_env ~expr_env ~event_env ~event_id ~expr:expr.data program
-  >>= fun (program, event_env, expr_env) ->
-  return
-    { state with
+  let* expr = parse_expression_from_string expr_str in
+  let* program, event_env, expr_env, ty_env, label_types =
+    execute ~ty_env ~label_types ~expr_env ~event_env ~event_id ~expr:expr.data
       program
+  in
+  return
+    { program
+    ; ty_env
+    ; label_types
     ; event_env
     ; expr_env
     ; previous_state= Some state

@@ -96,9 +96,12 @@ and runtime filename =
     parse_program_from_file filename
     >>= fun program ->
     Logger.success "Parsed successfully" ;
-    initialize program
-    >>= fun (program, (ty_env, expr_env, event_env)) ->
-    let runtime_state = mk_runtime_state ~ty_env ~expr_env ~event_env program in
+    let* program, (ty_env, label_types, expr_env, event_env) =
+      initialize program
+    in
+    let runtime_state =
+      mk_runtime_state ~ty_env ~label_types ~expr_env ~event_env program
+    in
     prompt runtime_state
   with Duplicate_binding id ->
     Logger.error @@ "Duplicate binding: " ^ id ;

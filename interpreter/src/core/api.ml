@@ -5,7 +5,6 @@
 open Ast
 open Syntax
 open Error
-open Unparser
 open Parsing.Lex_and_parse
 open Dcr
 open Evaluation
@@ -14,6 +13,7 @@ open Instantiation
 open Errors
 open Helper
 open Typing
+open Helper
 open Typechecking
 open Errors
 open Common
@@ -26,65 +26,59 @@ open Printing
    ============================================================================= *)
 
 let initialize program =
-  preprocess_program program
-  >>= fun (event_env, expr_env, program) ->
-  typecheck ~event_env program
-  >>= fun (ty_env, event_env) ->
+  let* event_env, expr_env, program = preprocess_program program in
+  let* ty_env, event_env, label_types = typecheck ~event_env program in
   Logger.success "Typechecked successfully" ;
-  instantiate ~expr_env ~event_env program
-  >>= fun (program, event_env, expr_env) ->
+  let* program, event_env, expr_env =
+    instantiate ~expr_env ~event_env program
+  in
   Logger.success "Instantiated successfully" ;
-  return (program, (ty_env, expr_env, event_env))
+  return (program, (ty_env, label_types, expr_env, event_env))
 
 (* =============================================================================
    Execute functions
    ============================================================================= *)
 
 let rec execute ~event_id ?(expr = Unit) ?(ty_env = empty_env)
-    ?(expr_env = empty_env) ?(event_env = empty_env) program =
-  typecheck_expr ~ty_env (annotate expr)
-  >>= fun _ ->
+    ?(label_types = EventTypes.empty) ?(expr_env = empty_env)
+    ?(event_env = empty_env) program =
+  let* _ = typecheck_expr ~ty_env ~label_types (annotate expr) in
   match find_flat event_id event_env with
   | None -> event_not_found event_id
   | Some event ->
       (* Check if the event is enabled *)
-      is_enabled event program (event_env, expr_env)
-      >>= fun is_enabled ->
+      let* is_enabled = is_enabled event program (event_env, expr_env) in
       if not is_enabled then event_not_enabled event
       else
         (* Executing the event according to its kind (i.e input or output) *)
         let io = event.data.io in
-        ( match io.data with
-        | Input _ -> execute_input_event event expr (ty_env, expr_env)
-        | Output _ -> execute_output_event event expr_env )
-        >>= (* Update marking *)
-        set_marking ~executed:true
-        >>= fun event ->
-        return (update_event event program)
-        >>= fun program ->
-        Logger.debug @@ "Updated events:\n"
-        ^ Plain.unparse_events program.events ;
-        (* Debug event_env *)
-        Logger.debug @@ "Event Env after executing event:\n"
-        ^ string_of_env Colorized.unparse_event event_env ;
+        let* event =
+          ( match io.data with
+          | Input _ -> execute_input_event event expr (ty_env, expr_env)
+          | Output _ -> execute_output_event event expr_env )
+          (* Update marking *)
+          >>= set_marking ~executed:true
+        in
+        let program = update_event event program in
         (* Propagate relation effects that this event is apart of. *)
-        propagate_effects event (event_env, expr_env) program
-        >>= fun (program, _, _) ->
-        preprocess_program program
-        >>= fun (event_env, expr_env, program) ->
-        return (program, event_env, expr_env)
+        let* program, _, _ =
+          propagate_effects event (event_env, expr_env) program
+        in
+        let* event_env, expr_env, program = preprocess_program program in
+        let* ty_env, event_env, label_types = typecheck ~event_env program in
+        return (program, event_env, expr_env, ty_env, label_types)
 
 and execute_output_event event expr_env =
   let {info; io; marking; _} = event.data in
-  ( match io.data with
-  | Output expr -> return expr
-  | _ ->
-      let id, _ = info in
-      something_went_wrong ~loc:id.loc
-        ("Is not a output event" ^ keyword id.data) )
-  >>= fun expr ->
-  eval_expr expr expr_env
-  >>= fun v ->
+  let* expr =
+    match io.data with
+    | Output expr -> return expr
+    | _ ->
+        let id, _ = info in
+        something_went_wrong ~loc:id.loc
+          ("Is not a output event" ^ keyword id.data)
+  in
+  let* v = eval_expr expr expr_env in
   let {value; _} = marking.data in
   value := v ;
   set_marking ~value:v event
@@ -93,10 +87,8 @@ and execute_input_event event expr (ty_env, expr_env) =
   let {info; io; _} = event.data in
   match io.data with
   | Input expected_ty ->
-      eval_expr (annotate expr) expr_env
-      >>= fun value ->
-      typecheck_expr ~ty_env value
-      >>= fun ty ->
+      let* value = eval_expr (annotate expr) expr_env in
+      let* ty = typecheck_expr ~ty_env value in
       if not (equal_types ty expected_ty.data) then
         type_mismatch ~loc:expected_ty.loc [expected_ty.data] [ty]
       else set_marking ~value event

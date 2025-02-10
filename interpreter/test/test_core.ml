@@ -65,8 +65,9 @@ let runtime_set =
         check_true "Expecting to have a relation related to the event b"
           (has_relation ~filter:(is_ctrl Condition) (fst b.data.info).data
              program ) ;
-        execute ~event_id:"a" ~expr:Unit ~expr_env ~event_env program
-        >>= fun (program, event_env, expr_env) ->
+        let* program, event_env, expr_env, _ty_env, _label_types =
+          execute ~event_id:"a" ~expr:Unit ~expr_env ~event_env program
+        in
         let a = Option.get @@ get_event ~filter:(same_id "a") program in
         check_true "Event a should be executed" (is_executed a) ;
         let b = Option.get (get_event ~filter:(same_id "b") program) in
@@ -83,8 +84,9 @@ let runtime_set =
         check_true "Event a not found" (has_event ~filter:(same_id "a") program) ;
         check_true "Event a doesn't have any relations"
           (has_relation "a" program) ;
-        execute ~event_id:"a" ~expr:(IntLit 1) ~expr_env ~event_env program
-        >>= fun (program, event_env, expr_env) ->
+        let* program, event_env, expr_env, _ty_env, _label_types =
+          execute ~event_id:"a" ~expr:(IntLit 1) ~expr_env ~event_env program
+        in
         check_true "Expected 3 events" (List.length program.events = 3) ;
         check_true "Expected 2 relations" (List.length program.relations = 2) ;
         check_true "Not expecting instantiations to be done."
@@ -118,8 +120,9 @@ let runtime_set =
         in
         check_int "Expecting two spawn relations from 'a'" 2
           (List.length spawn_relations) ;
-        execute ~event_id:"a" ~expr:Unit ~expr_env ~event_env program
-        >>= fun (program, _event_env, _expr_env) ->
+        let* program, _event_env, _expr_env, _ty_env, _label_types =
+          execute ~event_id:"a" ~expr:Unit ~expr_env ~event_env program
+        in
         let a = Option.get @@ get_event ~filter:(same_id "a") program in
         check_true "Event a should be executed" (is_executed a) ;
         check_int "Expected 5 events" 5 (List.length program.events) ;
@@ -156,8 +159,9 @@ let runtime_set =
           (List.length spawn_relations) ;
         check_int "Expecting 2 template instantiations" 2
           (List.length spawn_insts) ;
-        execute ~event_id:"c" ~expr:(IntLit 0) ~expr_env ~event_env program
-        >>= fun (program, event_env, expr_env) ->
+        let* program, event_env, expr_env, _ty_env, _label_types =
+          execute ~event_id:"c" ~expr:(IntLit 0) ~expr_env ~event_env program
+        in
         check_int "Expected 3 events" 3 (List.length program.events) ;
         check_int "Expected 1 relation" 1 (List.length program.relations) ;
         check_int "Not expecting instantiations to be done." 0
@@ -181,8 +185,9 @@ let runtime_set =
         in
         check_true "Expecting all instantiated 'o' to have value False"
           all_contain_false_value ;
-        execute ~event_id:"c" ~expr:(IntLit 1) ~expr_env ~event_env program
-        >>= fun (program, _event_env, _expr_env) ->
+        let* program, _event_env, expr_env, _ty_env, _label_types =
+          execute ~event_id:"c" ~expr:(IntLit 1) ~expr_env ~event_env program
+        in
         check_int "Expected 5 events" 5 (List.length program.events) ;
         check_int "Expected 1 relations" 1 (List.length program.relations) ;
         check_int "Not expecting instantiations to be done." 0
@@ -325,13 +330,15 @@ let export_events_set =
       (test_folder "exported-events/1.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
-        >>= fun (_ty_env, event_env) -> return (program, event_env, expr_env) )
+        >>= fun (_ty_env, event_env, _label_types) ->
+        return (program, event_env, expr_env) )
       expecting_error
   ; make_test "2.tdcr"
       (test_folder "exported-events/2.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
-        >>= fun (_ty_env, event_env) -> return (program, event_env, expr_env) )
+        >>= fun (_ty_env, event_env, _label_types) ->
+        return (program, event_env, expr_env) )
       expecting_error
   ; make_test "3.tdcr"
       (test_folder "exported-events/3.tdcr")
@@ -445,7 +452,7 @@ let export_events_set =
       (test_folder "exported-events/6.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
-        >>= fun (_ty_env, event_env) ->
+        >>= fun (_ty_env, event_env, _label_types) ->
         instantiate ~expr_env ~event_env program
         >>= fun (program, event_env, expr_env) ->
         (* Check the events *)
@@ -491,7 +498,7 @@ let annotation_set =
       (test_folder "annotations/0.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
-        >>= fun (_ty_env, event_env) ->
+        >>= fun (_ty_env, event_env, _label_types) ->
         instantiate ~expr_env ~event_env program
         >>= fun (program, event_env, expr_env) ->
         (* Check the events *)
@@ -508,7 +515,7 @@ let annotation_set =
       (test_folder "annotations/1.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
-        >>= fun (_ty_env, event_env) ->
+        >>= fun (_ty_env, event_env, _label_types) ->
         instantiate ~expr_env ~event_env program
         >>= fun (program, event_env, expr_env) ->
         (* Check the events *)
@@ -626,7 +633,7 @@ let annotation_set =
       (test_folder "annotations/2.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
-        >>= fun (_ty_env, event_env) ->
+        >>= fun (_ty_env, event_env, _label_types) ->
         instantiate ~expr_env ~event_env program
         >>= fun (program, event_env, expr_env) ->
         (* Check the events *)
@@ -672,7 +679,7 @@ let annotation_set =
       (test_folder "annotations/3.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
-        >>= fun (_ty_env, event_env) ->
+        >>= fun (_ty_env, event_env, _label_types) ->
         instantiate ~expr_env ~event_env program
         >>= fun (program, event_env, expr_env) ->
         (* Check the events *)
@@ -692,16 +699,18 @@ let annotation_set =
         check_int "Expecting only one spawn relation on the program"
           (List.length spawn_relations)
           (List.length program.relations) ;
-        execute ~event_id:"a" ~expr:(IntLit 0) ~expr_env ~event_env program
-        >>= fun (program, event_env, expr_env) ->
+        let* program, event_env, expr_env, _ty_env, _label_types =
+          execute ~event_id:"a" ~expr:(IntLit 0) ~expr_env ~event_env program
+        in
         check_int "Expected same number of events" 1
           (List.length program.events) ;
         check_int "Expected same number of relations" 1
           (List.length program.relations) ;
         check_int "Not expecting instantiations to be done." 0
           (List.length program.template_insts) ;
-        execute ~event_id:"a" ~expr:(IntLit 1) ~expr_env ~event_env program
-        >>= fun (program, event_env, expr_env) ->
+        let* program, event_env, expr_env, _ty_env, _label_types =
+          execute ~event_id:"a" ~expr:(IntLit 1) ~expr_env ~event_env program
+        in
         check_int "Expected 2 events" 2 (List.length program.events) ;
         check_int "Expected 2 relations" 2 (List.length program.relations) ;
         check_int "Not expecting instantiations to be done." 0
@@ -729,7 +738,7 @@ let annotation_set =
       (test_folder "annotations/4.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
-        >>= fun (_ty_env, event_env) ->
+        >>= fun (_ty_env, event_env, _label_types) ->
         instantiate ~expr_env ~event_env program
         >>= fun (program, event_env, expr_env) ->
         (* Check the events *)
@@ -749,16 +758,18 @@ let annotation_set =
         check_int "Expecting only one spawn relation on the program"
           (List.length spawn_relations)
           (List.length program.relations) ;
-        execute ~event_id:"a" ~expr:(IntLit 0) ~expr_env ~event_env program
-        >>= fun (program, event_env, expr_env) ->
+        let* program, event_env, expr_env, _ty_env, _label_types =
+          execute ~event_id:"a" ~expr:(IntLit 0) ~expr_env ~event_env program
+        in
         check_int "Expected same number of events" 1
           (List.length program.events) ;
         check_int "Expected same number of relations" 4
           (List.length program.relations) ;
         check_int "Not expecting instantiations to be done." 0
           (List.length program.template_insts) ;
-        execute ~event_id:"a" ~expr:(IntLit 1) ~expr_env ~event_env program
-        >>= fun (program, event_env, expr_env) ->
+        let* program, event_env, expr_env, _ty_env, _label_types =
+          execute ~event_id:"a" ~expr:(IntLit 1) ~expr_env ~event_env program
+        in
         check_int "Expected 5 events" 5 (List.length program.events) ;
         let* bs = find_all_events ~filter:(same_id "b") program in
         check_int "Expecting 4 events with sub-id 'b'" 4 (List.length bs) ;
@@ -783,7 +794,7 @@ let annotation_set =
       (test_folder "annotations/5.tdcr")
       (fun program (event_env, expr_env) ->
         typecheck ~event_env program
-        >>= fun (_ty_env, event_env) ->
+        >>= fun (_ty_env, event_env, _label_types) ->
         instantiate ~expr_env ~event_env program
         >>= fun (program, event_env, expr_env) ->
         (* Check the events *)
@@ -803,13 +814,15 @@ let annotation_set =
         check_int "Expecting only one spawn relation on the program"
           (List.length spawn_relations)
           (List.length program.relations) ;
-        execute ~event_id:"a" ~expr:(IntLit (-1)) ~expr_env ~event_env program
-        >>= fun (program, event_env, expr_env) ->
+        let* program, event_env, expr_env, _ty_env, _label_types =
+          execute ~event_id:"a" ~expr:(IntLit (-1)) ~expr_env ~event_env program
+        in
         check_int "Expected 2 events" 2 (List.length program.events) ;
         let* bs = find_all_events ~filter:(same_id "b") program in
         check_int "Expecting 1 events with sub-id 'b'" 1 (List.length bs) ;
-        execute ~event_id:"a" ~expr:(IntLit 1) ~expr_env ~event_env program
-        >>= fun (program, event_env, expr_env) ->
+        let* program, event_env, expr_env, _ty_env, _label_types =
+          execute ~event_id:"a" ~expr:(IntLit 1) ~expr_env ~event_env program
+        in
         check_int "Expected 3 events" 3 (List.length program.events) ;
         let* bs = find_all_events ~filter:(same_id "b") program in
         check_int "Expecting 2 events with sub-id 'b'" 2 (List.length bs) ;

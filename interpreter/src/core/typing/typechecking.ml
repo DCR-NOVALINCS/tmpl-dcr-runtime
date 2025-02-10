@@ -29,10 +29,6 @@ let rec typecheck ?(event_env = empty_env) program =
   typecheck_subprogram
     (events, insts, relations, annotations)
     (ty_env, event_env, tmpl_ty_env, label_types)
-  >>= fun (ty_env, event_env, _) ->
-  Logger.debug @@ "Event Env after typechecking program:\n"
-  ^ string_of_env (fun e -> Plain.unparse_events [e]) event_env ;
-  return (ty_env, event_env)
 
 (* =============================================================================
    Typechecking of template definitions

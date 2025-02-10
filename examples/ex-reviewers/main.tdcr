@@ -1,9 +1,14 @@
 # ---- Review request process -------------------------- #
-# TODO: description                                      #
+#                                                        #
+# This scenario models the similar process from the      #
+# `main-no-tmpls.tdcr` file, but using templates to      #
+# generate the approver process.                         #
 #                                                        #
 # ------------------------------------------------------ #
 
-tmpl approver(): review, approve, reprove {
+# ---- Template definition ----------------------------- #
+
+tmpl reviewer(): review, approve, reprove {
   (rv: review)[?]
   (a: approve)[?]
   (r: reprove)[?]
@@ -11,14 +16,18 @@ tmpl approver(): review, approve, reprove {
   rv -->* a, r
 } => rv, a, r
 
+# ---- Process ------------------------------------------ #
+
+# Initialize pull request with N reviewers.
 (pr: pullRequest)[?: Number]
 
 pr -->> {
   (sa: setApproved)[?]
   %(sr: setChangesRequested)[?]
 
+  # Reviewer creation
   foreach i in @range(1, @trigger.value):
-    approver() => review, approve, reprove
+    reviewer() => review, approve, reprove
 
     approve -->* sa
     reprove -->+ sr
