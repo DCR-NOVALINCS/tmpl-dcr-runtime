@@ -33,18 +33,20 @@ rule read_token = parse
 	| "-->%"            { EXCLUDE }
 	| "-->*"            { CONDITION }
 	| "*-->"            { RESPONSE }
+	| "*-->X"            { CANCEL }
 	| "--><>"           { MILESTONE }
 	| "-->>"            { SPAWN }
   (* guarded dcr relations - left guard *)
 	| "-["              { LGUARD }
 	| "*-["             { LGUARD_RESPONSE }
   (* guarded dcr relation - right guard *)
-	| "]->+"            { RGUARD_INCLUDE}
+	| "]->+"            { RGUARD_INCLUDE }
 	| "]->"             { RGUARD_RESPONSE }
-	| "]->%"            { RGUARD_EXCLUDE}
-	| "]->*"            { RGUARD_CONDITION}
-	| "]-><>"           { RGUARD_MILESTONE}
-	| "]->>"            { RGUARD_SPAWN}
+	| "]->%"            { RGUARD_EXCLUDE }
+	| "]->*"            { RGUARD_CONDITION }
+	| "]->X"            { RGUARD_CANCEL }
+	| "]-><>"           { RGUARD_MILESTONE }
+	| "]->>"            { RGUARD_SPAWN }
 	| "@trigger"        { TRIGGER }  
 	| '\''              { STR (read_string (Buffer.create 20) '\'' lexbuf) }
 	| '\"'              { STR (read_string (Buffer.create 20) '\"' lexbuf) }
@@ -84,10 +86,8 @@ rule read_token = parse
 	| "List" 			{ LISTTY }
 	| "tmpl" | "template" | "process" { TEMPLATE }
 	| "if" | "when"     { IF }
-	| "/if" 			{ ENDIF }
 	| "else" 			{ ELSE }
 	| "foreach"  		{ FOREACH }
-	| "/foreach" 		{ ENDFOREACH }
 	| "in"				{ IN }
 	| "@range"			{ RANGE }
 	| "executed"		{ ID "executed" }

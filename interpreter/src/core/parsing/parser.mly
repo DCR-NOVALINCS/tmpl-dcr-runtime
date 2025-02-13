@@ -45,19 +45,19 @@ let mk_program_from_top_level_input =
 // dcr literals
 %token TRIGGER EXCL PEND
 // (unguarded) dcr relations
-%token INCLUDE EXCLUDE CONDITION RESPONSE MILESTONE SPAWN
+%token INCLUDE EXCLUDE CONDITION RESPONSE CANCEL MILESTONE SPAWN
 // (guarded) dcr relations - guard opening (left)
 %token LGUARD LGUARD_RESPONSE
 // (guarded) dcr relations - guard closing
-%token RGUARD_INCLUDE RGUARD_EXCLUDE RGUARD_CONDITION RGUARD_RESPONSE RGUARD_MILESTONE RGUARD_SPAWN
+%token RGUARD_INCLUDE RGUARD_EXCLUDE RGUARD_CONDITION RGUARD_RESPONSE RGUARD_CANCEL RGUARD_MILESTONE RGUARD_SPAWN
 // information flow
 // %token FLOWS TOP BOT
 // templates
 %token TEMPLATE
 // conditional annotations
-%token IF ENDIF ELSE
+%token IF ELSE
 // loop annotations
-%token FOREACH ENDFOREACH IN
+%token FOREACH IN
 // misc
 %token QUESTION PROP_DEREF BOLDARROW ARROW
 
@@ -157,17 +157,14 @@ plain_arg_pair:
 
 // template annotations 
 plain_template_annotation:
-  // | WHEN; expr = expr                                                           { When(expr) }
   // Loop annotation 
-  | FOREACH; id=id; IN; l=expr COLON;                                                 
-    graph = plain_program_spawn;
-    ENDFOREACH;
+  | FOREACH; id=id; IN; l=expr;                                                 
+    graph = delimited(LBRACE, plain_program_spawn, RBRACE);
   { Foreach (id, l, graph) }
   // Conditional annotation
-  | IF; condition = expr; COLON;
-    then_branch = plain_program_spawn;
-    else_branch = preceded(ELSE, preceded(COLON, plain_program_spawn))?;
-    ENDIF;
+  | IF; condition = expr;
+    then_branch = delimited(LBRACE, plain_program_spawn, RBRACE);
+    else_branch = preceded(ELSE, delimited(LBRACE, plain_program_spawn, RBRACE))?;
   { IfElse { condition; then_branch; else_branch } }
 
 // =====
@@ -230,86 +227,97 @@ plain_group_ctrl_relation_decl:
   | left_ids=separated_nonempty_list(COMMA, id);
   INCLUDE; 
   right_ids=separated_nonempty_list(COMMA, id);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
   { mk_ctrl_relations left_ids (annotate (BoolLit true)) right_ids Include }
 
   // Exclude
   | left_ids=separated_nonempty_list(COMMA, id);
   EXCLUDE;
   right_ids=separated_nonempty_list(COMMA, id);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
   { mk_ctrl_relations left_ids (annotate (BoolLit true)) right_ids Exclude }
 
   // Condition
   | left_ids=separated_nonempty_list(COMMA, id);
   CONDITION;
   right_ids=separated_nonempty_list(COMMA, id);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
   { mk_ctrl_relations left_ids (annotate (BoolLit true)) right_ids Condition }
 
   // Response
   | left_ids=separated_nonempty_list(COMMA, id);
   RESPONSE;
   right_ids=separated_nonempty_list(COMMA, id);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
   { mk_ctrl_relations left_ids (annotate (BoolLit true)) right_ids Response }
+
+  // Cancel
+  | left_ids=separated_nonempty_list(COMMA, id);
+  CANCEL;
+  right_ids=separated_nonempty_list(COMMA, id);
+  { mk_ctrl_relations left_ids (annotate (BoolLit true)) right_ids Cancel }
 
   // Milestone
   | left_ids=separated_nonempty_list(COMMA, id);
   MILESTONE;
   right_ids=separated_nonempty_list(COMMA, id);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
   { mk_ctrl_relations left_ids (annotate (BoolLit true)) right_ids Milestone }
 
   // Spawn 
   | left_ids=separated_nonempty_list(COMMA, id); 
   SPAWN; 
   prog=delimited(LBRACE, plain_program_spawn, RBRACE);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;   
   { mk_spawn_relations left_ids (annotate (BoolLit true)) prog }
+
+  | left_ids=separated_nonempty_list(COMMA, id);
+  SPAWN;
+  inst=template_inst;
+  { mk_spawn_relations left_ids (annotate (BoolLit true)) (mk_subprogram ~template_insts:[inst] ()) }
 
   // ==== Guarded relations ==== 
   // Include
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD, expr, RGUARD_INCLUDE);
   right_ids=separated_nonempty_list(COMMA, id);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
   { mk_ctrl_relations left_ids expr right_ids Include }
 
   // Exclude
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD, expr, RGUARD_EXCLUDE);
   right_ids=separated_nonempty_list(COMMA, id);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
   { mk_ctrl_relations left_ids expr right_ids Exclude }
 
   // Condition
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD, expr, RGUARD_CONDITION);
   right_ids=separated_nonempty_list(COMMA, id);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
   { mk_ctrl_relations left_ids expr right_ids Condition }
 
   // Response
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD_RESPONSE, expr, RGUARD_RESPONSE);
   right_ids=separated_nonempty_list(COMMA, id);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
   { mk_ctrl_relations left_ids expr right_ids Response }
 
+  // Cancel
+  | left_ids=separated_nonempty_list(COMMA, id);
+  expr=delimited(LGUARD_RESPONSE, expr, RGUARD_CANCEL);
+  right_ids=separated_nonempty_list(COMMA, id);
+  { mk_ctrl_relations left_ids expr right_ids Cancel }
+  
   // Milestone
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD, expr, RGUARD_MILESTONE);
   right_ids=separated_nonempty_list(COMMA, id);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
   { mk_ctrl_relations left_ids expr right_ids Milestone }
 
   // Spawn
   | left_ids=separated_nonempty_list(COMMA, id);
   expr=delimited(LGUARD, expr, RGUARD_SPAWN);
   prog=delimited(LBRACE, plain_program_spawn, RBRACE);
-  // annotations=preceded(MINUS, separated_list(PIPE, plain_template_annotation))?;
   { mk_spawn_relations left_ids expr prog }
+
+  | left_ids=separated_nonempty_list(COMMA, id);
+  expr=delimited(LGUARD, expr, RGUARD_SPAWN);
+  inst=template_inst;
+  { mk_spawn_relations left_ids expr (mk_subprogram ~template_insts:[inst] ()) }
+  ;
 
 
 event_io: mark_loc_ty(plain_event_io) {$1}
@@ -342,7 +350,7 @@ plain_type_expr:
 | STRTY                                                                         { StringTy }
 | INTTY                                                                         { IntTy    }
 | BOOLTY                                                                        { BoolTy   }
-| id                                                                      { EventTy($1) }
+| id                                                                            { EventTy($1) }
 | delimited(LBRACE, plain_record_type_field_list, RBRACE)                       { RecordTy($1) }
 | LISTTY; item_type=delimited(LBRACKET, plain_type_expr, RBRACKET)              { ListTy(item_type) }
 ;
@@ -351,13 +359,13 @@ plain_type_expr:
 
 expr: mark_loc_ty(plain_expr) { $1 }
 plain_expr:
-| plain_range                                                                         { $1 }
+| plain_range                                                                   { $1 }
 | plain_orop                                                                    { $1 }
 ;
 
 // range: mark_loc_ty(plain_range) { $1 }
 plain_range:
-| RANGE; LPAR; start_expr = arith; COMMA; end_expr = arith; RPAR;                    { Range(start_expr, end_expr) }
+| RANGE; LPAR; start_expr = arith; COMMA; end_expr = arith; RPAR;               { Range(start_expr, end_expr) }
 
 orop: mark_loc_ty(plain_orop) { $1 }
 plain_orop:
@@ -416,7 +424,7 @@ plain_fact:
 
 property_deref: mark_loc_ty(plain_property_deref) { $1 }
 plain_property_deref:
-| r=fact PROP_DEREF p=id                                                       { PropDeref(r, p) }
+| r=fact PROP_DEREF p=id                                                        { PropDeref(r, p) }
 
 bool: mark_loc_ty(plain_bool) { $1 }
 plain_bool:
@@ -433,21 +441,21 @@ plain_integer:
 // ============== records
 /* record: mark_loc_ty(plain_record) { $1 } */
 plain_record:
-| record = delimited(LBRACE, plain_record_field_list, RBRACE) { record }
+| record = delimited(LBRACE, plain_record_field_list, RBRACE)                   { record }
 ;
 
 /* record_field_list: mark_loc_ty(plain_record_field_list) { $1 } */
 plain_record_field_list:
-| fields = separated_nonempty_list(COMMA, plain_record_field(expr)) { fields }
+| fields = separated_nonempty_list(COMMA, plain_record_field(expr))             { fields }
 ;
 
 // record_type_field_list: mark_loc_ty(plain_record_type_field_list) { $1 }
 plain_record_type_field_list:
-  separated_nonempty_list(COMMA, plain_record_field(type_expr)) { $1 } 
+  separated_nonempty_list(COMMA, plain_record_field(type_expr))                 { $1 } 
 ;
 
 plain_record_field(X):
-| name=id; COLON; value=X               {(name, value)}
+| name=id; COLON; value=X                                                       {(name, value)}
 
 // === the rule id 
 id: mark_loc_ty(plain_id) {$1}

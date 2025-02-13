@@ -263,6 +263,11 @@ and evaluate_subprogram ?(eval = partial_eval_expr)
     | Foreach (id, expr, body) ->
         let* value = eval expr expr_env in
         let expr_env = bind id.data (annotate (Identifier id)) expr_env in
+        let event_env =
+          match value.data with
+          | EventRef event_ref -> bind id.data !event_ref event_env
+          | _ -> event_env
+        in
         let* body, _ =
           evaluate_subprogram ~eval body (expr_env, event_env, tmpl_env)
         in
@@ -379,6 +384,10 @@ and instantiate_annotations annots ?(eval = eval_expr)
   in
   fold_right
     (fun (result, (expr_env, event_env, tmpl_env)) annot ->
+      Logger.debug
+        (Printf.sprintf "Evaluating annotation with envs:\nExpr: %s\n Event:%s"
+           (string_of_env Colorized.unparse_expr expr_env)
+           (string_of_env Colorized.unparse_event event_env) ) ;
       instantiate_annotation result annot (expr_env, event_env, tmpl_env) )
     (empty_subprogram, (expr_env, event_env, tmpl_env))
     annots
@@ -415,12 +424,14 @@ and instantiate_sub (events, insts, relations, annots)
 and instantiate ?(expr_env = empty_env) ?(event_env = empty_env) program =
   (* Bind all the available templates of the program *)
   let template_decls = program.template_decls in
-  bind_tmpls template_decls (expr_env, event_env, empty_env)
-  >>= fun (expr_env, event_env, tmpl_env) ->
+  let* expr_env, event_env, tmpl_env =
+    bind_tmpls template_decls (expr_env, event_env, empty_env)
+  in
   (* Instantiate all templates of the program *)
   let program' = to_subprogram program in
-  instantiate_sub program' (expr_env, event_env, tmpl_env)
-  >>= fun ((events, insts, relations, annots), expr_env, event_env) ->
+  let* (events, insts, relations, annots), expr_env, event_env =
+    instantiate_sub program' (expr_env, event_env, tmpl_env)
+  in
   (* Reassuring that there is no instantiation/annotation evaluation to do. *)
   assert (List.length insts = 0 && List.length annots = 0) ;
   return

@@ -42,28 +42,28 @@ ar -->> {
     
     request(id = @trigger.value.id, description = @trigger.value.description) => requestData, setApproved, setReproved
     
-    foreach i in @range(1, @trigger.value.count):
+    foreach i in @range(1, @trigger.value.count) {
         aa -->> {
-            if @trigger.value.type == "manager":
+            if @trigger.value.type == "manager" {
                 managerApprover(
                     r = requestData, 
                     set_approved = setApproved, 
                     set_reproved = setReproved
                 ) => approveRequest, refuseRequest
-            else:
-                if @trigger.value.type == "director":
+            } else {
+                if @trigger.value.type == "director" {
                     directorApprover(
                         r = requestData, 
                         set_approved = setApproved, 
                         set_reproved = setReproved
                     ) => approveRequest, refuseRequest
-                else:
+                } else {
                     base_approver(
                         sa = setApproved, 
                         sr = setReproved
                     ) => approveRequest, refuseRequest
-                /if
-            /if
+                }
+            }
         }
-    /foreach
+    }
 }

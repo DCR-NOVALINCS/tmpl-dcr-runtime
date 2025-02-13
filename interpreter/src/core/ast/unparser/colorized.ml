@@ -271,6 +271,7 @@ and unparse_relation ?(indent = "") ?(abbreviated = true)
     | Include -> Green
     | Exclude -> Red
     | Milestone -> Magenta
+    | Cancel -> BrightMagenta
   in
   let spawn_relation_color = BrightMagenta in
   let unparse_relation_arrow ~arrow_start ~color

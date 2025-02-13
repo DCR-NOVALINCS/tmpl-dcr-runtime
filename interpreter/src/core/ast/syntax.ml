@@ -212,7 +212,13 @@ and relation' =
   | SpawnRelation of event_id * expr * subprogram
 [@@deriving yojson]
 
-and relation_type = Condition | Include | Exclude | Milestone | Response
+and relation_type =
+  | Condition
+  | Include
+  | Exclude
+  | Milestone
+  | Response
+  | Cancel
 [@@deriving yojson]
 
 (* =============================================================================

@@ -378,10 +378,8 @@ and typecheck_relation relation (ty_env, event_env, tmpl_ty_env, label_types) =
   let check_event_id id =
     match find_flat id.data event_env with
     | None ->
-        (* Logger.debug @@ "Event env when [check_event] " ^ id.data ^ ":\n"
-           ^ string_of_env
-               (fun e -> unparse_events [e])
-               event_env ; *)
+        Logger.debug @@ "Event env when [check_event] " ^ id.data ^ ":\n"
+        ^ string_of_env Colorized.unparse_event event_env ;
         id_not_found id
     | Some event -> return event
   and check_guard_expr guard =
@@ -452,11 +450,16 @@ and typecheck_template_annotation annotation
       >>= fun expr_ty ->
       ( match expr_ty with
       | ListTy elem_ty ->
-          return (begin_scope ty_env, begin_scope event_env)
-          >>= fun (ty_env, event_env) ->
-          return (bind id.data elem_ty ty_env, event_env, label_types)
+          let ty_env, event_env =
+            (begin_scope ty_env |> bind id.data elem_ty, begin_scope event_env)
+          in
+          return (ty_env, event_env, label_types)
       | _ -> type_mismatch ~loc:expr.loc [ListTy UnitTy] [expr_ty] )
       >>= fun (annot_ty_env, annot_event_env, label_types) ->
+      Logger.debug
+        (Printf.sprintf "Annotation envs:\n%s\n%s"
+           (string_of_env Plain.unparse_ty annot_ty_env)
+           (string_of_env (fun e -> Plain.unparse_events [e]) annot_event_env) ) ;
       typecheck_subprogram body
         (annot_ty_env, annot_event_env, tmpl_ty_env, label_types)
       >>= fun (_, _, label_types) -> return (ty_env, event_env, label_types)

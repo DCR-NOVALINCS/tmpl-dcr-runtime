@@ -113,6 +113,7 @@ and propagate_effects event (event_env, expr_env) program =
                other (do nothing) *)
             match op with
             | Response -> set_marking ~pending:true dest_event
+            | Cancel -> set_marking ~pending:false dest_event
             | Exclude -> set_marking ~included:false dest_event
             | Include -> set_marking ~included:true dest_event
             | _ -> return dest_event

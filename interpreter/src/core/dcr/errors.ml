@@ -35,7 +35,7 @@ let invalid_number_of_exported_events ?(errors = []) ?(loc = Nowhere) xs
 let event_not_enabled ?(errors = []) event =
   let id, _ = event.data.info in
   fail
-    ( { location= event.loc
+    ( { location= Nowhere
       ; message= Printf.sprintf "Event %s is not enabled" (keyword id.data)
       ; hint=
           Some

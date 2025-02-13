@@ -1,15 +1,8 @@
-tmpl f(e: A, m: Number = 5): C {
-    (c: C)[?]
 
-    foreach i in @range(0, m):
-        if i > 2: 
-            (n: N)[i]
-            c -->% n
-        /if
-    /foreach
+foreach i in @range(1, a.value) {
+    if i > 1 {
+      (d: D)[i]
+    }
+}    
 
-    e -->* c
-} => c
-
-(a: A)[?]
-f(e = a) => c
+(a: A)[5]

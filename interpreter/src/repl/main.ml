@@ -13,9 +13,6 @@ let commands =
   let visible =
     create_cmd ("exit", [], "Exit the program.") Quit.term []
     |> create_cmd
-         ("rollback", [], "Rollbacks a number of times in the program.")
-         Rollback.term
-    |> create_cmd
          ( "export"
          , ["FILENAME"]
          , "Creates a file named " ^ keyword "FILENAME"
@@ -36,6 +33,9 @@ let commands =
     create_cmd
       ("help", [], "Prints the list of available commands.")
       (Help.term visible) visible
+    |> create_cmd
+         ("rollback", [], "Rollbacks a number of times in the program.")
+         Rollback.term
   in
   let cmds_bbk_tree = Bktree.create @@ List.map (fun (name, _) -> name) all in
   ( create_cmd

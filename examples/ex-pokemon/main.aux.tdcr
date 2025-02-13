@@ -10,5 +10,32 @@ ap -->> {
 }
 
 b -->> {
-    (bl: BattleLog)[{ winner: @trigger.value.p1.value.name }]
+    if @trigger.value.p1.value.type == "fire" AND @trigger.value.p2.value.type == "grass" {
+        (bl: BattleLog)[{ winner: @trigger.value.p1.value.name }]
+    }
+
+    if @trigger.value.p1.value.type == "grass" AND @trigger.value.p2.value.type == "fire" {
+        (bl: BattleLog)[{ winner: @trigger.value.p2.value.name }]
+    }
+
+    if @trigger.value.p1.value.type == "water" AND @trigger.value.p2.value.type == "fire" {
+        (bl: BattleLog)[{ winner: @trigger.value.p1.value.name }]
+    }
+
+    if @trigger.value.p1.value.type == "fire" AND @trigger.value.p2.value.type == "water" {
+        (bl: BattleLog)[{ winner: @trigger.value.p2.value.name }]
+    }
+
+    if @trigger.value.p1.value.type == "grass" AND @trigger.value.p2.value.type == "water" {
+        (bl: BattleLog)[{ winner: @trigger.value.p1.value.name }]
+    }
+
+    if @trigger.value.p1.value.type == "water" AND @trigger.value.p2.value.type == "grass" {
+        (bl: BattleLog)[{ winner: @trigger.value.p2.value.name }]
+    }
+
+    if @trigger.value.p1.value.type == @trigger.value.p2.value.type {
+        (bl: BattleLog)[{ winner: "draw" }]
+    }
+
 }

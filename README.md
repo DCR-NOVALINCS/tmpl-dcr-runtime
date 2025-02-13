@@ -9,11 +9,10 @@
   [![documentation](https://img.shields.io/badge/documentation-unavailable-red)]("")
   [![license](https://img.shields.io/badge/license-MIT-green)](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE)
   
-  ![demo](assets/gifs/demo.gif)
+  <video src="assets/demo.mp4" placeholder="" autoplay loop controls muted title="Demonstration of the project">
+    Sorry, your browser doesn't support HTML 5 video.
+  </video>
 </div> 
-
-> [!WARNING]
-> This project is still in development.
 
 # Table of Contents
 
@@ -25,6 +24,7 @@
   - [Installation](#installation)
   - [Usage](#usage)
 - [License](#license)
+- [Authors](#authors)
 
 # About 
 
@@ -37,35 +37,33 @@ This project is a part of a master thesis of one of the authors to study and imp
 Here is a quick sneak peek of how to express a DCR graph with templates in this project.
 
 ```
-tmpl add(n: Number, m: Number): Result {
-  (r: Result)[n + m]
-} => r
+tmpl reviewer(): review, approve, reprove {
+  (rv: review)[?]
+  (a: approve)[?]
+  (r: reprove)[?]
 
-tmpl sub(n: Number, m: Number): Result {
-  (r: Result)[n - m]
-} => r
+  rv -->* a, r
+} => rv, a, r
 
-tmpl max(r1: Result, r2: Result) {
-  r1 -[r1.value > r2.value]->% r2
-  r2 -[r2.value > r1.value]->% r1
-}
+(pr: pullRequest)[?: Number]
 
-(i: Input)[?: { l: Number, r: Number }]
+pr -->> {
+  (sa: setApproved)[?]
+  %(sr: setChangesRequested)[?]
 
-i -->> {
-  add(n = @trigger.value.l, m = @trigger.value.r) => result0
-  sub(n = result0.value, m = @trigger.value.r) => result1
-  max(r1 = result0, r2 = result1)
+  foreach i in @range(1, @trigger.value) {
+    reviewer() => review, approve, reprove
+
+    approve -->* sa
+    reprove -->+ sr
+    sa, sr -->% approve, reprove, review , sa, sr
+  }
 }
 ```
 
->[!NOTE] 
-> This syntax may change in the future, so be aware of that. 😅
-
-
 ## Features
 
-Here is a list of the features that are available in this project.
+Here is a list of the features that are available in this prototype.
 
 | Features                      | Done? |
 | ----------------------------- | ----- |
@@ -76,8 +74,6 @@ Here is a list of the features that are available in this project.
 | Export to `.dot`              | ❌     |
 | Reactive data values          | ❌     |
 | Interaction between processes | ❌     |
-
-If you have any suggestions or want to contribute to this project, feel free to open an issue or a pull request. 🙂
 
 # Getting Started
 
@@ -200,3 +196,7 @@ This project is licensed under the **MIT License**.
 See [LICENSE](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE) for more information.
 
 <!-- TODO: Add acknowledgements and references.  -->
+
+# Authors
+
+This project was developed by the authors present in the [AUTHORS](AUTHORS.md) file.

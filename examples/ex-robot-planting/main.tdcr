@@ -27,16 +27,16 @@ ar -->> {
     robot(id = @trigger.value.id) => watering, collectFruit, trim
 
     (ap: addPlant)[?: { id: String, typename: String, position: { x: Number, y: Number } }]
-    foreach plantType in pts.value:
+    foreach plantType in pts.value {
         ap -->> {
-            if plantType.typename == @trigger.value.typename:
+            if plantType.typename == @trigger.value.typename {
                 plant(
                     id = @trigger.value.id,
                     position = @trigger.value.position,
                     plantType = plantType,
                     wp = watering
                 )
-            /if
+            }
         }
-    /foreach
+    }
 }
