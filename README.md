@@ -8,10 +8,8 @@
 
   [![documentation](https://img.shields.io/badge/documentation-unavailable-red)]("")
   [![license](https://img.shields.io/badge/license-MIT-green)](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE)
-  
-  <video src="assets/demo.mp4" placeholder="" autoplay loop controls muted title="Demonstration of the project">
-    Sorry, your browser doesn't support HTML 5 video.
-  </video>
+
+  https://github.com/user-attachments/assets/1fa8df90-eb1b-4deb-869a-e29fbd7f6c70
 </div> 
 
 # Table of Contents
@@ -135,21 +133,12 @@ From this prompt, you can run the following commands:
 <!-- TODO: for each command, show a gif to illustrate to command -->
 
 - **help**: Print the help message, displaying the available commands and their usage.
-<!--
   ```
   > help
-  Available Commands:
-  - export <FILENAME>: Creates a file named <FILENAME> with a textual representation of the current state of the graph.
-  - execute <EVENT_ID> <EXPR_STRING>: Executes the event <EVENT_ID> with the expression <EXPR_STRING> if needed.
-  - view : Views the current state of the graph.
-  - exit : Exit the program.
   ```
--->
-<video src="assets/help-demo.mp4" placeholder="" autoplay loop controls muted title="Demonstration of the help command">
-  Sorry, your browser doesn't support HTML 5 video.
-</video>
-
-- **exit**: Exit the program and close the CLI.
+  <!-- https://github.com/user-attachments/assets/81363412-c054-47ef-b363-deca291d879b -->
+  
+- **exit**: Exit the program and close the prototype.
   ```
   > exit
   ```
