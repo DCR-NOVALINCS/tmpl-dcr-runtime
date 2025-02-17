@@ -18,7 +18,6 @@
 
 - [Table of Contents](#table-of-contents)
 - [About](#about)
-  - [Features](#features)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
@@ -30,13 +29,13 @@
 
 **t-dcr** is a cli runtime to create and execute [DCR graphs]() with templates in a simple and easy way. 
 
-This project is a part of a master thesis of one of the authors to study and implement a way to abstract and reuse parts of a DCR graph. 
+This project is a part of a master thesis of one of the authors to study and implement templates in DCR graphs. 
 
-<!-- TODO: Put a complex-ish example -->
+The main goal of this prototype is to validate the usability and the expressiveness of the templates in DCR graphs and to see how it can be used in various scenarios.
 
-Here is a quick sneak peek of how to express a DCR graph with templates in this project.
+Here is a quick sneak peek of how to express a DCR graph with templates in this project. This example is located in the [`examples`](/examples) directory of the project.
 
-```
+```tdcr
 tmpl reviewer(): review, approve, reprove {
   (rv: review)[?]
   (a: approve)[?]
@@ -60,20 +59,6 @@ pr -->> {
   }
 }
 ```
-
-## Features
-
-Here is a list of the features that are available in this prototype.
-
-| Features                      | Done? |
-| ----------------------------- | ----- |
-| Basic Semantic of DCR Graphs  | ✅     |
-| Templates in DCR Graphs       | ✅     |
-| Export to JSON                | ✅     |
-| Export back to `.tdcr`        | ✅     |
-| Export to `.dot`              | ❌     |
-| Reactive data values          | ❌     |
-| Interaction between processes | ❌     |
 
 # Getting Started
 
@@ -149,7 +134,8 @@ After running the command, you should see the following prompt.
 From this prompt, you can run the following commands:
 <!-- TODO: for each command, show a gif to illustrate to command -->
 
-- **help**: Print the help message.
+- **help**: Print the help message, displaying the available commands and their usage.
+<!--
   ```
   > help
   Available Commands:
@@ -158,6 +144,10 @@ From this prompt, you can run the following commands:
   - view : Views the current state of the graph.
   - exit : Exit the program.
   ```
+-->
+<video src="assets/help-demo.mp4" placeholder="" autoplay loop controls muted title="Demonstration of the help command">
+  Sorry, your browser doesn't support HTML 5 video.
+</video>
 
 - **exit**: Exit the program and close the CLI.
   ```
