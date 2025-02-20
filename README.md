@@ -1,12 +1,9 @@
 
 <div align="center">
-  <h1>tmpl-dcr-runtime</h1>
-  <p>
-    Templates in Dynamic Conditional Response (DCR) Graphs.
-  </p>
+  <h1>Templates in Dynamic Conditional Response (DCR) Graphs.</h1>
 </div> 
 
-# Table of Contents
+## Table of Contents
 
 - [Table of Contents](#table-of-contents)
 - [About](#about)
@@ -16,7 +13,7 @@
 - [Usage](#usage)
 - [License](#license)
 
-# About 
+## About 
 
 This project is a interpreter that can create and execute DCR graphs with templates in a simple and easy way. 
 
@@ -49,9 +46,9 @@ pr -->> {
 }
 ```
 
-# Getting Started
+## Getting Started
 
-## Prerequisites
+### Prerequisites
 
 In order to run this project you need to have the following installed:
 
@@ -62,7 +59,7 @@ This are the minimum versions that are guaranteed to work and worked during deve
 
 In order to install OCaml and Opam, we suggest to follow the instructions in this [link](https://ocaml.org/docs/installing-ocaml).
 
-## Installation
+### Installation
 
 To install the project you need to clone the repository and install the dependencies. 
 
@@ -85,7 +82,7 @@ opam install . --deps-only
 For some reason you don't have the `tmpl_dcr.opam` file, you can run the following command to install the dependencies.
 
 ```bash
-opam install ocaml dune odoc menhir yojson cmdliner alcotest
+opam install dune odoc menhir yojson ppx_yojson_conv cmdliner alcotest
 ```
 
 And finally, you can build the project by running the following command.
@@ -94,9 +91,9 @@ And finally, you can build the project by running the following command.
 make build
 ```
 
-Or `dune build`. And you should be ready to go. 😁 
+Or `dune build`. And you should be ready to go.
 
-# Usage
+## Usage
 
 To start the interpreter, you can run the following command in the `interpreter` folder and execute the following command:
 
@@ -108,8 +105,7 @@ Where `<filename>` is the name of the file that contains the DCR graph with temp
 
 You can see some examples in the [`examples`](/examples) directory of the project to see how to write a DCR graph with templates.
 
->[!IMPORTANT] 
-> The file extension must be `.tdcr` in order to be recognized by the program.
+**Note:** The file extension must be `.tdcr` in order to be recognized by the program.
 
 ---
 
@@ -155,10 +151,8 @@ From this prompt, you can run the following commands:
     - `tdcr` (default)
     - `json`
 
-# License
+## License
 
 This project is licensed under the **MIT License**.
 
 See [LICENSE](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE) for more information.
-
-<!-- TODO: Add acknowledgements and references.  -->

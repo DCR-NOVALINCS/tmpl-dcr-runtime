@@ -3,8 +3,6 @@
 # Variables
 INTERPRETER_PATH := .
 OUTPUT_DOC_PATH := docs
-OUTPUT_JS_PATH := ../server/src/runtime
-# OUTPUT_JS_PATH := .
 
 setup:
 	cd $(INTERPRETER_PATH)
