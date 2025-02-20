@@ -10,7 +10,6 @@ setup:
 	cd $(INTERPRETER_PATH)
 	opam update
 	opam install . --deps-only
-	make build
 
 pre-build:
 	cd $(INTERPRETER_PATH)

@@ -17,8 +17,9 @@ depends: [
   "odoc"
   "menhir" {>= "3.0"}
   "yojson"
+  "ppx_yojson_conv"
   "cmdliner"
-  "alcotest" {with-test}
+  "alcotest"
 ]
 build: [
   ["dune" "subst"] {dev}
