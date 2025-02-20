@@ -23,7 +23,8 @@ let input_filename =
   Arg.(required & pos 0 (some string) None & info [] ~doc)
 
 let start_repl filename options =
-  set_logger options.logger_level >>= fun _ -> Repl.Main.runtime filename
+  let* _ = set_logger options.logger_level in
+  Repl.Main.runtime filename
 
 let term = Term.(const start_repl $ input_filename $ options)
 

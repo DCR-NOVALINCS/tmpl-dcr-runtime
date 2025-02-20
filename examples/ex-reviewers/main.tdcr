@@ -9,9 +9,9 @@
 # ---- Template definition ----------------------------- #
 
 tmpl reviewer(): review, approve, reprove {
-  (rv: review)[?]
-  (a: approve)[?]
-  (r: reprove)[?]
+  (rv: review)[?: Unit]
+  (a: approve)[?: Unit]
+  (r: reprove)[?: Unit]
 
   rv -->* a, r
 } => rv, a, r
@@ -19,11 +19,11 @@ tmpl reviewer(): review, approve, reprove {
 # ---- Process ------------------------------------------ #
 
 # Initialize pull request with N reviewers.
-(pr: pullRequest)[?: Number]
+(pr: pull Request)[?: Number]
 
 pr -->> {
-  (sa: setApproved)[?]
-  %(sr: setChangesRequested)[?]
+  (sa: setApproved)[?: Unit]
+  %(sr: setChangesRequested)[?: Unit]
 
   # Reviewer creation
   foreach i in @range(1, @trigger.value) {

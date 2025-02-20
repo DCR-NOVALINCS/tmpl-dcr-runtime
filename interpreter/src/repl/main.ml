@@ -69,11 +69,12 @@ let rec prompt runtime_state =
   match input_line stdin with
   | exception End_of_file -> return runtime_state
   | input ->
-      sanitize_input input
-      >>= fun tokens ->
-      interpret_command tokens runtime_state
-      |> print_output ~previous_state:runtime_state
-      >>= fun state -> prompt {state with output= ""}
+      let* tokens = sanitize_input input in
+      let* state =
+        interpret_command tokens runtime_state
+        |> print_output ~previous_state:runtime_state
+      in
+      prompt {state with output= ""}
 
 and get_file_extension filename =
   let parts = String.split_on_char '.' filename in
@@ -91,10 +92,8 @@ and input_file filename =
 
 and runtime filename =
   try
-    input_file filename
-    >>= fun _ ->
-    parse_program_from_file filename
-    >>= fun program ->
+    let* _ = input_file filename in
+    let* program = parse_program_from_file filename in
     Logger.success "Parsed successfully" ;
     let* program, (ty_env, label_types, expr_env, event_env) =
       initialize program

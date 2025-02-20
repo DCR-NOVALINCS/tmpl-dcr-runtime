@@ -80,6 +80,7 @@ rule read_token = parse
 	| '|'				{ PIPE }
 	| "=>" 				{ BOLDARROW }
 	| "->" 				{ ARROW }
+	| "Unit" 			{ UNITTY }
 	| "String"			{ STRTY }
 	| "Number" 			{ INTTY }
 	| "Boolean" 		{ BOOLTY }

@@ -103,12 +103,10 @@ and execute_input_event event expr (ty_env, expr_env) =
 and parse_program_from_file filename =
   let file_channel = open_in filename in
   let lexbuf = Lexing.from_channel file_channel in
-  parse_program ~filename lexbuf
-  >>| fun program -> close_in file_channel ; program
+  let* program = parse_program ~filename lexbuf in
+  close_in file_channel ; return program
 
 and parse_expression_from_string expr_tokens =
-  (* sanitize_input expr_string
-     >>= fun expr_string_tokens -> *)
   if List.is_empty expr_tokens then return (annotate Unit)
   else
     let lexbuf = Lexing.from_string (String.concat " " expr_tokens) in
@@ -140,8 +138,9 @@ and view ?(filter = fun event _ -> Some event)
     ?(should_print_template_decls = false) ?(should_print_events = true)
     ?(should_print_value = false) ?(should_print_relations = false)
     ?(expr_env = empty_env) ?(event_env = empty_env) program =
-  filter_map (fun event -> filter event (event_env, expr_env)) program.events
-  >>= fun events ->
+  let* events =
+    filter_map (fun event -> filter event (event_env, expr_env)) program.events
+  in
   let* program = sort_events {program with events} in
   let open Unparser in
   return

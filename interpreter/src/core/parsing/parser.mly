@@ -32,7 +32,7 @@ let mk_program_from_top_level_input =
 // list maker
 %token RANGE
 // primitive types
-%token STRTY INTTY BOOLTY LISTTY
+%token UNITTY STRTY INTTY BOOLTY LISTTY
 // delimiters
 %token LPAR RPAR LBRACE RBRACE LBRACKET RBRACKET 
 // separators
@@ -347,6 +347,7 @@ plain_node_marking:
 
 type_expr: mark_loc_ty(plain_type_expr) {$1}
 plain_type_expr:
+| UNITTY                                                                        { UnitTy  }
 | STRTY                                                                         { StringTy }
 | INTTY                                                                         { IntTy    }
 | BOOLTY                                                                        { BoolTy   }
@@ -462,6 +463,9 @@ id: mark_loc_ty(plain_id) {$1}
 plain_id:
   | id=ID  { id }
 
+name: mark_loc_ty(plain_name) {$1}
+plain_name:
+  | name=STR  { name }
 
 mark_loc_ty(X):
   x = X
