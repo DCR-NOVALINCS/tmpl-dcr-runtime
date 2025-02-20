@@ -18,7 +18,7 @@
 
 # About 
 
-This project is a interprete that can create and execute [DCR graphs]() with templates in a simple and easy way. 
+This project is a interpreter that can create and execute DCR graphs with templates in a simple and easy way. 
 
 The main goal of this prototype is to validate the usability and the expressiveness of the templates in DCR graphs and to see how it can be used in various scenarios.
 
@@ -55,7 +55,7 @@ pr -->> {
 
 In order to run this project you need to have the following installed:
 
-- [OCaml](https://ocaml.org/docs/install.html) (5.1.1 or newer)
+- [OCaml](https://ocaml.org/docs/install.html) (base compiler version 5.1.1 or newer)
 - [Opam](https://opam.ocaml.org/doc/Install.html) (2.1.2 or newer)
 
 This are the minimum versions that are guaranteed to work and worked during development and tested with. 
