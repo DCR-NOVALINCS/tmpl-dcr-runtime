@@ -4,8 +4,6 @@ version: "0.1"
 synopsis: "An implementation of a interpreter for Templates in DCR Graphs"
 description:
   "An implementation of a interpreter and runtime execution of Templates in Dynamic Condition Response Graphs (DCR Graphs)."
-maintainer: ["bfibraga"]
-authors: ["bfibraga"]
 license: "MIT"
 tags: ["dcr" "templates" "interpreter" "runtime" "tdcr"]
 homepage: "https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime"

@@ -4,12 +4,6 @@
   <p>
     Templates in Dynamic Conditional Response (DCR) Graphs.
   </p>
-
-
-  [![documentation](https://img.shields.io/badge/documentation-unavailable-red)]("")
-  [![license](https://img.shields.io/badge/license-MIT-green)](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE)
-
-  https://github.com/user-attachments/assets/1fa8df90-eb1b-4deb-869a-e29fbd7f6c70
 </div> 
 
 # Table of Contents
@@ -19,15 +13,12 @@
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
-  - [Usage](#usage)
+- [Usage](#usage)
 - [License](#license)
-- [Authors](#authors)
 
 # About 
 
-**t-dcr** is a cli runtime to create and execute [DCR graphs]() with templates in a simple and easy way. 
-
-This project is a part of a master thesis of one of the authors to study and implement templates in DCR graphs. 
+This project is a interprete that can create and execute [DCR graphs]() with templates in a simple and easy way. 
 
 The main goal of this prototype is to validate the usability and the expressiveness of the templates in DCR graphs and to see how it can be used in various scenarios.
 
@@ -69,6 +60,8 @@ In order to run this project you need to have the following installed:
 
 This are the minimum versions that are guaranteed to work and worked during development and tested with. 
 
+In order to install OCaml and Opam, we suggest to follow the instructions in this [link](https://ocaml.org/docs/installing-ocaml).
+
 ## Installation
 
 To install the project you need to clone the repository and install the dependencies. 
@@ -103,7 +96,7 @@ make build
 
 Or `dune build`. And you should be ready to go. 😁 
 
-## Usage
+# Usage
 
 To start the interpreter, you can run the following command in the `interpreter` folder and execute the following command:
 
@@ -118,9 +111,6 @@ You can see some examples in the [`examples`](/examples) directory of the projec
 >[!IMPORTANT] 
 > The file extension must be `.tdcr` in order to be recognized by the program.
 
-> [!NOTE]
-> You can also run the program with the `--help` flag to see the available options or the `--log <level>` to see the debug information. 
-
 ---
 
 After running the command, you should see the following prompt.
@@ -130,13 +120,11 @@ After running the command, you should see the following prompt.
 ```
 
 From this prompt, you can run the following commands:
-<!-- TODO: for each command, show a gif to illustrate to command -->
 
 - **help**: Print the help message, displaying the available commands and their usage.
   ```
   > help
   ```
-  <!-- https://github.com/user-attachments/assets/81363412-c054-47ef-b363-deca291d879b -->
   
 - **exit**: Exit the program and close the prototype.
   ```
@@ -165,7 +153,6 @@ From this prompt, you can run the following commands:
   **Flags:**
   - `-m <mode>` or `--mode <mode>`: Export the program in the given mode `<mode>`. Available modes are:
     - `tdcr` (default)
-    <!-- - `dot` -->
     - `json`
 
 # License
@@ -175,7 +162,3 @@ This project is licensed under the **MIT License**.
 See [LICENSE](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE) for more information.
 
 <!-- TODO: Add acknowledgements and references.  -->
-
-# Authors
-
-This project was developed by the authors present in the [AUTHORS](AUTHORS.md) file.

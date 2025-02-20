@@ -9,10 +9,6 @@
 (source
  (github DCR-NOVALINCS/tmpl-dcr-runtime))
 
-(authors "bfibraga")
-
-(maintainers "bfibraga")
-
 (license "MIT")
 
 (documentation https://url/to/documentation)
