@@ -19,7 +19,7 @@ This project is a interpreter that can create and execute DCR graphs with templa
 
 The main goal of this prototype is to validate the usability and the expressiveness of the templates in DCR graphs and to see how it can be used in various scenarios.
 
-Here is a quick sneak peek of how to express a DCR graph with templates in this project. This example is located in the [`examples`](/examples) directory of the project.
+Here is a quick sneak peek of how to express a DCR graph with templates in this project. This example is located in the [`examples`](./examples) directory of the project.
 
 ```tdcr
 tmpl reviewer(): review, approve, reprove {
@@ -103,7 +103,7 @@ dune exec tmpl_dcr -- <filename.tdcr>
 
 Where `<filename>` is the name of the file that contains the DCR graph with templates.
 
-You can see some examples in the [`examples`](/examples) directory of the project to see how to write a DCR graph with templates.
+You can see some examples in the [`examples`](./examples) directory of the project to see how to write a DCR graph with templates.
 
 **Note:** The file extension must be `.tdcr` in order to be recognized by the program.
 
@@ -155,4 +155,4 @@ From this prompt, you can run the following commands:
 
 This project is licensed under the **MIT License**.
 
-See [LICENSE](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE) for more information.
+See [LICENSE](./LICENSE) for more information.
