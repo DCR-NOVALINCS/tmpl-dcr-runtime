@@ -15,7 +15,7 @@
 
 ## About 
 
-This project is a interpreter that can create and execute DCR graphs with templates in a simple and easy way. 
+This project is a interpreter that can create and execute DCR graphs with templates. 
 
 The main goal of this prototype is to validate the usability and the expressiveness of the templates in DCR graphs and to see how it can be used in various scenarios.
 
