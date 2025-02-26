@@ -8,18 +8,21 @@
 
 # ---- Template definition ----------------------------- #
 
-tmpl reviewer(): review, approve, reprove {
-  (rv: review)[?: Unit]
-  (a: approve)[?: Unit]
-  (r: reprove)[?: Unit]
+tmpl reviewer_process(n: Number): approve, reject {
+  (r: Reviewer)[n]
+  !(rv: review)[?: Unit]
+  (ap: approve)[?: Unit]
+  (rj: reject)[?: Unit]
 
-  rv -->* a, r
-} => rv, a, r
+  rv -->* ap, rj
+  ap -->% rj
+  rj -->% ap
+} => ap, rj
 
 # ---- Process ------------------------------------------ #
 
 # Initialize pull request with N reviewers.
-(pr: pull Request)[?: Number]
+(pr: pullRequest)[?: Number]
 
 pr -->> {
   (sa: setApproved)[?: Unit]
@@ -27,11 +30,10 @@ pr -->> {
 
   # Reviewer creation
   foreach i in @range(1, @trigger.value) {
-    reviewer() => review, approve, reprove
+    reviewer_process(n = i) => approve, reject
 
     approve -->* sa
-    reprove -->+ sr
-    sa, sr -->% approve, reprove, review , sa, sr
+    reject -->+ sr
   }
 }
 

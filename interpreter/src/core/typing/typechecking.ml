@@ -383,32 +383,27 @@ and typecheck_relation relation (ty_env, event_env, tmpl_ty_env, label_types) =
         id_not_found id
     | Some event -> return event
   and check_guard_expr guard =
-    typecheck_expr ~ty_env guard
-    >>= fun guard_ty ->
+    let* guard_ty = typecheck_expr ~ty_env guard in
     if equal_types guard_ty BoolTy then return BoolTy
     else type_mismatch ~loc:guard.loc [BoolTy] [guard_ty]
   in
   match relation.data with
   | ControlRelation (from_id, guard, dest, _) ->
-      check_event_id from_id
-      >>= fun _ ->
-      check_event_id dest
-      >>= fun _ ->
-      check_guard_expr guard >>= fun _ -> return (ty_env, event_env, label_types)
+      let* _ = check_event_id from_id in
+      let* _ = check_event_id dest in
+      let* _ = check_guard_expr guard in
+      return (ty_env, event_env, label_types)
   | SpawnRelation (from_id, guard, subprogram) ->
-      check_event_id from_id
-      >>= fun from_event ->
-      check_guard_expr guard
-      >>= fun _ ->
-      return (begin_scope event_env, begin_scope ty_env)
-      >>= fun (spawn_event_env, spawn_ty_env) ->
-      return
-        ( bind trigger_id from_event spawn_event_env
-        , bind trigger_id (event_as_ty from_event) spawn_ty_env )
-      >>= fun (spawn_event_env, spawn_ty_env) ->
-      typecheck_subprogram subprogram
-        (spawn_ty_env, spawn_event_env, tmpl_ty_env, label_types)
-      >>= fun (ty_env, event_env, label_types) ->
+      let* from_event = check_event_id from_id in
+      let* _ = check_guard_expr guard in
+      let spawn_event_env, spawn_ty_env =
+        ( begin_scope event_env |> bind trigger_id from_event
+        , begin_scope ty_env |> bind trigger_id (event_as_ty from_event) )
+      in
+      let* ty_env, event_env, label_types =
+        typecheck_subprogram subprogram
+          (spawn_ty_env, spawn_event_env, tmpl_ty_env, label_types)
+      in
       return (end_scope ty_env, end_scope event_env, label_types)
 
 (* =============================================================================
@@ -428,41 +423,44 @@ and typecheck_template_annotation annotation
     (ty_env, event_env, tmpl_ty_env, label_types) =
   match annotation with
   | IfElse {condition; then_branch; else_branch} ->
-      typecheck_expr ~ty_env ~label_types condition
-      >>= fun condition_ty ->
-      ( match condition_ty with
-      | BoolTy -> return ()
-      | _ -> type_mismatch ~loc:condition.loc [BoolTy] [condition_ty] )
-      >>= fun _ ->
-      return (begin_scope ty_env, begin_scope event_env)
-      >>= fun (branch_ty_env, branch_event_env) ->
-      typecheck_subprogram then_branch
-        (branch_ty_env, branch_event_env, tmpl_ty_env, label_types)
-      >>= fun (_, _, label_types) ->
-      ( match else_branch with
-      | None -> return (branch_ty_env, branch_event_env, label_types)
-      | Some else_body ->
-          typecheck_subprogram else_body
-            (branch_ty_env, branch_event_env, tmpl_ty_env, label_types) )
-      >>= fun (_, _, label_types) -> return (ty_env, event_env, label_types)
+      let* condition_ty = typecheck_expr ~ty_env ~label_types condition in
+      let* branch_ty_env, branch_event_env =
+        if equal_types condition_ty BoolTy then
+          return (begin_scope ty_env, begin_scope event_env)
+        else type_mismatch ~loc:condition.loc [BoolTy] [condition_ty]
+      in
+      let* _, _, label_types =
+        typecheck_subprogram then_branch
+          (branch_ty_env, branch_event_env, tmpl_ty_env, label_types)
+      in
+      let* _, _, label_types =
+        match else_branch with
+        | None -> return (branch_ty_env, branch_event_env, label_types)
+        | Some else_body ->
+            typecheck_subprogram else_body
+              (branch_ty_env, branch_event_env, tmpl_ty_env, label_types)
+      in
+      return (ty_env, event_env, label_types)
   | Foreach (id, expr, body) ->
-      typecheck_expr expr ~ty_env
-      >>= fun expr_ty ->
-      ( match expr_ty with
-      | ListTy elem_ty ->
-          let ty_env, event_env =
-            (begin_scope ty_env |> bind id.data elem_ty, begin_scope event_env)
-          in
-          return (ty_env, event_env, label_types)
-      | _ -> type_mismatch ~loc:expr.loc [ListTy UnitTy] [expr_ty] )
-      >>= fun (annot_ty_env, annot_event_env, label_types) ->
+      let* expr_ty = typecheck_expr expr ~ty_env in
+      let* annot_ty_env, annot_event_env, label_types =
+        match expr_ty with
+        | ListTy elem_ty ->
+            let ty_env, event_env =
+              (begin_scope ty_env |> bind id.data elem_ty, begin_scope event_env)
+            in
+            return (ty_env, event_env, label_types)
+        | _ -> type_mismatch ~loc:expr.loc [ListTy UnitTy] [expr_ty]
+      in
       Logger.debug
         (Printf.sprintf "Annotation envs:\n%s\n%s"
            (string_of_env Plain.unparse_ty annot_ty_env)
            (string_of_env (fun e -> Plain.unparse_events [e]) annot_event_env) ) ;
-      typecheck_subprogram body
-        (annot_ty_env, annot_event_env, tmpl_ty_env, label_types)
-      >>= fun (_, _, label_types) -> return (ty_env, event_env, label_types)
+      let* _, _, label_types =
+        typecheck_subprogram body
+          (annot_ty_env, annot_event_env, tmpl_ty_env, label_types)
+      in
+      return (ty_env, event_env, label_types)
 
 (* =============================================================================
    Typechecking of expressions
