@@ -1,3 +1,0 @@
-(a: A)[?]
-%(b: B)[?: Number]
-!(c: C)[?: String]

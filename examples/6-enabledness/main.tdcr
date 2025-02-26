@@ -1,9 +1,0 @@
-(a: A)[?]
-%(b: B)[?: Number]
-!(c: C)[?: String]
-(d: D)[?: {n: Number, b: Boolean}]
-
-a -->+ b
-a *--> c
-b -->* c
-c --><> b

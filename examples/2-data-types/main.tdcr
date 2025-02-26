@@ -1,5 +1,0 @@
-(n: NumberEvent)[0 + 1]
-(b: BooleanEvent)[true AND 0 > 1]
-(s: StringEvent)["Hello world!"]
-(l: ListEvent)[[1, 2, 3]]
-(r: RecordEvent)[{a: 1, b: true}]
