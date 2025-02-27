@@ -1,25 +1,21 @@
-# Description: Makefile for building and testing the ocaml project
+# Targets
+.SILENT: pre-build build watch clean
+.PHONY: test install format doc
 
 # Variables
-INTERPRETER_PATH := .
-OUTPUT_DOC_PATH := docs
-OUTPUT_JS_PATH := ../server/src/runtime
-# OUTPUT_JS_PATH := .
+OUTPUT_DOC_PATH = ../docs
 
 setup:
-	cd $(INTERPRETER_PATH)
 	opam update
 	opam install . --deps-only
 
 pre-build:
-	cd $(INTERPRETER_PATH)
 	eval $(opam env)
 
 build:
 	make pre-build
 	# make clean
 	dune build
-	cp -rf $(INTERPRETER_PATH)/_build/default/bin/main.exe tmpl_dcr.exe
 	printf "\nBuild successful\n"
 
 watch:
@@ -46,13 +42,9 @@ clean:
 	rm -rf docs
 
 doc:
-	make clean
 	make pre-build
+	make clean
 	dune build @doc
 	mkdir -p $(OUTPUT_DOC_PATH) 
 	cp -r _build/default/_doc/_html/* $(OUTPUT_DOC_PATH)
 	touch $(OUTPUT_DOC_PATH)/.nojekyll # Prevents github from ignoring the docs folder
-
-# Targets
-.SILENT: pre-build build watch clean
-.PHONY: test install format doc
