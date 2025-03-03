@@ -1,61 +1,55 @@
-# ---- Review request process -------------------------- #
-#                                                        #
-# This scenario models the process of a code base inte-  #
-# gration request. The process starts with a pull re-    #
-# quest and each request is reviewed by 5 reviewers.     #
-# Each reviewer should review before making a decision,  #
-# i.e approve or make changes (reprove) the request. The #
-# final decision is made by the setApproved or           #
-# setChangesRequested events.                            #
-#                                                        #
-# ------------------------------------------------------ #
+(pr: pullRequest)[?: Unit]
 
-# ---- Process ------------------------------------------ #
-
-(pr: pullRequest)[?]
-
-# Initialize review with 5 reviewers
+# Initialize review with 3 reviewers
 pr -->> {
-  # Review request events (steps before final decision)
-  (rr1: reviewRequest)[?]
-  (rr2: reviewRequest)[?]
-  (rr3: reviewRequest)[?]
-  (rr4: reviewRequest)[?]
-  (rr5: reviewRequest)[?]
+  # Set approved/rejected request events
+  (sa: SetApproved)[?: Unit]
+  %(sr: SetRejected)[?: Unit]
 
-  # Decision events
-  # Approve events
-  (a1: approve)[?]
-  (a2: approve)[?]
-  (a3: approve)[?]
-  (a4: approve)[?]
-  (a5: approve)[?]
+  # Reviewer 1
+  (r1: Reviewer)[1]
+  !(rv1: Review)[?: Unit]
+  (ap1: Approve)[?: Unit]
+  (rj1: Reject)[?: Unit]
 
-  # Request / Reprove changes events
-  (r1: requestChanges)[?]
-  (r2: requestChanges)[?]
-  (r3: requestChanges)[?]
-  (r4: requestChanges)[?]
-  (r5: requestChanges)[?]
+  # Reviewer 2
+  (r2: Reviewer)[2]
+  !(rv2: Review)[?: Unit]
+  (ap2: Approve)[?: Unit]
+  (rj2: Reject)[?: Unit]
 
-  # Set final state of the request (approved or changes requested)
-  (sa: setApproved)[?]
-  %(sr: setChangesRequested)[?]
+  # Reviewer 3
+  (r3: Reviewer)[3]
+  !(rv3: Review)[?: Unit]
+  (ap3: Approve)[?: Unit]
+  (rj3: Reject)[?: Unit]
 
-  # First steps must be done before the decision
-  rr1 -->* a1, r1
-  rr2 -->* a2, r2
-  rr3 -->* a3, r3
-  rr4 -->* a4, r4
-  rr5 -->* a5, r5
+  rv1 -->* ap1
+  rv1 -->* rj1
+  ap1 -->% rj1
+  rj1 -->% ap1
 
-  # Decision restrictions, simulating a AND gate
-  a1, a2, a3, a4, a5 -->* sa
-  r1, r2, r3, r4, r5 -->+ sr
+  rv2 -->* ap2
+  rv2 -->* rj2
+  ap2 -->% rj2
+  rj2 -->% ap2
 
-  #  Decision made, remove all events
-  sr -->% sr, sa
-  sa -->% sa, sr
-  sa, sr -->% a1, r1, rr1, a2, r2, rr2, a3, r3, rr3, a4, r4, rr4, a5, r5, rr5
+  rv3 -->* ap3
+  rv3 -->* rj3
+  ap3 -->% rj3
+  rj3 -->% ap3
+
+  ap1 -->* sa
+  ap2 -->* sa
+  ap3 -->* sa
+
+  rj1 -->% sa
+  rj2 -->% sa
+  rj3 -->% sa
+
+  rj1 -->+ sr
+  rj2 -->+ sr
+  rj3 -->+ sr
+
 }
 

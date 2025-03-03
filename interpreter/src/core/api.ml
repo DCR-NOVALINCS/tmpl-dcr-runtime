@@ -57,7 +57,7 @@ let rec execute ~event_id ?(expr = Unit) ?(ty_env = empty_env)
           | Input _ -> execute_input_event event expr (ty_env, expr_env)
           | Output _ -> execute_output_event event expr_env )
           (* Update marking *)
-          >>= set_marking ~executed:true
+          >>= set_marking ~executed:true ~pending:false
         in
         let program = update_event event program in
         (* Propagate relation effects that this event is apart of. *)
