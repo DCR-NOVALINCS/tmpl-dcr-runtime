@@ -10,6 +10,7 @@
 - [Getting Started](#getting-started)
   - [Docker Image](#docker-image)
     - [Prerequisites](#prerequisites)
+    - [Example](#example)
   - [Building from Source](#building-from-source)
     - [Prerequisites](#prerequisites-1)
     - [Installation](#installation)
@@ -63,7 +64,7 @@ The first option is the easiest way to run the project, but if you want to build
 
 In order to run the Docker image, you need to have Docker installed on your machine. You can follow the instructions in this [link](https://docs.docker.com/get-docker/) to install Docker.
 
-After installing Docker, you can run the following command to build the Docker image.
+After installing Docker, you can run the following command to build the Docker image in the `interpreter` directory of the project.
 
 ```bash
 docker build -t template-dcr-interpreter .
@@ -77,6 +78,14 @@ latest <path>/<file>.tdcr
 ```
 
 Where `<path>` is the path to the directory that contains the `.tdcr` file and `<file>` is the name of the file that contains the DCR graph with templates.
+
+#### Example
+
+Here is an example of how to run the Docker image with the example file located in the `examples` directory of the project, in the `interpreter` directory.
+
+```bash
+docker run -it -v $(pwd)/../examples:/app/examples template-dcr-interpreter:latest examples/ex-reviewers/main.tdcr
+```
 
 ---
 
