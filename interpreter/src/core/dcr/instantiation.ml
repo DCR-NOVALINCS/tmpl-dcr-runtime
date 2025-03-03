@@ -319,6 +319,9 @@ and instantiate_annotations annots ?(eval = eval_expr)
           if is_true then then_branch
           else Option.value ~default:empty_subprogram else_branch
         in
+        let events, _, _, _ = branch in
+        let* expr_env = bind_events ~f:event_as_expr events expr_env in 
+        let* event_env = bind_events ~f:id events event_env in
         evaluate_annotation_body branch (expr_env, event_env, tmpl_env)
     | Foreach (id, expr, body) ->
         Logger.info "Evaluating Foreach annotation" ;

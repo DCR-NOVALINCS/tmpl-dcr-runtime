@@ -8,8 +8,11 @@
 - [Table of Contents](#table-of-contents)
 - [About](#about)
 - [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
+  - [Docker Image](#docker-image)
+    - [Prerequisites](#prerequisites)
+  - [Building from Source](#building-from-source)
+    - [Prerequisites](#prerequisites-1)
+    - [Installation](#installation)
 - [Usage](#usage)
 - [License](#license)
 
@@ -48,7 +51,38 @@ pr -->> {
 
 ## Getting Started
 
-### Prerequisites
+Is possible to run this project two ways:
+- Using the Docker image available in the `interpreter` directory. 
+- Building the project from source.
+
+The first option is the easiest way to run the project, but if you want to build the project from source, you can follow the instructions below.
+
+### Docker Image
+
+#### Prerequisites
+
+In order to run the Docker image, you need to have Docker installed on your machine. You can follow the instructions in this [link](https://docs.docker.com/get-docker/) to install Docker.
+
+After installing Docker, you can run the following command to build the Docker image.
+
+```bash
+docker build -t template-dcr-interpreter .
+```
+
+After building the Docker image, you can run the following command to start the interpreter.
+
+```bash
+docker run -it -v $(pwd)/<path>:/app/<path> template-dcr-interpreter:
+latest <path>/<file>.tdcr
+```
+
+Where `<path>` is the path to the directory that contains the `.tdcr` file and `<file>` is the name of the file that contains the DCR graph with templates.
+
+---
+
+### Building from Source
+
+#### Prerequisites
 
 In order to run this project you need to have the following installed:
 
@@ -59,7 +93,7 @@ This are the minimum versions that are guaranteed to work and worked during deve
 
 In order to install OCaml and Opam, we suggest to follow the instructions in this [link](https://ocaml.org/docs/installing-ocaml).
 
-### Installation
+#### Installation
 
 To install the project you need to clone the repository and install the dependencies. 
 

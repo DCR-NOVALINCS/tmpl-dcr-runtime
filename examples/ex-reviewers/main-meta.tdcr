@@ -1,0 +1,39 @@
+# ---- Template definition ----------------------------- #
+
+tmpl reviewer_process(n: Number): Approve, Reject {
+  (r: Reviewer)[n]
+  !(rv: Review)[?: Unit]
+  (ap: Approve)[?: Unit]
+  (rj: Reject)[?: Unit]
+  
+  rv -->* ap
+  rv -->* rj
+  ap -->% rj
+  rj -->% ap
+} => ap, rj
+
+# ---- Process ------------------------------------------ #
+
+# Initialize pull request with N reviewers. Each reviewer has an ID and a type.
+(pr: pullRequest)[?: List[{id: Number, type: String}]]
+
+pr -->> {
+  (sa: SetApproved)[?: Unit]
+  %(sr: SetChangesRequested)[?: Unit]
+
+  foreach r in @trigger.value {
+    reviewer_process(n = r.id) => approve, reprove
+    approve -->* sa
+    reprove -->% sa
+    reprove -->+ sr
+
+    if r.type == "owner" {
+      (cc: ChangeCode)[?: Unit]
+      sr *--> cc
+      cc --><> pr
+    } else {
+      %(cm: Comment)[?: Unit]
+      sr -->+ cm
+    }
+  }
+}

@@ -4,7 +4,7 @@
 pr -->> {
   # Set approved/rejected request events
   (sa: SetApproved)[?: Unit]
-  %(sr: SetRejected)[?: Unit]
+  %(sr: SetChangesRequested)[?: Unit]
 
   # Reviewer 1
   (r1: Reviewer)[1]
@@ -24,6 +24,7 @@ pr -->> {
   (ap3: Approve)[?: Unit]
   (rj3: Reject)[?: Unit]
 
+  # Control-flow relations between reviewers' actions and the final decision
   rv1 -->* ap1
   rv1 -->* rj1
   ap1 -->% rj1

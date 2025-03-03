@@ -4,6 +4,7 @@
 
 # Variables
 OUTPUT_DOC_PATH = ../docs
+DOCKER_IMAGE_NAME = template-dcr-interpreter
 
 setup:
 	opam update
@@ -48,3 +49,7 @@ doc:
 	mkdir -p $(OUTPUT_DOC_PATH) 
 	cp -r _build/default/_doc/_html/* $(OUTPUT_DOC_PATH)
 	touch $(OUTPUT_DOC_PATH)/.nojekyll 
+
+docker: 
+	make pre-build
+	docker build -t $(DOCKER_IMAGE_NAME) .
