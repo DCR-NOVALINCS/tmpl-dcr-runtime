@@ -308,13 +308,22 @@ and fresh_event ?(alpha_rename = counter) event =
 
 and fresh_events ?(exclude = []) ?(alpha_rename = counter)
     (events, insts, relations, annots) =
-  let ids =
-    List.filter_map
+    let event_ids = List.filter_map
       (fun e ->
         let id, _ = e.data.info in
         if List.mem id.data exclude then None else Some id.data )
       events
+      in
+    let x_ids = List.map
+      (fun i ->
+        let {x; _} = i.data in
+        List.filter_map
+          (fun x_id -> if List.mem x_id.data exclude then None else Some x_id.data)
+          x )
+      insts
+      |> List.flatten
   in
+  let ids = List.append event_ids x_ids in
   let id_mapping =
     List.map
       (fun id ->
@@ -383,11 +392,16 @@ and fresh_events ?(exclude = []) ?(alpha_rename = counter)
     let insts =
       List.map
         (fun i ->
-          let {args; _} = i.data in
+          let {args; x; _} = i.data in
           let args =
             List.map (fun (id, expr) -> (id, substitution_expr expr)) args
           in
-          {i with data= {i.data with args}} )
+          let x =
+            List.map
+              (fun x_id -> {x_id with data = substitution x_id.data})
+              x
+          in
+          {i with data= {i.data with args; x}} )
         insts
     in
     let* relations =
