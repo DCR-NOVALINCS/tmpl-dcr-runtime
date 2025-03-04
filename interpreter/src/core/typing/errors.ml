@@ -110,3 +110,16 @@ let missing_exported_event_types ?(errors = []) ~expected got =
             "Ensure the exported event types are declared and in scope. Check for typos."
       }
     :: errors )
+
+let missing_exported_events ?(errors = []) ~expected got =
+  fail 
+    ( { location= Nowhere
+      ; message=
+          Printf.sprintf "Missing exported events. Expected %s, but got %s"
+            (String.concat ", " (deannotate_list expected))
+            (String.concat ", " (deannotate_list got))
+      ; hint=
+          Some
+            "Ensure the exported events are declared and in scope. Check for typos."
+      }
+    :: errors )

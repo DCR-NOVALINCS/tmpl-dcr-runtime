@@ -2,12 +2,14 @@
 
     This module provides a simple environment data structure for storing
     bindings between keys and values. The environment supports adding and
-    removing scopes, binding values to keys, and finding values bound to keys. *)
+    removing scopes, binding values to keys, and finding values bound to keys.
+*)
 
 (** [Not_found id] is raised when a binding for [id] is not found *)
 exception Not_found of string
 
-(** [Empty_env] is raised when an operation is performed on an empty environment *)
+(** [Empty_env] is raised when an operation is performed on an empty environment
+*)
 exception Empty_env
 
 (** [Duplicate_binding id] is raised when a binding for [id] already exists *)

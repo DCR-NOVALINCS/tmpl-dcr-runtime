@@ -43,3 +43,9 @@ val missing_exported_event_types :
   -> expected:event_id list
   -> event_id list
   -> ('a, detailed_error list) result
+
+val missing_exported_events :
+     ?errors:detailed_error list
+  -> expected:event_id list
+  -> event_id list
+  -> ('a, detailed_error list) result

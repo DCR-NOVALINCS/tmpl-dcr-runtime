@@ -642,6 +642,5 @@ and update_ids id_mapping (events, insts, relations, annotations) =
    ============================================================================= *)
 
 and eval_bool ?(eval = eval_expr) expr env =
-  eval expr env
-  >>= fun value ->
+  let* value = eval expr env in
   match value.data with BoolLit b -> return b | _ -> invalid_expr expr

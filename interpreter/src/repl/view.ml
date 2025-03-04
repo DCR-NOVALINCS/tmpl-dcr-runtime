@@ -44,12 +44,13 @@ and view_cmd disabled show_value show_relations show_template_defs state =
           ~should_print_template_decls:show_template_defs ~event_env ~expr_env
           program
   in
-  view program
-  >>= fun output ->
-  is_empty_string
-    ~map:(fun _ -> CString.colorize ~format:Italic "No events to show.")
-    output
-  >>= fun output -> return {state with output}
+  let* output = view program in
+  let* output =
+    is_empty_string
+      ~map:(fun _ -> CString.colorize ~format:Italic "No events to show.")
+      output
+  in
+  return {state with output}
 
 let term =
   Term.(

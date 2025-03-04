@@ -19,7 +19,8 @@ val lexing_error :
 val syntax_error :
   ?errors:detailed_error list -> lexbuf -> ('a, detailed_error list) result
 (** [syntax_error ?errors lexbuf] is a parser error that occurs during parsing.
-    It contains the location of the error and the token that caused the error. *)
+    It contains the location of the error and the token that caused the error.
+*)
 
 val unexpected_eof :
   ?errors:detailed_error list -> lexbuf -> ('a, detailed_error list) result

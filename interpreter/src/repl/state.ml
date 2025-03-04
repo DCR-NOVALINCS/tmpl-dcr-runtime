@@ -37,7 +37,6 @@ let empty_runtime_state = mk_runtime_state empty_program
 
 let string_of_state state =
   let {output; _} = state in
-  (* TODO: Pretty print on the output. *)
   output
 
 let print_output ?(previous_state = empty_runtime_state) = function
