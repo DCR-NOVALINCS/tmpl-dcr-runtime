@@ -33,9 +33,6 @@ let commands =
     create_cmd
       ("help", [], "Prints the list of available commands.")
       (Help.term visible) visible
-    |> create_cmd
-         ("rollback", [], "Rollbacks a number of times in the program.")
-         Rollback.term
   in
   let cmds_bbk_tree = Bktree.create @@ List.map (fun (name, _) -> name) all in
   ( create_cmd
@@ -68,6 +65,7 @@ let rec prompt runtime_state =
   (* Get command from input *)
   match input_line stdin with
   | exception End_of_file -> return runtime_state
+  | "" -> prompt runtime_state
   | input ->
       let* tokens = sanitize_input input in
       let* state =
