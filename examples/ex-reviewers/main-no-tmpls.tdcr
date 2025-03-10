@@ -1,5 +1,5 @@
 (pr: pullRequest)[?: Unit]
-
+;
 # Initialize review with 3 reviewers
 pr -->> {
   # Set approved/rejected request events
@@ -23,7 +23,7 @@ pr -->> {
   !(rv3: Review)[?: Unit]
   (ap3: Approve)[?: Unit]
   (rj3: Reject)[?: Unit]
-
+  ;
   # Control-flow relations between reviewers' actions and the final decision
   rv1 -->* ap1
   rv1 -->* rj1

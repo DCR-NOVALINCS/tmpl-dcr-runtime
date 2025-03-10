@@ -26,26 +26,33 @@ The main goal of this prototype is to validate the usability and the expressiven
 Here is a quick sneak peek of how to express a DCR graph with templates in this project. This example is located in the [`examples`](./examples/) directory of the project.
 
 ```tdcr
-tmpl reviewer(): review, approve, reprove {
-  (rv: review)[?]
-  (a: approve)[?]
-  (r: reprove)[?]
+tmpl reviewer_process(n: Number): Approve, Reject {
+  (r: Reviewer)[n]
+  !(rv: Review)[?: Unit]
+  (ap: Approve)[?: Unit]
+  (rj: Reject)[?: Unit]
+  ;
+  rv -->* ap
+  rv -->* rj
+  ap -->% rj
+  rj -->% ap
+} => ap, rj
+;
+# ---- Process ------------------------------------------ #
 
-  rv -->* a, r
-} => rv, a, r
-
-(pr: pullRequest)[?: Number]
-
+# Initialize pull request with N reviewers.
+(pr: PullRequest)[?: Number]
+;
 pr -->> {
-  (sa: setApproved)[?]
-  %(sr: setChangesRequested)[?]
-
+  (sa: SetApproved)[?: Unit]
+  %(sr: SetChangesRequested)[?: Unit]
+  ; 
   foreach i in @range(1, @trigger.value) {
-    reviewer() => review, approve, reprove
-
+    reviewer_process(n = i) => approve, reject
+    ; 
     approve -->* sa
-    reprove -->+ sr
-    sa, sr -->% approve, reprove, review , sa, sr
+    reject -->% sa
+    reject -->+ sr
   }
 }
 ```
