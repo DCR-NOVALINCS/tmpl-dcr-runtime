@@ -108,3 +108,4 @@ Consider adding more prosumers and calculating their monthly costs to see how th
 
 - [`ex-bad-typing`](../ex-bad-typing/README.md): see how the interpreter handles type errors.
 - [`ex-reviewers`](../ex-reviewers/README.md): see how to model a review process for a pull request.
+- [`ex-pokemon`](../ex-pokemon/README.md): see how to simulate a Pokémon battle.
