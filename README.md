@@ -1,37 +1,29 @@
 
 <div align="center">
-  <h1>tmpl-dcr-runtime</h1>
-  <p>
-    Templates in Dynamic Conditional Response (DCR) Graphs.
-  </p>
-
-
-  [![documentation](https://img.shields.io/badge/documentation-unavailable-red)]("")
-  [![license](https://img.shields.io/badge/license-MIT-green)](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE)
-
-  https://github.com/user-attachments/assets/1fa8df90-eb1b-4deb-869a-e29fbd7f6c70
+  <h1>Templates in Dynamic Conditional Response (DCR) Graphs.</h1>
 </div> 
 
-# Table of Contents
+## Table of Contents
 
 - [Table of Contents](#table-of-contents)
 - [About](#about)
 - [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Usage](#usage)
+  - [Docker Image](#docker-image)
+    - [Prerequisites](#prerequisites)
+    - [Example](#example)
+  - [Building from Source](#building-from-source)
+    - [Prerequisites](#prerequisites-1)
+    - [Installation](#installation)
+- [Usage](#usage)
 - [License](#license)
-- [Authors](#authors)
 
-# About 
+## About 
 
-**t-dcr** is a cli runtime to create and execute [DCR graphs]() with templates in a simple and easy way. 
-
-This project is a part of a master thesis of one of the authors to study and implement templates in DCR graphs. 
+This project is a interpreter that can create and execute DCR graphs with templates. 
 
 The main goal of this prototype is to validate the usability and the expressiveness of the templates in DCR graphs and to see how it can be used in various scenarios.
 
-Here is a quick sneak peek of how to express a DCR graph with templates in this project. This example is located in the [`examples`](/examples) directory of the project.
+Here is a quick sneak peek of how to express a DCR graph with templates in this project. This example is located in the [`examples`](./examples/) directory of the project.
 
 ```tdcr
 tmpl reviewer(): review, approve, reprove {
@@ -58,18 +50,59 @@ pr -->> {
 }
 ```
 
-# Getting Started
+## Getting Started
 
-## Prerequisites
+Is possible to run this project two ways:
+- Using the Docker image available in the `interpreter` directory. 
+- Building the project from source.
+
+The first option is the easiest way to run the project, but if you want to build the project from source, you can follow the instructions below.
+
+### Docker Image
+
+#### Prerequisites
+
+In order to run the Docker image, you need to have Docker installed on your machine. You can follow the instructions in this [link](https://docs.docker.com/get-docker/) to install Docker.
+
+After installing Docker, you can run the following command to build the Docker image in the `interpreter` directory of the project.
+
+```bash
+docker build -t template-dcr-interpreter .
+```
+
+After building the Docker image, you can run the following command to start the interpreter.
+
+```bash
+docker run -it -v $(pwd)/<path>:/app/<path> template-dcr-interpreter:
+latest <path>/<file>.tdcr
+```
+
+Where `<path>` is the path to the directory that contains the `.tdcr` file and `<file>` is the name of the file that contains the DCR graph with templates.
+
+#### Example
+
+Here is an example of how to run the Docker image with the example file located in the `examples` directory of the project, in the `interpreter` directory.
+
+```bash
+docker run -it -v $(pwd)/../examples:/app/examples template-dcr-interpreter:latest examples/ex-reviewers/main.tdcr
+```
+
+---
+
+### Building from Source
+
+#### Prerequisites
 
 In order to run this project you need to have the following installed:
 
-- [OCaml](https://ocaml.org/docs/install.html) (5.1.1 or newer)
+- [OCaml](https://ocaml.org/docs/install.html) (base compiler version 5.1.1 or newer)
 - [Opam](https://opam.ocaml.org/doc/Install.html) (2.1.2 or newer)
 
 This are the minimum versions that are guaranteed to work and worked during development and tested with. 
 
-## Installation
+In order to install OCaml and Opam, we suggest to follow the instructions in this [link](https://ocaml.org/docs/installing-ocaml).
+
+#### Installation
 
 To install the project you need to clone the repository and install the dependencies. 
 
@@ -92,7 +125,7 @@ opam install . --deps-only
 For some reason you don't have the `tmpl_dcr.opam` file, you can run the following command to install the dependencies.
 
 ```bash
-opam install ocaml dune odoc menhir yojson cmdliner alcotest
+opam install dune odoc menhir yojson ppx_yojson_conv cmdliner alcotest
 ```
 
 And finally, you can build the project by running the following command.
@@ -101,7 +134,7 @@ And finally, you can build the project by running the following command.
 make build
 ```
 
-Or `dune build`. And you should be ready to go. 😁 
+Or `dune build`. And you should be ready to go.
 
 ## Usage
 
@@ -113,13 +146,9 @@ dune exec tmpl_dcr -- <filename.tdcr>
 
 Where `<filename>` is the name of the file that contains the DCR graph with templates.
 
-You can see some examples in the [`examples`](/examples) directory of the project to see how to write a DCR graph with templates.
+You can see some examples in the [`examples`](./examples/) directory of the project to see how to write a DCR graph with templates.
 
->[!IMPORTANT] 
-> The file extension must be `.tdcr` in order to be recognized by the program.
-
-> [!NOTE]
-> You can also run the program with the `--help` flag to see the available options or the `--log <level>` to see the debug information. 
+**Note:** The file extension must be `.tdcr` in order to be recognized by the program.
 
 ---
 
@@ -130,13 +159,11 @@ After running the command, you should see the following prompt.
 ```
 
 From this prompt, you can run the following commands:
-<!-- TODO: for each command, show a gif to illustrate to command -->
 
 - **help**: Print the help message, displaying the available commands and their usage.
   ```
   > help
   ```
-  <!-- https://github.com/user-attachments/assets/81363412-c054-47ef-b363-deca291d879b -->
   
 - **exit**: Exit the program and close the prototype.
   ```
@@ -165,17 +192,10 @@ From this prompt, you can run the following commands:
   **Flags:**
   - `-m <mode>` or `--mode <mode>`: Export the program in the given mode `<mode>`. Available modes are:
     - `tdcr` (default)
-    <!-- - `dot` -->
     - `json`
 
-# License
+## License
 
 This project is licensed under the **MIT License**.
 
-See [LICENSE](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE) for more information.
-
-<!-- TODO: Add acknowledgements and references.  -->
-
-# Authors
-
-This project was developed by the authors present in the [AUTHORS](AUTHORS.md) file.
+See [LICENSE](./LICENSE) for more information.

@@ -2,5 +2,4 @@
 
 (context
  (default
-  ; TODO: See more at https://dune.readthedocs.io/en/latest/cross-compilation.html#cross-compilation
   (targets native)))

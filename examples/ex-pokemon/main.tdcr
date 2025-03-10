@@ -3,22 +3,39 @@ tmpl pokemon( name: String, type: String ): Pokemon {
 } => p
 
 (ap: addPokemon)[?: { name: String, type: String }]
-(b: Battle)[?: { p1: { name: String, type: String }, p2: { name: String, type: String } }]
+(b: Battle)[?: { p1: Pokemon, p2: Pokemon }]
 
 ap -->> {
     pokemon(name = @trigger.value.name, type = @trigger.value.type) => p
 }
 
 b -->> {
-    pokemon(name = @trigger.value.p1.name, type = @trigger.value.p1.type) => p1
-    pokemon(name = @trigger.value.p2.name, type = @trigger.value.p2.type) => p2
+    if @trigger.value.p1.value.type == "fire" AND @trigger.value.p2.value.type == "grass" {
+        (bl: BattleLog)[{ winner: @trigger.value.p1.value.name }]
+    }
 
-    p1 -[p1.value.type == "fire" AND p2.value.type == "grass"]->% p2
-    p2 -[p2.value.type == "fire" AND p1.value.type == "grass"]->% p1
+    if @trigger.value.p1.value.type == "grass" AND @trigger.value.p2.value.type == "fire" {
+        (bl: BattleLog)[{ winner: @trigger.value.p2.value.name }]
+    }
 
-    p1 -[p1.value.type == "water" AND p2.value.type == "fire"]->% p2
-    p2 -[p2.value.type == "water" AND p1.value.type == "fire"]->% p1
+    if @trigger.value.p1.value.type == "water" AND @trigger.value.p2.value.type == "fire" {
+        (bl: BattleLog)[{ winner: @trigger.value.p1.value.name }]
+    }
 
-    p1 -[p1.value.type == "grass" AND p2.value.type == "water"]->% p2
-    p2 -[p2.value.type == "grass" AND p1.value.type == "water"]->% p1
+    if @trigger.value.p1.value.type == "fire" AND @trigger.value.p2.value.type == "water" {
+        (bl: BattleLog)[{ winner: @trigger.value.p2.value.name }]
+    }
+
+    if @trigger.value.p1.value.type == "grass" AND @trigger.value.p2.value.type == "water" {
+        (bl: BattleLog)[{ winner: @trigger.value.p1.value.name }]
+    }
+
+    if @trigger.value.p1.value.type == "water" AND @trigger.value.p2.value.type == "grass" {
+        (bl: BattleLog)[{ winner: @trigger.value.p2.value.name }]
+    }
+
+    if @trigger.value.p1.value.type == @trigger.value.p2.value.type {
+        (bl: BattleLog)[{ winner: "draw" }]
+    }
+
 }
