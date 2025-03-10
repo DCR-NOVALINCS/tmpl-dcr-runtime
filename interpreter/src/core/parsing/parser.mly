@@ -105,8 +105,9 @@ plain_program:
 ;
 
 plain_program_spawn:
+  | (* empty *) { mk_subprogram () }
   | plain_top_input SEMICOLON plain_program_spawn { mk_program_from_top_level_input $3 [$1] }
-  | plain_top_input { mk_program_from_top_level_input (mk_subprogram ()) [$1] }
+  // | plain_top_input { mk_program_from_top_level_input (mk_subprogram ()) [$1] }
 
 plain_top_input:
   | plain_event_decl_list { EventList (List.rev $1) }
