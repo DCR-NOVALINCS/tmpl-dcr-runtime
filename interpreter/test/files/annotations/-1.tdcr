@@ -4,5 +4,5 @@ foreach i in @range(1, a.value) {
       (d: D)[i]
     }
 }    
-
+;
 (a: A)[5]

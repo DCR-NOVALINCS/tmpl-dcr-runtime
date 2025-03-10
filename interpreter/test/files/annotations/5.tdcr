@@ -1,8 +1,8 @@
 (a: A)[?: Number]
-
+;
 a -->> {
     (b: B)[?: Number]
-
+    ;
     foreach i in @range(1, @trigger.value){
         b -->> {
             (c: C)[i+@trigger.value]

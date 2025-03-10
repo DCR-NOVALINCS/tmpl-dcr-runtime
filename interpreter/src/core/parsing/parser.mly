@@ -1,22 +1,19 @@
 %{
 open Ast.Syntax
-(*
-type top_level_input = 
-  (*| TemplateDef of template_def*)
-  | Event of event
-  | TemplateInst of template_instance
-  | Relations of relation list
-  | AnnotatedSubprogram of template_annotation' 
 
-let mk_program_from_top_level_input =
-  List.fold_left (fun (events, insts, relations, annotations) x -> match x with
-    (* | TemplateDef x -> { program with template_decls = x :: program.template_decls }*)
-    | Event event -> (event :: events, insts, relations, annotations)
-    | TemplateInst inst -> (events, inst :: insts, relations, annotations)
-    | Relations relations' -> (events, insts, List.append relations' relations, annotations)
-    | AnnotatedSubprogram annotation -> (events, insts, relations, annotation :: annotations)
-  ) empty_subprogram
-*)
+type input = 
+  | EventList of event list
+  | TemplateInstList of template_instance list
+  | RelationList of relation list
+  | TemplateAnnotationList of template_annotation' list
+
+let mk_program_from_top_level_input prog inputs = 
+  List.fold_left (fun (events, template_insts, relations, annotations) -> function
+    | EventList events' -> (events' @ events, template_insts, relations, annotations)
+    | TemplateInstList template_insts' -> (events, template_insts' @ template_insts, relations, annotations)
+    | RelationList relations' -> (events, template_insts, relations' @ relations, annotations)
+    | TemplateAnnotationList annotations' -> (events, template_insts, relations, annotations' @ annotations)
+  ) prog inputs
 %}
 
 %[@trace true]
@@ -108,30 +105,14 @@ plain_program:
 ;
 
 plain_program_spawn:
-  | (* empty *) { mk_subprogram () }
-  | comp=graph_component; SEMICOLON; rest=plain_program_spawn; 
-  { 
-    let (events, template_insts, relations, annotations) = rest in
-    let (events', template_insts', relations', annotations') = comp in
-    (List.append events' events, List.append template_insts' template_insts, List.append relations' relations, List.append annotations' annotations)
-  }
-  | comp=graph_component; 
-  { 
-    comp
-  }
+  | plain_top_input SEMICOLON plain_program_spawn { mk_program_from_top_level_input $3 [$1] }
+  | plain_top_input { mk_program_from_top_level_input (mk_subprogram ()) [$1] }
 
-graph_component:
-  | plain_event_decl_list { mk_subprogram ~events:$1 () }
-  | nonempty_list(template_inst); { mk_subprogram ~template_insts:$1 () }
-  | plain_ctrl_relation_decl_list { mk_subprogram ~relations:$1 () }
-  | nonempty_list(plain_template_annotation); { mk_subprogram ~annotations:$1 () }
-
-// plain_top_input:
-//   // | plain_template_decl { TemplateDef($1) }
-//   | event_decl                                                                  { Event($1) }
-//   | template_inst                                                               { TemplateInst($1) }
-//   | plain_ctrl_relation_decl_list                                               { Relations($1) }
-//   | plain_template_annotation                                                   { AnnotatedSubprogram($1) }
+plain_top_input:
+  | plain_event_decl_list { EventList (List.rev $1) }
+  | nonempty_list(template_inst) { TemplateInstList (List.rev $1) }
+  | plain_ctrl_relation_decl_list { RelationList (List.rev $1) }
+  | nonempty_list(plain_template_annotation) { TemplateAnnotationList (List.rev $1) }
 
 // =====
 // ===== template declaration 

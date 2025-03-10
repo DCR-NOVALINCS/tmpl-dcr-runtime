@@ -1,9 +1,10 @@
 tmpl cond(e: A): A {
     (a: A)[?]
+    ;
     e -->* a
 } => a
-
+;
 (a: A)[?]
-
+;
 cond(e = a) => a1
 cond(e = a1) => a2

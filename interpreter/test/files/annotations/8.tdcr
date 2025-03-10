@@ -1,8 +1,4 @@
 tmpl list(n: Number = 10) {
-    # foreach i in @range(0, n) {
-    #     (node: Node)[i]
-    #     node *--> node
-    # }
     if n > 0 {
         (node: Node)[n]
     }

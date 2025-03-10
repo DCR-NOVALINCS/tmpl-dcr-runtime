@@ -1,7 +1,9 @@
 tmpl g (n: Number, e: A) {
     (b: B)[n]
+    ;
     e -[n > 0]->* b
 }
-
+;
 (a: A)[?]
+;
 g(n = 1, e = a)

@@ -1,12 +1,13 @@
 tmpl g (n: Number, e: A) {
     (b: B)[n]
+    ;
     e -->* b
 }
-
+;
 (a: A)[?: Number]
-
+;
 a -->> {
     (b: B)[@trigger.value + 1]
-  
+    ;
     g(n = 0, e = a)
 }

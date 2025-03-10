@@ -7,11 +7,12 @@
 
 tmpl j(): E {
   (e: E)[0]
+  ;
   k(event = e) => e2
 } => e2
 
 tmpl k(event: E): E {
   j() => e2
 } => e2
-
+;
 j() => e

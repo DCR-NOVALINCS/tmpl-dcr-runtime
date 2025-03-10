@@ -1,7 +1,9 @@
 tmpl f(n: Number): R {
     (r: R)[{ n: n }]
 } => r
-
+;
 (a: A)[?: Number]
+;
 f(n = 1) => r0
+;
 a -[a.value < r0.value]->% r0

@@ -1,5 +1,5 @@
 (a: A)[?: Number]
-
+;
 foreach i in @range(0, 3){
     a -->> {
         if @trigger.value > 0{

@@ -1,9 +1,9 @@
 (a:A)[?: Number]
 # (a2: A)[?: String]
-
+;
 a -->> {
     (e1: E)[@trigger.value]
-    
+    ;
     a -->> {
         (e2: E2)[true AND e1.value / 2 != 0]
     }
@@ -11,7 +11,7 @@ a -->> {
 
 a -->> {
     (e1: E)[@trigger.value * 2]
-
+    ;
     a -->> {
         (e2: E2)[false OR @trigger.value <= 0]
     }

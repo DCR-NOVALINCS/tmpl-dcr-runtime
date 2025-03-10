@@ -5,7 +5,7 @@ tmpl g(n: Number): A {
 tmpl h(n: Number): B {
     (b: B)[n]
 } => b
-
+;
 g(n = 0) => a1
 h(n = a1.value.n + 1) => b1
 g(n = b1.value + 1) => a2

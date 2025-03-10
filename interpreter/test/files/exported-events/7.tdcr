@@ -1,9 +1,9 @@
 tmpl accumulator(e: A, n: Number = 1): A {
     (e2: A)[e.value + n]
 } => e2
-
+;
 (a: A)[0]
-
+;
 accumulator(e = a) => a2
 accumulator(e = a2) => a3
 accumulator(e = a3) => a4

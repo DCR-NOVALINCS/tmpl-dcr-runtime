@@ -5,9 +5,9 @@ tmpl is_positive(n: Number = 0): Output {
 tmpl is_negative(n: Number = 0): Output {
     (o: Output)[n < 0]
 } => o
-
+;
 (c: C)[?: Number]
-
+;
 c -->> {
     is_negative(n = @trigger.value) => negative
     is_positive(n = @trigger.value) => positive

@@ -9,13 +9,13 @@ tmpl is_negative(n: Number = 0): Output {
 tmpl check_sign(c: Number): Output, Output {
     is_negative(n = c) => negative
     is_positive(n = c) => positive
-
+    ;
     negative -[negative.value]->% positive
     positive -[positive.value]->% negative
 } => negative, positive
-
+;
 (c: C)[?: Number]
-
+;
 c -->> {
     check_sign(c = @trigger.value) => negative, positive
 }

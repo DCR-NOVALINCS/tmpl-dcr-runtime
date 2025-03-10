@@ -7,7 +7,7 @@
 (l: L)[[0, 1, 2]]
 (l1: L)[@range(0, 10)]
 (r: R)[{ n: n0.value - 1, s: s.value, b: b.value AND false }]
-
+;
 i0 -[n1.value > n0.value]->% s, b
 i1 -[s.value == "b"]->+ i0, s, b
 i0 -[b.value]->* b
@@ -16,7 +16,7 @@ i1 -[r.value.b AND r.value.n > 0]-><> i0
 i1 -->> {
     (n2: N)[@trigger.value.id]
     (b2: B)[@trigger.value.isActivated]
-
+    ;
     i0 *-[@trigger.value.isActivated OR true == b2.value]-> i1
 }
 
