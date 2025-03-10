@@ -1,6 +1,6 @@
 %{
 open Ast.Syntax
-
+(*
 type top_level_input = 
   (*| TemplateDef of template_def*)
   | Event of event
@@ -16,7 +16,7 @@ let mk_program_from_top_level_input =
     | Relations relations' -> (events, insts, List.append relations' relations, annotations)
     | AnnotatedSubprogram annotation -> (events, insts, relations, annotation :: annotations)
   ) empty_subprogram
-
+*)
 %}
 
 %[@trace true]
@@ -63,6 +63,7 @@ let mk_program_from_top_level_input =
 
 %nonassoc NEG
 %nonassoc PROP_DEREF 
+%nonassoc LOWEST
 
 %start main 
 %start main_expr
@@ -81,40 +82,56 @@ main_expr:
 ;
 
 // program: mark_loc_ty(plain_program) {$1}
+// plain_program:
+//     template_decls = list(plain_template_decl);
+//     spawn_prog = plain_program_spawn;
+//     { 
+//       let (events, template_insts, relations, annotations) = spawn_prog in
+//       mk_program ~template_decls ~events ~template_insts ~relations ~annotations ()
+//     }
+// ;
+
+// plain_program_spawn:
+//   | input = list(plain_top_input); 
+//     { 
+//       mk_program_from_top_level_input input 
+//     }
+
+program: mark_loc_ty(plain_program) {$1}
 plain_program:
-    template_decls = list(plain_template_decl);
+    template_decls = terminated(list(plain_template_decl), SEMICOLON)?;
     spawn_prog = plain_program_spawn;
     { 
       let (events, template_insts, relations, annotations) = spawn_prog in
-      mk_program ~template_decls ~events ~template_insts ~relations ~annotations ()
+      mk_program ~template_decls:(Option.value ~default:[] template_decls) ~events ~template_insts ~relations ~annotations ()
     }
 ;
 
-/* program_spawn: mark_loc_ty(plain_program_spawn) {$1} */
-// plain_program_spawn:
-//     events = plain_event_decl_list;
-//     template_insts = preceded(SEMICOLON, nonempty_list(plain_template_inst))?;
-//     relations = preceded(SEMICOLON, plain_ctrl_relation_decl_list)?;
-//     { (
-//         events, 
-//         Option.value ~default:[] template_insts, 
-//         Option.value ~default:[] relations
-//       ) } 
-// ;
-
 plain_program_spawn:
-  | input = list(plain_top_input); 
-    { 
-      mk_program_from_top_level_input input 
-    }
+  | (* empty *) { mk_subprogram () }
+  | comp=graph_component; SEMICOLON; rest=plain_program_spawn; 
+  { 
+    let (events, template_insts, relations, annotations) = rest in
+    let (events', template_insts', relations', annotations') = comp in
+    (List.append events' events, List.append template_insts' template_insts, List.append relations' relations, List.append annotations' annotations)
+  }
+  | comp=graph_component; 
+  { 
+    comp
+  }
 
+graph_component:
+  | plain_event_decl_list { mk_subprogram ~events:$1 () }
+  | nonempty_list(template_inst); { mk_subprogram ~template_insts:$1 () }
+  | plain_ctrl_relation_decl_list { mk_subprogram ~relations:$1 () }
+  | nonempty_list(plain_template_annotation); { mk_subprogram ~annotations:$1 () }
 
-plain_top_input:
-  // | plain_template_decl { TemplateDef($1) }
-  | event_decl                                                                  { Event($1) }
-  | template_inst                                                               { TemplateInst($1) }
-  | plain_ctrl_relation_decl_list                                               { Relations($1) }
-  | plain_template_annotation                                                   { AnnotatedSubprogram($1) }
+// plain_top_input:
+//   // | plain_template_decl { TemplateDef($1) }
+//   | event_decl                                                                  { Event($1) }
+//   | template_inst                                                               { TemplateInst($1) }
+//   | plain_ctrl_relation_decl_list                                               { Relations($1) }
+//   | plain_template_annotation                                                   { AnnotatedSubprogram($1) }
 
 // =====
 // ===== template declaration 
