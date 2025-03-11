@@ -8,6 +8,10 @@ open Monads.ResultMonad
 open Printing
 open Cmdliner
 
+(** [help_cmd] command to view the available commands
+    @param commands the list of available commands
+    @param state the current state
+    @return the new state displaying the available commands *)
 let help_cmd commands state =
   let header = CString.colorize ~color:BrightCyan "Available Commands:" in
   let cmds_section =

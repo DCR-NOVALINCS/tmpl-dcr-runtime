@@ -2,6 +2,13 @@
 
 This folder contains multiple examples of how the interpreter handles type errors.
 
+| Example | Expected Behavior |
+| --- | --- |
+| [`0.tdcr`](0.tdcr) | Event `s` not found in the template graph. |
+| [`1.tdcr`](1.tdcr) | Event label `Action` has different data types specified. |
+| [`2.tdcr`](2.tdcr) | Different number of exported events between the template and its application. |
+| [`3.tdcr`](3.tdcr) | Duplicate event ids in the main graph. |
+| [`4.tdcr`](4.tdcr) | Same as `1.tdcr`. |
 
 ## Other Examples
 

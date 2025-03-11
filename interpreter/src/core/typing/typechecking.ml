@@ -308,7 +308,9 @@ and typecheck_inst inst (ty_env, event_env, tmpl_ty_env, label_types) =
            args *)
       and make_x_events xs (ty_env, event_env, label_types) =
         if not (List.length xs = List.length export_tys) then
-          missing_exported_events ~expected:(List.map (fun e -> annotate (fst e)) export_tys) xs
+          missing_exported_events
+            ~expected:(List.map (fun e -> annotate (fst e)) export_tys)
+            xs
         else
           iter
             (fun x ->

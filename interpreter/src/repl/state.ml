@@ -56,7 +56,6 @@ type cmd =
       (runtime_state -> (runtime_state, detailed_error list) result) Cmd.t }
 
 let create_cmd (name, params, description) term cmds =
-  (* Add both the default and shortened versions of the command to the list *)
   let cmd =
     { params
     ; description

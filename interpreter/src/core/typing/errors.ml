@@ -112,7 +112,7 @@ let missing_exported_event_types ?(errors = []) ~expected got =
     :: errors )
 
 let missing_exported_events ?(errors = []) ~expected got =
-  fail 
+  fail
     ( { location= Nowhere
       ; message=
           Printf.sprintf "Missing exported events. Expected %s, but got %s"

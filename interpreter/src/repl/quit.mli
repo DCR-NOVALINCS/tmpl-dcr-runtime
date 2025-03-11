@@ -1,6 +1,4 @@
-(** {3 Quit command}
-
-    The quit command exits the REPL. *)
+(** {3 Quit command} *)
 
 open Cmdliner
 

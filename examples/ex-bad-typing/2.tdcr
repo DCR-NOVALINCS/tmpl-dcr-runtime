@@ -1,8 +1,9 @@
 tmpl one_shot_process(): Action {
     !(a: Action)[?: Number]
-
+    ;
     a -->% a
 } => a
-
+;
 (a: Action)[?: Number]
+;
 one_shot_process() => a1, a2

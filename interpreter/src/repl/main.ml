@@ -9,6 +9,10 @@ open Core
 open Api
 open Cmdliner
 
+(** [commands] is a list of all available commands in the program.
+    @return
+      a tuple of list of all available commands and a BK-tree of the commands.
+*)
 let commands =
   let visible =
     create_cmd ("exit", [], "Exit the program.") Quit.term []

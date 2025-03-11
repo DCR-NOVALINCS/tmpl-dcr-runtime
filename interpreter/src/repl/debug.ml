@@ -6,11 +6,17 @@ open Monads.ResultMonad
 open Printing
 open Cmdliner
 
+(** [view_envs] flag to view the current environments
+    @return a boolean flag *)
 let view_envs =
   Arg.(
     value & flag
     & info ["e"; "envs"] ~docv:"ENVS" ~doc:"View the current environments" )
 
+(** [debug_cmd] command to view debug information.
+    @param view_envs a boolean flag to view the current environments
+    @param state the current state
+    @return the new state displaying debug information. *)
 and debug_cmd view_envs state =
   let {ty_env; event_env; expr_env; _} = state in
   let buffer = Buffer.create 100 in

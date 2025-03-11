@@ -1,6 +1,4 @@
-(** {1 View}
-
-    This module provides functions to implement the {b view} command. *)
+(** {1 View command} *)
 
 open Cmdliner
 open State
