@@ -209,8 +209,8 @@ and evaluate_subprogram ?(eval = partial_eval_expr)
     in
     let* args = map update_arg args in
     return {inst with data= {inst.data with args}}
-  and evaluate_relation relation =
-    let replace_id id =
+  and evaluate_relation relation event_env =
+    let replace_id id event_env =
       match find_flat id.data event_env with
       | None -> event_not_found ~loc:id.loc id.data
       | Some event ->
@@ -219,15 +219,15 @@ and evaluate_subprogram ?(eval = partial_eval_expr)
     in
     match relation.data with
     | ControlRelation (from, guard, dest, op) ->
-        let* from, _ = replace_id from in
+        let* from, _ = replace_id from event_env in
         let* guard = eval guard expr_env in
-        let* dest, _ = replace_id dest in
+        let* dest, _ = replace_id dest event_env in
         return {relation with data= ControlRelation (from, guard, dest, op)}
     | SpawnRelation (from, guard, subprogram) ->
         let expr_env, event_env, tmpl_env =
           (begin_scope expr_env, begin_scope event_env, tmpl_env)
         in
-        let* from, from_event = replace_id from in
+        let* from, from_event = replace_id from event_env in
         let* guard = eval guard expr_env in
         let* expr_env, event_env =
           return
@@ -247,7 +247,8 @@ and evaluate_subprogram ?(eval = partial_eval_expr)
     | IfElse {condition; then_branch; else_branch} ->
         let* condition = eval condition expr_env in
         let* then_branch, _ =
-          evaluate_subprogram ~eval then_branch (expr_env, event_env, tmpl_env)
+          evaluate_subprogram ~eval:partial_eval_expr then_branch
+            (expr_env, event_env, tmpl_env)
         in
         let* else_branch =
           match else_branch with
@@ -274,8 +275,10 @@ and evaluate_subprogram ?(eval = partial_eval_expr)
         return (Foreach (id, value, body))
   in
   let* events = map evaluate_event events in
+  let* expr_env = bind_events ~f:event_as_expr events expr_env in
+  let* event_env = bind_events ~f:id events event_env in
   let* insts = map evaluate_inst insts in
-  let* relations = map evaluate_relation relations in
+  let* relations = map (fun r -> evaluate_relation r event_env) relations in
   let* annots = map evaluate_annot annots in
   return ((events, insts, relations, annots), (expr_env, event_env, tmpl_env))
 

@@ -1,0 +1,21 @@
+
+(ca: CreateAuthor)[?: { name: String }]
+;
+ca -->> {
+    (a: Author)[@trigger.value.name]
+    (cb: CreateBook)[?: { title: String, isbn: String }]
+    ;
+    cb -->> {
+        (b: Book)[{ title: @trigger.value.title, isbn: @trigger.value.isbn, author: a }]
+        (lb: LoanBook)[?: { username: String }]
+        ;
+        lb -->% lb
+        lb -->> {
+            (l: Loan)[{ book: b, user: @trigger.value.username }]
+            !(r: ReturnBook)[?]
+            ;
+            r -->% r
+            r -->+ lb
+        }
+    }
+}

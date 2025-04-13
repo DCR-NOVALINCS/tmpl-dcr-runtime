@@ -1,0 +1,8 @@
+execute ca [{ name: "André" }, { name: "João" }]
+view
+execute pb_0 { title: "The Hobbit", type: "book" }
+execute pb_2 { title: "OSTRICH", type: "research_paper" }
+view
+execute li_5 { username: "Bob" }
+view
+exit

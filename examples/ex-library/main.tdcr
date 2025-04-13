@@ -1,0 +1,48 @@
+tmpl loanable_item_process(itemname: String) {
+    (li: LoanItem)[?: { username: String }]
+    %(ri: ReturnItem)[?]
+    ;
+    li -->+ ri
+    li *--> ri
+    ri -->% ri
+    ri -->+ li
+    li -->> {
+        (l: LoanInfo)[{ itemname: itemname, username: @trigger.value.username }]
+    }
+}
+
+tmpl book_process(title: String, authorname: String) {
+    (b: Book)[{ title: title, authorname: authorname }]
+    ;
+    loanable_item_process(itemname = title)
+}
+
+tmpl research_paper_process(title: String, authorname: String) {
+    (rp: ResearchPaper)[{ title: title, authorname: authorname }]
+    ;
+    loanable_item_process(itemname = title)
+}
+
+tmpl author_process(authorname: String) {
+    (a: Author)[{ name: authorname }]
+    (pb: Publish)[?: { title: String, type: String }]
+    ;
+    pb -->> {
+        if @trigger.value.type == "book" {
+            book_process(title = @trigger.value.title, authorname = authorname)
+        } else {
+            if @trigger.value.type == "research_paper" {
+                research_paper_process(title = @trigger.value.title, authorname = authorname)
+            }
+        }
+    }
+}
+;
+
+(ca: CreateAuthors)[?: List[{ name: String }]]
+;
+ca -->> {
+    foreach author in @trigger.value {
+        author_process(authorname = author.name)
+    }
+}

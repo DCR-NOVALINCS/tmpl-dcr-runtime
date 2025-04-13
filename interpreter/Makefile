@@ -1,7 +1,3 @@
-# Targets
-.SILENT: pre-build build watch clean
-.PHONY: test install format doc
-
 # Variables
 OUTPUT_DOC_PATH = ../docs
 DOCKER_IMAGE_NAME = template-dcr-interpreter
@@ -13,11 +9,14 @@ setup:
 pre-build:
 	eval $(opam env)
 
+GREEN = \033[1;32m
+NC = \033[0m
 build:
 	make pre-build
 	# make clean
 	dune build
-	printf "\nBuild successful\n"
+	cp -f _build/install/default/bin/tmpl_dcr ./tmpl_dcr
+	printf "${GREEN}Success: ${NC}Build created\n"
 
 watch:
 	make pre-build
@@ -53,3 +52,7 @@ doc:
 docker: 
 	make pre-build
 	docker build -t $(DOCKER_IMAGE_NAME) .
+
+# Targets
+.SILENT: pre-build build watch clean
+.PHONY: test install format doc

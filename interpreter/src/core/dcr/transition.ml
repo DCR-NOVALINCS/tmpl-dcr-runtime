@@ -27,8 +27,7 @@ let is_enabled event program (event_env, expr_env) =
             match op with
             | Condition -> is_included from_event && is_executed from_event
             | Milestone ->
-                is_included from_event && is_executed from_event
-                && not (is_pending event)
+                is_included from_event && not (is_pending event)
             | _ -> true
           in
           return is_enabled
