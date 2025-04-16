@@ -19,8 +19,8 @@ let rec bind_tmpls tmpls (expr_env, event_env, tmpl_env) =
   let bind tmpl (expr_env, event_env, tmpl_env) =
     let id = tmpl.id in
     Logger.info @@ Printf.sprintf "Binding template %s" (keyword id.data) ;
-    return (bind id.data tmpl tmpl_env)
-    >>| fun tmpl_env -> (expr_env, event_env, tmpl_env)
+    let tmpl_env = bind id.data tmpl tmpl_env in
+    return (expr_env, event_env, tmpl_env)
   in
   fold_left
     (fun (expr_env, event_env, tmpl_env) tmpl ->
@@ -31,8 +31,7 @@ let rec bind_tmpls tmpls (expr_env, event_env, tmpl_env) =
 and bind_args (args, params) ?(eval = eval_expr) (expr_env, event_env, tmpl_env)
     =
   let rec bind_arg (id, expr) (expr_env, event_env) =
-    eval expr expr_env
-    >>= fun value ->
+    let* value = eval expr expr_env in
     let expr_env = bind id.data value expr_env in
     match value.data with
     | EventRef event_ref ->
@@ -52,14 +51,16 @@ and bind_args (args, params) ?(eval = eval_expr) (expr_env, event_env, tmpl_env)
         bind_arg (pid, value) (expr_env, event_env)
     | _ -> return (expr_env, event_env)
   in
-  fold_left
-    (fun (expr_env, event_env) arg -> bind_arg arg (expr_env, event_env))
-    (expr_env, event_env) args
-  >>= fun (expr_env, event_env) ->
-  fold_left
-    (fun (expr_env, event_env) param -> bind_param param (expr_env, event_env))
-    (expr_env, event_env) params
-  >>= fun (expr_env, event_env) ->
+  let* expr_env, event_env =
+    fold_left
+      (fun (expr_env, event_env) arg -> bind_arg arg (expr_env, event_env))
+      (expr_env, event_env) args
+  in
+  let* expr_env, event_env =
+    fold_left
+      (fun (expr_env, event_env) param -> bind_param param (expr_env, event_env))
+      (expr_env, event_env) params
+  in
   Logger.debug
   @@ Printf.sprintf "Bound args in expr env:\n%s"
        (string_of_env Colorized.unparse_expr expr_env) ;

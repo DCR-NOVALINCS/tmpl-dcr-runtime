@@ -1,3 +1,5 @@
 open Cli
 
-let () = if !Sys.interactive then () else Main.run ()
+let start = if !Sys.interactive then () else Main.run ()
+
+let () = start

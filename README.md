@@ -1,6 +1,10 @@
 
 <div align="center">
   <h1>Templates in Dynamic Conditional Response (DCR) Graphs.</h1>
+
+  [![License](https://img.shields.io/github/license/DCR-NOVALINCS/tmpl-dcr-runtime)](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE)
+  [![Latest Tag](https://img.shields.io/github/v/tag/DCR-NOVALINCS/tmpl-dcr-runtime)](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/tags)
+  [![Docker Image Version](https://img.shields.io/docker/v/bfibraga/template-dcr-interpreter?sort=date&logo=docker)](https://hub.docker.com/r/bfibraga/template-dcr-interpreter)
 </div> 
 
 ## Table of Contents
@@ -23,7 +27,7 @@ This project is a interpreter that can create and execute DCR graphs with templa
 
 The main goal of this prototype is to validate the usability and the expressiveness of the templates in DCR graphs and to see how it can be used in various scenarios.
 
-Here is a quick sneak peek of how to express a DCR graph with templates in this project. This example is located in the [`examples`](./examples/) directory of the project.
+Here is a quick sneak peek of how to express a DCR graph with templates in this project ([view the full example](./examples/ex-reviewers/main.tdcr)):
 
 ```tdcr
 tmpl reviewer_process(n: Number): Approve, Reject {
@@ -38,9 +42,7 @@ tmpl reviewer_process(n: Number): Approve, Reject {
   rj -->% ap
 } => ap, rj
 ;
-# ---- Process ------------------------------------------ #
 
-# Initialize pull request with N reviewers.
 (pr: PullRequest)[?: Number]
 ;
 pr -->> {

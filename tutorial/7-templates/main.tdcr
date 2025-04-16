@@ -1,0 +1,10 @@
+tmpl t1(n: Number, a: A) {
+    (b: B)[?]
+    ;
+    b -[n > 0]->* a
+}
+
+tmpl t2(a: A) {
+    t1(n = 1, a = a)
+}
+;

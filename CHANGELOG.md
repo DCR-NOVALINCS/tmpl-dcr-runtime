@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.2] - 2025-04-16
+
+### Added
+
+- Added new example:
+  - [`ex-library`](examples/ex-library/main.tdcr): A DCR graph that models a library system with events for borrowing and returning books, as well as managing fines.
+- Added the remaining missing tutorials to the [`tutorial`](./tutorial/) folder:
+- Adding documentation on all the OCaml modules.
+
+### Changed 
+*None*
+
+### Fixed
+*None*
+
 ## [coordination-25-0.1.1] - 2025-03-11
 
 ### Added
@@ -16,3 +31,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Updated the `.tdcr` files for the example `ex-reviewers` to show the intended behavior of the graph.
 
 ### Fixed
+*None*

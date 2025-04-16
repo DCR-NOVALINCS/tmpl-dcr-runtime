@@ -69,8 +69,8 @@ module ResultMonad = struct
   let for_all f l =
     fold_left (fun acc x -> f x >>= fun v -> return (v && acc)) true l
 
-  let exists f l =
-    fold_left (fun acc x -> f x >>= fun v -> return (v || acc)) false l
+  (* let exists f l =
+    fold_left (fun acc x -> f x >>= fun v -> return (v || acc)) false l *)
 end
 
 module OptionMonad = struct
@@ -122,20 +122,4 @@ module FilterMonad = struct
   let filter_map f l = List.filter_map f l
 
   let iter f l = List.iter (fun x -> f x) l
-end
-
-module AccResult = struct
-  type ('a, 'b) t = 'a * 'b list
-
-  let return x = (x, [])
-
-  let fail e = (Obj.magic (), [e])
-
-  let bind (x, errors) f =
-    let y, errors' = f x in
-    (y, List.append errors errors')
-
-  let ( >>= ) = bind
-
-  let ( let* ) = bind
 end
