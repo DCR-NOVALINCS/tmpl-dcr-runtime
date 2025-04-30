@@ -39,7 +39,7 @@ format:
 clean:
 	make pre-build
 	dune clean
-	rm -rf docs
+	rm -rf $(OUTPUT_DOC_PATH)
 
 doc:
 	make pre-build
@@ -47,7 +47,8 @@ doc:
 	dune build @doc
 	mkdir -p $(OUTPUT_DOC_PATH) 
 	cp -r _build/default/_doc/_html/* $(OUTPUT_DOC_PATH)
-	touch $(OUTPUT_DOC_PATH)/.nojekyll # Prevents github from ignoring the docs folder
+# Prevents github from ignoring the docs folder
+	touch $(OUTPUT_DOC_PATH)/.nojekyll 
 
 docker: 
 	make pre-build

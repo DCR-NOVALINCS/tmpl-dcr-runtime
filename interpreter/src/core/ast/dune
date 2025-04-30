@@ -1,5 +1,6 @@
 (library
  (name ast)
+ (public_name tmpl_dcr.ast)
  (preprocess
   (pps ppx_yojson_conv))
  (libraries common ppx_yojson_conv))

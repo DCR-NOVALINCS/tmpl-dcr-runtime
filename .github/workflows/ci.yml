@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up OCaml
+        uses: avsm/setup-ocaml@v2
+        with:
+          ocaml-compiler: 5.1.2
+          opam-repository: default
+
+      - name: Install dependencies
+        run: make setup
+
+      - name: Build project
+        run: make build
+
+      - name: Run tests
+        run: make check
+
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up OCaml
+        uses: avsm/setup-ocaml@v2
+        with:
+          ocaml-compiler: 5.1.2
+          opam-repository: default
+
+      - name: Install dependencies
+        run: make setup
+
+      - name: Build documentation
+        run: make doc
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs

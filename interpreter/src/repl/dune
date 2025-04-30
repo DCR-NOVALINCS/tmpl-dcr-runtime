@@ -1,3 +1,4 @@
 (library
  (name repl)
+ (public_name tmpl_dcr.repl)
  (libraries common core cmdliner))

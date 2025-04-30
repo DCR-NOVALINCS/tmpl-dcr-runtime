@@ -1,3 +1,4 @@
 (library
  (name common)
+ (public_name tmpl_dcr.common)
  (libraries))

@@ -1,3 +1,4 @@
 (library
  (name dcr)
+ (public_name tmpl_dcr.dcr)
  (libraries ast common unparser))

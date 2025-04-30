@@ -1,5 +1,6 @@
 (library
  (name parsing)
+ (public_name tmpl_dcr.parsing)
  (libraries ast common))
 
 (ocamllex lexer)
