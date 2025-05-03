@@ -6,5 +6,8 @@
 
 (documentation
  (package tmpl_dcr)
- ; (mld_files index)
- )
+ (mld_files index))
+
+(env
+ (doc
+  (flags (--as-json))))

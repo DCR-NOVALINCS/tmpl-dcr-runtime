@@ -1,0 +1,69 @@
+{0:tmpl_dcr Templates in Dynamic Conditional Response (DCR) Graphs.}
+
+This project is a interpreter that can create and execute DCR graphs with templates. 
+The main goal of this prototype is to validate the usability and the expressiveness of the templates in DCR graphs and to see how it can be used in various scenarios.
+
+{1:usage {b Usage.}}
+
+To start the interpreter, run the following command in the terminal:
+
+{@bash[
+    $ dune exec tmpl_dcr -- <filename.tdcr>
+]}
+
+Where [<filename>] is the name of the file that contains the DCR graph with templates.
+You can see some examples in the {{:./../../examples/}[examples]} directory of the project to see how to write a DCR graph with templates.
+
+{b Note:} The file extension must be [.tdcr] in order to be recognized by the program.
+
+After running the command, you should see the following prompt.
+
+{@text[
+    > 
+]}
+
+From this prompt, you can run the commands specified in the {{!commands}[Commands]} section.
+
+The interpreter accepts the following arguments:
+- [--help] or [-h]: Show the help message and exit.
+- [--version] or [-v]: Show the version of the interpreter and exit.
+- [--log <value>] or [-l <value>]: Set the log level. The value can be one of the following: [debug], [info], [warn], [error], [success]. If not specified, the interpreter does not log anything.
+
+{1:commands {b Commands.}}
+
+The interpreter accepts the following commands:
+- [help]: Show the available commands and their descriptions.
+- [exit]: Exit the interpreter, returning with the exit code 0.
+- [view]: View the current state of the DCR graph. 
+  {t | Flag |  Description |
+   |----------|----------|
+   | [-d] or [--disabled]   | View the disabled events.   |
+   | [-r] or [--relations]   | View the relations between the events.   |
+   | [-t] or [--templates]   | View the templates that are available in the program.   |
+   | [-v] or [--value]  | View the values of the events.   |}
+
+- [execute <event_id> <value>]: Execute the event with the given [event_id] and the given [expr] as the input.
+  The [event_id] is the id of the event that you want to execute. The [value] is the value that you want to pass to the event. 
+
+- [export <filename1> <filename2> ... <filenameN>]: Export the current state of the DCR graph to the given files. 
+{t | Flag |  Description |
+   |----------|----------|
+   | [-m] or [--mode]  | Export the program in the given mode [<mode>]. Available modes are: [tdcr] (default), [json]  |}
+
+{1:implementation {b Implementation Details.}}
+
+The interpreter is implemented in OCaml and uses the Dune build system.
+The entry module is {!module:Cli}.
+
+{2:structure Module Structure.}
+
+The project is organized into the following modules:
+
+{t | Module         | Description                                                                 |
+   |----------------|-----------------------------------------------------------------------------|
+   | {{!Cli}{b Cli}} | Handles the command-line interface, including parsing arguments and commands. |
+   | {{!Core.Api}{b Api}} | Provides the main API for interacting with DCR graphs, including initialization, execution, and viewing. |
+   | {{!Ast}{b Ast}} | Defines the abstract syntax tree of a templated DCR Graph.        |
+   | {{!Typing}{b Typing}} | Implements the type-checking logic for events and expressions.      |
+   | {{!Repl}{b Repl}} | Implements the Read-Eval-Print Loop (REPL) for interactive usage.           |
+   | {{!Common}{b Common}} | Contains utility functions and helpers used across the project.           |}

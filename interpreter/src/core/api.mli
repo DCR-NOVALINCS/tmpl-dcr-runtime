@@ -1,3 +1,9 @@
+(** {1 Api}
+
+    This module provides the API for the TDCR interpreter. It includes functions
+    to initialize, execute, and view the program, as well as functions to parse
+    and unparse the program in different formats. *)
+
 open Ast
 open Syntax
 open Error

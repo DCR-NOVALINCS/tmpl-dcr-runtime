@@ -1,4 +1,7 @@
-(** This module defines a set of error-handling functions for the REPL
+(** {1 Errors}
+    @author Bruno Braga
+
+    This module defines a set of error-handling functions for the REPL
     (Read-Eval-Print Loop) of the interpreter. These functions return results
     that encapsulate potential errors in a structured way, allowing for detailed
     error reporting and handling. *)

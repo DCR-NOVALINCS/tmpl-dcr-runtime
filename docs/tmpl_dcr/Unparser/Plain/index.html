@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>Plain (tmpl_dcr.Unparser.Plain)</title><meta charset="utf-8"/><link rel="stylesheet" href="../../../odoc.support/odoc.css"/><meta name="generator" content="odoc 2.4.4"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><script src="../../../odoc.support/highlight.pack.js"></script><script>hljs.initHighlightingOnLoad();</script></head><body class="odoc"><nav class="odoc-nav"><a href="../index.html">Up</a> – <a href="../../index.html">tmpl_dcr</a> &#x00BB; <a href="../index.html">Unparser</a> &#x00BB; Plain</nav><header class="odoc-preamble"><h1>Module <code><span>Unparser.Plain</span></code></h1></header><div class="odoc-content"><div class="odoc-spec"><div class="spec value anchored" id="val-unparse"><a href="#val-unparse" class="anchor"></a><code><span><span class="keyword">val</span> unparse : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?abbreviated</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?separator</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_template_decls</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_events</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_value</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_executed_marking</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_template_insts</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_relations</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Ast/Syntax/index.html#type-program">Ast.Syntax.program</a> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_template_decls"><a href="#val-unparse_template_decls" class="anchor"></a><code><span><span class="keyword">val</span> unparse_template_decls : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?abbreviated</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?separator</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_events</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_template_insts</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_relations</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><span><a href="../../Ast/Syntax/index.html#type-template_def">Ast.Syntax.template_def</a> list</span> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_template_decl"><a href="#val-unparse_template_decl" class="anchor"></a><code><span><span class="keyword">val</span> unparse_template_decl : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?abbreviated</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?separator</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_events</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_template_insts</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_relations</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Ast/Syntax/index.html#type-template_def">Ast.Syntax.template_def</a> <span class="arrow">&#45;&gt;</span></span>
+  unit</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_subprogram"><a href="#val-unparse_subprogram" class="anchor"></a><code><span><span class="keyword">val</span> unparse_subprogram : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?abbreviated</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?separator</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?print_events</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?print_value</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?print_executed</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?print_template_insts</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?print_relations</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Ast/Syntax/index.html#type-subprogram">Ast.Syntax.subprogram</a> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_events"><a href="#val-unparse_events" class="anchor"></a><code><span><span class="keyword">val</span> unparse_events : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?abbreviated</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?print_value</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?print_executed</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><span><a href="../../Ast/Syntax/index.html#type-event">Ast.Syntax.event</a> list</span> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_event"><a href="#val-unparse_event" class="anchor"></a><code><span><span class="keyword">val</span> unparse_event : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?abbreviated</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?print_value</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?print_executed</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Ast/Syntax/index.html#type-event">Ast.Syntax.event</a> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_template_insts"><a href="#val-unparse_template_insts" class="anchor"></a><code><span><span class="keyword">val</span> unparse_template_insts : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><span><span><a href="../../Ast/Syntax/index.html#type-template_instance'">Ast.Syntax.template_instance'</a> <a href="../../Ast/Syntax/index.html#type-annotated">Ast.Syntax.annotated</a></span> list</span> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_template_inst"><a href="#val-unparse_template_inst" class="anchor"></a><code><span><span class="keyword">val</span> unparse_template_inst : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Ast/Syntax/index.html#type-template_instance'">Ast.Syntax.template_instance'</a> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_relations"><a href="#val-unparse_relations" class="anchor"></a><code><span><span class="keyword">val</span> unparse_relations : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?abbreviated</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_events</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_template_insts</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><span><a href="../../Ast/Syntax/index.html#type-relation">Ast.Syntax.relation</a> list</span> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_relation"><a href="#val-unparse_relation" class="anchor"></a><code><span><span class="keyword">val</span> unparse_relation : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?abbreviated</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_events</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_template_insts</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Ast/Syntax/index.html#type-relation">Ast.Syntax.relation</a> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_annotations"><a href="#val-unparse_annotations" class="anchor"></a><code><span><span class="keyword">val</span> unparse_annotations : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?abbreviated</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_events</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_template_insts</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><span><a href="../../Ast/Syntax/index.html#type-template_annotation'">Ast.Syntax.template_annotation'</a> list</span> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_annotation"><a href="#val-unparse_annotation" class="anchor"></a><code><span><span class="keyword">val</span> unparse_annotation : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?abbreviated</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_events</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?should_print_template_insts</span>:bool <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Ast/Syntax/index.html#type-template_annotation'">Ast.Syntax.template_annotation'</a> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_ty"><a href="#val-unparse_ty" class="anchor"></a><code><span><span class="keyword">val</span> unparse_ty : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Ast/Syntax/index.html#type-type_expr'">Ast.Syntax.type_expr'</a> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_expr"><a href="#val-unparse_expr" class="anchor"></a><code><span><span class="keyword">val</span> unparse_expr : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Ast/Syntax/index.html#type-expr">Ast.Syntax.expr</a> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_pos"><a href="#val-unparse_pos" class="anchor"></a><code><span><span class="keyword">val</span> unparse_pos : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?separator</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Ast/Syntax/Lexing/index.html#type-position">Ast.Syntax.Lexing.position</a> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div><div class="odoc-spec"><div class="spec value anchored" id="val-unparse_loc"><a href="#val-unparse_loc" class="anchor"></a><code><span><span class="keyword">val</span> unparse_loc : 
+  <span><span class="optlabel">?indent</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?separator</span>:string <span class="arrow">&#45;&gt;</span></span>
+  <span><span class="optlabel">?buffer</span>:<span class="xref-unresolved">Stdlib</span>.Buffer.t <span class="arrow">&#45;&gt;</span></span>
+  <span><a href="../../Ast/Syntax/index.html#type-loc">Ast.Syntax.loc</a> <span class="arrow">&#45;&gt;</span></span>
+  string</span></code></div></div></div></body></html>

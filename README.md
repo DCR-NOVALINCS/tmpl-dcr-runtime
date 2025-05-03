@@ -5,6 +5,9 @@
   [![License](https://img.shields.io/github/license/DCR-NOVALINCS/tmpl-dcr-runtime)](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/blob/main/LICENSE)
   [![Latest Tag](https://img.shields.io/github/v/tag/DCR-NOVALINCS/tmpl-dcr-runtime)](https://github.com/DCR-NOVALINCS/tmpl-dcr-runtime/tags)
   [![Docker Image Version](https://img.shields.io/docker/v/bfibraga/template-dcr-interpreter?sort=date&logo=docker)](https://hub.docker.com/r/bfibraga/template-dcr-interpreter)
+  [![Documentation](https://img.shields.io/badge/docs-latest-blue)](https://dcr-novalincs.github.io/tmpl-dcr-runtime/)
+
+  <img src="assets/images/tmpl-graph.png" width="350" alt="Pull Request Template Graph">
 </div> 
 
 ## Table of Contents

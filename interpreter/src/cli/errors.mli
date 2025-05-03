@@ -1,6 +1,10 @@
-(** This module defines error-handling functions for the CLI (Command Line
+(** {0 Cli Errors}
+
+    This module defines error-handling functions for the CLI (Command Line
     Interface) of the interpreter. Each function returns a result type that
-    encapsulates either a successful value or a list of detailed errors. *)
+    encapsulates either a successful value or a list of detailed errors.
+
+    {1 Overview} *)
 
 open Ast
 open Error

@@ -47,7 +47,6 @@ doc:
 	dune build @doc
 	mkdir -p $(OUTPUT_DOC_PATH) 
 	cp -r _build/default/_doc/_html/* $(OUTPUT_DOC_PATH)
-# Prevents github from ignoring the docs folder
 	touch $(OUTPUT_DOC_PATH)/.nojekyll 
 
 docker: 
